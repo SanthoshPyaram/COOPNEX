@@ -1,0 +1,27 @@
+{
+  "name": "sahakari-seva",
+  "version": "1.0.0",
+  "description": "Sahakari Seva - Cooperative Labour Digital Service Marketplace Platform for SIH 2026",
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "seed": "cd backend && npm run seed",
+    "start:backend": "cd backend && npm run dev",
+    "start:ai": "cd ai-service && python app.py",
+    "start:frontend": "cd frontend && npm run dev",
+    "test": "cd backend && npm test",
+    "build": "cd frontend && npm run build && cd ../backend && npm run build"
+  },
+  "keywords": [
+    "cooperative",
+    "labour",
+    "sih2026",
+    "smart-india-hackathon",
+    "marketplace",
+    "fair-wage",
+    "ai-forecasting",
+    "geospatial"
+  ],
+  "author": "SIH 2026 Team - Sahakari Seva",
+  "license": "MIT"
+}
+

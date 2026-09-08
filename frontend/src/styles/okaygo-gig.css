@@ -1,0 +1,167 @@
+/* OkayGo gig-v2 dedicated styles & keyframe animations */
+
+:root {
+  --ok-primary: #0b84f3;
+  --ok-primary-hover: #0651a8;
+  --ok-primary-light: #2aa0ff;
+  --ok-accent-cyan: #5dceff;
+  --ok-bg-dark: #0c1424;
+  --ok-bg-darker: #070d18;
+  --ok-bg-navy: #07142b;
+  --ok-bg-soft: #eff5fe;
+  --ok-bg-card: #e7f2ff;
+  --ok-border-light: #d4e9ff;
+  --ok-green: #1f9d57;
+  --ok-green-bg: #e5f6ec;
+  --ok-gold: #ffb400;
+  --ok-text-dark: #07142b;
+  --ok-text-muted: #4a5a78;
+}
+
+/* Floating animation for chips and cards */
+@keyframes Gig_wjFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Floating with subtle scale */
+@keyframes Gig_appxFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(-0.5deg);
+  }
+}
+
+/* Status dot pulse */
+@keyframes Gig_wjBlink {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}
+
+/* Burst rotating background behind app stage */
+@keyframes Gig_burstSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Continuous smooth horizontal marquee ticker */
+@keyframes Gig_wt-scroll {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* Floating particle rise */
+@keyframes Gig_rise {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0px);
+  }
+}
+
+/* Glowing orbital pulse */
+@keyframes Gig_cxHalo {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.08);
+  }
+}
+
+/* Road dash animation */
+@keyframes Gig_roadDash {
+  0% {
+    stroke-dashoffset: 24;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Coin floating bob */
+@keyframes Gig_coinBob {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(4deg);
+  }
+}
+
+/* Applied utility classes */
+.gig-float {
+  animation: Gig_wjFloat 5s ease-in-out infinite;
+}
+
+.gig-float-delayed {
+  animation: Gig_wjFloat 6s ease-in-out 1.5s infinite;
+}
+
+.gig-appx-float {
+  animation: Gig_appxFloat 7s ease-in-out infinite;
+}
+
+.gig-blink {
+  animation: Gig_wjBlink 2s ease-in-out infinite;
+}
+
+.gig-burst-spin {
+  animation: Gig_burstSpin 35s linear infinite;
+}
+
+.gig-halo-pulse {
+  animation: Gig_cxHalo 4s ease-in-out infinite;
+}
+
+.gig-coin-bob {
+  animation: Gig_coinBob 3.5s ease-in-out infinite;
+}
+
+.gig-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: Gig_wt-scroll 32s linear infinite;
+}
+
+.gig-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+/* Custom scrollbar for task list */
+.gig-custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.gig-custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(11, 132, 243, 0.05);
+}
+.gig-custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(11, 132, 243, 0.25);
+  border-radius: 4px;
+}
+
