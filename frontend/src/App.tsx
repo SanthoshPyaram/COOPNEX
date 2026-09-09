@@ -55,7 +55,7 @@ export const App: React.FC = () => {
     <ThemeProvider>
       <LanguageProvider>
         <AuthProvider>
-          <BrowserRouter>
+          <BrowserRouter basename={import.meta.env.BASE_URL}>
             <Routes>
               {/* PUBLIC CONSUMER PRODUCT ROUTES (CLEAN, NO HACKATHON ARTIFACTS) */}
               <Route element={<PublicLayout />}>
