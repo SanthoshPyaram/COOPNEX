@@ -33,7 +33,9 @@ import {
   CheckCircle2,
   Menu,
   X,
-  Lock
+  Lock,
+  ArrowLeft,
+  Home
 } from "lucide-react";
 
 export interface NavItem {
@@ -76,6 +78,7 @@ export const AdminShell: React.FC<AdminShellProps> = ({
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Global Ctrl+K / Cmd+K listener
   useEffect(() => {
@@ -94,7 +97,7 @@ export const AdminShell: React.FC<AdminShellProps> = ({
     {
       title: "OPERATIONS",
       items: [
-        { id: "overview", label: "Overview", icon: LayoutDashboard },
+        { id: "command", label: "Command Center", icon: LayoutDashboard },
         { id: "mandate", label: "Admin Mandate", icon: Sparkles },
         { id: "workers", label: "Workers", icon: Users },
         {
@@ -141,6 +144,11 @@ export const AdminShell: React.FC<AdminShellProps> = ({
   ];
 
   const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const handleConfirmLogout = () => {
+    setShowLogoutConfirm(false);
     logout();
     navigate("/admin/login");
   };
@@ -260,14 +268,33 @@ export const AdminShell: React.FC<AdminShellProps> = ({
         {/* TOP COMMAND BAR */}
         {!isFocusMode && (
           <header className="h-16 border-b border-[#E4E9F0] dark:border-slate-800 bg-white dark:bg-[#101828] px-4 sm:px-6 flex items-center justify-between gap-4 z-20">
-            {/* Mobile Menu Toggle & Command Center Title */}
-            <div className="flex items-center gap-3 flex-1 max-w-lg">
+            {/* Mobile Menu Toggle, Navigation Quick Actions & Title */}
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 max-w-lg">
               <button
                 onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
                 className="md:hidden p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 {isMobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
+
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => navigate(-1)}
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold flex items-center gap-1 transition cursor-pointer"
+                  title="Go back to previous page"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline text-[11px]">Back</span>
+                </button>
+                <button
+                  onClick={() => navigate("/")}
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold flex items-center gap-1 transition cursor-pointer"
+                  title="Return to National Home"
+                >
+                  <Home className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline text-[11px]">Home</span>
+                </button>
+              </div>
 
               <div className="hidden xl:block">
                 <span className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
@@ -575,6 +602,41 @@ export const AdminShell: React.FC<AdminShellProps> = ({
           </div>
         )}
       </AnimatePresence>
+
+      {/* Accidental Sign-Out Confirmation Dialog */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white dark:bg-[#101828] border border-slate-200 dark:border-slate-800 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="w-11 h-11 rounded-2xl bg-rose-50 dark:bg-rose-950/50 flex items-center justify-center shrink-0 border border-rose-200 dark:border-rose-900">
+                <LogOut className="w-5 h-5 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-900 dark:text-white text-base">End Admin Session?</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  You will need to sign in again to access Super Admin controls.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLogout}
+                className="px-4 py-2 rounded-xl text-xs font-extrabold bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20 transition cursor-pointer"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

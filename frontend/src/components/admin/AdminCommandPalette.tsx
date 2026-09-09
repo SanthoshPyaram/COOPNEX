@@ -47,12 +47,12 @@ export const AdminCommandPalette: React.FC<AdminCommandPaletteProps> = ({
 
   const commandItems: CommandItem[] = [
     {
-      id: "nav-overview",
-      title: "Operations Dashboard",
+      id: "nav-command",
+      title: "Operations Command Center",
       category: "Navigation",
       shortcut: "G D",
       icon: LayoutDashboard,
-      onSelect: () => onNavigateTab("overview"),
+      onSelect: () => onNavigateTab("command"),
       meta: "KPIs, 3D Cooperative Network, Live Alerts"
     },
     {

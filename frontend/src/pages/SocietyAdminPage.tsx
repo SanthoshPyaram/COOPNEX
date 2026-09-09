@@ -76,14 +76,14 @@ export const SocietyAdminPage: React.FC = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
               <Link to="/society" className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-teal-800 text-amber-400 flex items-center justify-center font-bold">
+                <div className="w-8 h-8 rounded-lg bg-blue-600 text-amber-300 flex items-center justify-center font-bold">
                   <HandHeart className="w-4 h-4" />
                 </div>
                 <span className="font-display font-black text-base text-slate-900">
-                  COOPNEX <span className="text-teal-700">SOCIETY CONSOLE</span>
+                  COOPNEX <span className="text-blue-600">SOCIETY CONSOLE</span>
                 </span>
               </Link>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200 hidden sm:inline">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 hidden sm:inline">
                 PACS-04 • Vijayawada
               </span>
             </div>
@@ -111,7 +111,7 @@ export const SocietyAdminPage: React.FC = () => {
         {/* Header */}
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-4">
           <div>
-            <span className="text-xs uppercase font-bold text-teal-700 tracking-wider">
+            <span className="text-xs uppercase font-bold text-blue-600 tracking-wider">
               Primary Labour Cooperative Administration
             </span>
             <h1 className="text-2xl font-black text-slate-900 mt-0.5">
@@ -143,7 +143,7 @@ export const SocietyAdminPage: React.FC = () => {
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
             <span className="text-[11px] font-bold uppercase text-slate-400">Total Registered Members</span>
             <div className="text-2xl font-black text-slate-900 mt-1">186 Workers</div>
-            <span className="text-[10px] text-teal-700 font-semibold">+14 this quarter</span>
+            <span className="text-[10px] text-blue-600 font-semibold">+14 this quarter</span>
           </div>
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
             <span className="text-[11px] font-bold uppercase text-slate-400">Active On-Duty Today</span>
@@ -152,8 +152,8 @@ export const SocietyAdminPage: React.FC = () => {
           </div>
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
             <span className="text-[11px] font-bold uppercase text-slate-400">Verified (Level 3+)</span>
-            <div className="text-2xl font-black text-teal-800 mt-1">158 Certified</div>
-            <span className="text-[10px] text-teal-600 font-semibold">84.9% Trade Assessed</span>
+            <div className="text-2xl font-black text-blue-800 mt-1">158 Certified</div>
+            <span className="text-[10px] text-blue-600 font-semibold">84.9% Trade Assessed</span>
           </div>
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
             <span className="text-[11px] font-bold uppercase text-slate-400">Welfare Reserve Fund</span>
@@ -168,7 +168,7 @@ export const SocietyAdminPage: React.FC = () => {
             onClick={() => setSelectedTab("verification")}
             className={`px-4 py-2.5 font-bold text-xs rounded-t-xl transition ${
               selectedTab === "verification"
-                ? "bg-white text-teal-800 border-t-2 border-teal-700 shadow-xs"
+                ? "bg-white text-blue-700 border-t-2 border-blue-600 shadow-xs"
                 : "text-slate-500 hover:text-slate-900"
             }`}
           >
@@ -178,7 +178,7 @@ export const SocietyAdminPage: React.FC = () => {
             onClick={() => setSelectedTab("workers")}
             className={`px-4 py-2.5 font-bold text-xs rounded-t-xl transition ${
               selectedTab === "workers"
-                ? "bg-white text-teal-800 border-t-2 border-teal-700 shadow-xs"
+                ? "bg-white text-blue-700 border-t-2 border-blue-600 shadow-xs"
                 : "text-slate-500 hover:text-slate-900"
             }`}
           >

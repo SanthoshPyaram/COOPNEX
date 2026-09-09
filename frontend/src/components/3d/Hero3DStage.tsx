@@ -11,7 +11,6 @@ import {
   Radio,
   Award
 } from "lucide-react";
-import { CartoonWorkerMascot } from "../animations/CartoonWorkerMascot";
 
 interface Hero3DStageProps {
   gender: "man" | "woman";
@@ -180,29 +179,48 @@ export const Hero3DStage: React.FC<Hero3DStageProps> = ({
           </div>
         </div>
 
-        {/* 3D Mascot Stage Backdrop with Depth Rings */}
+        {/* 3D Real Artisan Stage Backdrop with Depth Rings */}
         <div
           style={{ transform: "translateZ(25px)" }}
-          className="relative py-4 px-2 rounded-2xl bg-gradient-to-b from-blue-50/70 via-indigo-50/40 to-slate-50 dark:from-slate-800/80 dark:via-slate-800/50 dark:to-slate-900/90 border border-blue-100 dark:border-slate-700/60 flex items-center justify-center overflow-hidden"
+          className="relative py-6 px-4 rounded-2xl bg-gradient-to-b from-blue-50/80 via-indigo-50/50 to-slate-50 dark:from-slate-800/90 dark:via-slate-800/60 dark:to-slate-900/95 border border-blue-100 dark:border-slate-700/60 flex items-center justify-center overflow-hidden"
         >
           {/* 3D Background Concentric Wave Rings */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-40 dark:opacity-25">
-            <div className="w-48 h-48 rounded-full border border-blue-400/30 animate-ping [animation-duration:3s]" />
-            <div className="w-36 h-36 rounded-full border border-indigo-400/40" />
-            <div className="w-24 h-24 rounded-full border border-emerald-400/30" />
+            <div className="w-52 h-52 rounded-full border border-blue-400/30 animate-ping [animation-duration:3s]" />
+            <div className="w-40 h-40 rounded-full border border-indigo-400/40" />
+            <div className="w-28 h-28 rounded-full border border-emerald-400/30" />
           </div>
 
-          {/* Central Animated Mascot Component */}
+          {/* Central Authentic Artisan Portrait Display */}
           <motion.div
             key={gender}
-            initial={{ opacity: 0, scale: 0.9, rotateY: 20 }}
+            initial={{ opacity: 0, scale: 0.9, rotateY: 15 }}
             animate={{ opacity: 1, scale: 1, rotateY: 0 }}
-            exit={{ opacity: 0, scale: 0.9, rotateY: -20 }}
+            exit={{ opacity: 0, scale: 0.9, rotateY: -15 }}
             transition={{ duration: 0.4 }}
             style={{ transform: "translateZ(45px)" }}
-            className="relative z-10"
+            className="relative z-10 flex flex-col items-center text-center"
           >
-            <CartoonWorkerMascot gender={gender} size="sm" showBadges={false} />
+            <div className="relative group">
+              <img
+                src={
+                  gender === "man"
+                    ? "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=480&q=80"
+                    : "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=480&q=80"
+                }
+                alt={gender === "man" ? "Rajesh Sharma" : "P. Sunitha Reddy"}
+                className="w-32 h-32 sm:w-36 sm:h-36 rounded-2xl object-cover ring-4 ring-white dark:ring-slate-800 shadow-2xl transition-transform duration-300 group-hover:scale-105"
+              />
+              <div className="absolute -bottom-2 -right-2 px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md border-2 border-white dark:border-slate-800">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
+                <span>Active</span>
+              </div>
+            </div>
+
+            <div className="mt-3 flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 text-xs font-bold border border-blue-200 dark:border-blue-800/40">
+              <Award className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <span>Skill India Certified Level 4</span>
+            </div>
           </motion.div>
         </div>
 

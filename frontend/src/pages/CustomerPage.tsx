@@ -245,7 +245,7 @@ export const CustomerPage: React.FC = () => {
               onClick={() => setSearchParams({ tab: "browse" })}
               className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition ${
                 activeTab === "browse"
-                  ? "bg-teal-700 text-white shadow-xs"
+                  ? "bg-blue-600 text-white shadow-xs"
                   : "text-slate-600 hover:bg-slate-100"
               }`}
             >
@@ -268,7 +268,7 @@ export const CustomerPage: React.FC = () => {
               onClick={() => setSearchParams({ tab: "bookings" })}
               className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition ${
                 activeTab === "bookings"
-                  ? "bg-teal-700 text-white shadow-xs"
+                  ? "bg-blue-600 text-white shadow-xs"
                   : "text-slate-600 hover:bg-slate-100"
               }`}
             >
@@ -277,7 +277,7 @@ export const CustomerPage: React.FC = () => {
           </div>
 
           <div className="text-xs text-slate-500 font-medium flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-lg border border-slate-200">
-            <MapPin className="w-3.5 h-3.5 text-teal-600" />
+            <MapPin className="w-3.5 h-3.5 text-blue-600" />
             <span>Vijayawada Central (Benz Circle)</span>
           </div>
         </div>
@@ -305,7 +305,7 @@ export const CustomerPage: React.FC = () => {
                     onClick={() => setSelectedService(cat)}
                     className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                       selectedService === cat
-                        ? "bg-teal-800 text-white shadow-xs"
+                        ? "bg-blue-800 text-white shadow-xs"
                         : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                     }`}
                   >
@@ -333,7 +333,7 @@ export const CustomerPage: React.FC = () => {
                       type="checkbox"
                       checked={verifiedOnly}
                       onChange={(e) => setVerifiedOnly(e.target.checked)}
-                      className="rounded text-teal-600 focus:ring-teal-500"
+                      className="rounded text-blue-600 focus:ring-blue-500"
                     />
                     <span>Level 4+ State Certified Only</span>
                   </label>
@@ -368,7 +368,7 @@ export const CustomerPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setSearchQuery("")}
-                      className="px-4 py-2 bg-teal-800 text-white text-xs font-bold rounded-xl hover:bg-teal-900 transition cursor-pointer"
+                      className="px-4 py-2 bg-blue-800 text-white text-xs font-bold rounded-xl hover:bg-blue-900 transition cursor-pointer"
                     >
                       Clear Search & View All {selectedService}s
                     </button>
@@ -412,7 +412,7 @@ export const CustomerPage: React.FC = () => {
                                 <span>•</span>
                                 <span>{worker.experienceYears} yrs exp</span>
                                 <span>•</span>
-                                <span className="text-teal-700 font-semibold">1.4 km (ETA 7m)</span>
+                                <span className="text-blue-600 font-semibold">1.4 km (ETA 7m)</span>
                               </div>
                             </div>
                           </div>
@@ -444,13 +444,13 @@ export const CustomerPage: React.FC = () => {
                                   }
                                 })
                               }
-                              className="bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2.5 py-1.5 rounded-xl text-right transition"
+                              className="bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1.5 rounded-xl text-right transition"
                             >
-                              <div className="text-xs font-black text-teal-800 flex items-center gap-1">
+                              <div className="text-xs font-black text-blue-800 flex items-center gap-1">
                                 <Sparkles className="w-3 h-3 text-amber-500" />
                                 {matchScore}% MATCH
                               </div>
-                              <div className="text-[10px] text-teal-600 underline font-medium">
+                              <div className="text-[10px] text-blue-600 underline font-medium">
                                 Why this worker?
                               </div>
                             </button>
@@ -473,7 +473,7 @@ export const CustomerPage: React.FC = () => {
                                 setBookingModalWorker(worker);
                                 setBookingStep(1);
                               }}
-                              className="bg-teal-700 hover:bg-teal-600 text-white font-bold px-4 py-2 rounded-xl transition shadow-xs"
+                              className="bg-blue-600 hover:bg-blue-600 text-white font-bold px-4 py-2 rounded-xl transition shadow-xs"
                             >
                               Book Worker
                             </button>
@@ -489,7 +489,7 @@ export const CustomerPage: React.FC = () => {
               <div className="lg:col-span-5 space-y-4">
                 <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2 flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4 text-teal-700" />
+                    <MapPin className="w-4 h-4 text-blue-600" />
                     Nearby Verified Workers Map
                   </h4>
                   <LeafletMap
@@ -510,7 +510,7 @@ export const CustomerPage: React.FC = () => {
                       <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block" /> Your Location
                     </span>
                     <span className="flex items-center gap-1">
-                      <span className="w-2.5 h-2.5 rounded-full bg-teal-600 inline-block" /> Verified Worker
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block" /> Verified Worker
                     </span>
                   </div>
                 </div>
@@ -578,7 +578,7 @@ export const CustomerPage: React.FC = () => {
                     <span className="font-bold text-slate-900 block">Detected Location:</span>
                     <span className="text-slate-600">{bookingAddress}</span>
                   </div>
-                  <span className="text-teal-700 font-bold">📍 GPS Active</span>
+                  <span className="text-blue-600 font-bold">📍 GPS Active</span>
                 </div>
 
                 <button
@@ -609,7 +609,7 @@ export const CustomerPage: React.FC = () => {
               emergencyActiveBooking && (
                 <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
                   {/* Top Matched Worker Strip */}
-                  <div className="p-5 rounded-2xl bg-teal-50/70 border border-teal-200 flex flex-wrap items-center justify-between gap-4">
+                  <div className="p-5 rounded-2xl bg-blue-50/70 border border-blue-200 flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                       <img
                         src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80"
@@ -621,7 +621,7 @@ export const CustomerPage: React.FC = () => {
                           <h3 className="text-lg font-black text-slate-900">RAJ KUMAR</h3>
                           <VerificationBadge level={4} size="sm" />
                         </div>
-                        <p className="text-xs text-teal-800 font-semibold">
+                        <p className="text-xs text-blue-800 font-semibold">
                           Level 4 State Certified Electrician • Vijayawada Central Co-op
                         </p>
                         <div className="flex items-center gap-3 text-xs text-slate-600 mt-1">
@@ -635,8 +635,8 @@ export const CustomerPage: React.FC = () => {
                     </div>
 
                     <div className="text-right">
-                      <div className="text-2xl font-black text-teal-800">96%</div>
-                      <div className="text-[10px] uppercase font-bold text-teal-600">AI Match Score</div>
+                      <div className="text-2xl font-black text-blue-800">96%</div>
+                      <div className="text-[10px] uppercase font-bold text-blue-600">AI Match Score</div>
                     </div>
                   </div>
 
@@ -671,7 +671,7 @@ export const CustomerPage: React.FC = () => {
                       <button
                         onClick={handleProcessPayment}
                         disabled={isProcessingPayment}
-                        className="bg-teal-700 hover:bg-teal-600 text-white font-black px-6 py-3 rounded-xl text-sm transition shadow-md flex items-center gap-2"
+                        className="bg-blue-600 hover:bg-blue-600 text-white font-black px-6 py-3 rounded-xl text-sm transition shadow-md flex items-center gap-2"
                       >
                         <CreditCard className="w-4 h-4" />
                         <span>
@@ -748,7 +748,7 @@ export const CustomerPage: React.FC = () => {
                     <div>
                       <span>Worker: </span>
                       <span className="font-bold text-slate-900">{b.workerName || "Assigned Worker"}</span>
-                      <span className="ml-2 text-teal-700 font-semibold">
+                      <span className="ml-2 text-blue-600 font-semibold">
                         (Direct Take-Home: ₹{b.fairWageBreakdown?.workerEarning})
                       </span>
                     </div>
@@ -759,7 +759,7 @@ export const CustomerPage: React.FC = () => {
                           const inv = await api.getInvoice(b._id);
                           setCurrentInvoice(inv.invoice);
                         }}
-                        className="text-xs text-teal-700 hover:text-teal-900 font-semibold underline flex items-center gap-1"
+                        className="text-xs text-blue-600 hover:text-blue-900 font-semibold underline flex items-center gap-1"
                       >
                         <FileText className="w-3.5 h-3.5" /> View Invoice
                       </button>
@@ -801,14 +801,14 @@ export const CustomerPage: React.FC = () => {
         {bookingModalWorker && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
             <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
-              <div className="bg-teal-900 text-white p-5 flex items-center justify-between">
+              <div className="bg-blue-900 text-white p-5 flex items-center justify-between">
                 <div>
                   <h3 className="font-bold text-base">Book Verified Worker: {bookingModalWorker.name}</h3>
-                  <p className="text-xs text-teal-200">{selectedService} • Level {bookingModalWorker.verificationLevel} Verified</p>
+                  <p className="text-xs text-blue-200">{selectedService} • Level {bookingModalWorker.verificationLevel} Verified</p>
                 </div>
                 <button
                   onClick={() => setBookingModalWorker(null)}
-                  className="text-teal-200 hover:text-white text-xl font-bold"
+                  className="text-blue-200 hover:text-white text-xl font-bold"
                 >
                   ✕
                 </button>
@@ -824,7 +824,7 @@ export const CustomerPage: React.FC = () => {
                         placeholder="e.g. Living room fan regulator replacement and light socket check"
                         value={requirementText}
                         onChange={(e) => setRequirementText(e.target.value)}
-                        className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
+                        className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 focus:outline-hidden"
                       />
                     </div>
 
@@ -840,7 +840,7 @@ export const CustomerPage: React.FC = () => {
 
                     <button
                       onClick={() => setBookingStep(2)}
-                      className="w-full py-3 rounded-xl bg-teal-700 hover:bg-teal-600 text-white font-bold"
+                      className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-600 text-white font-bold"
                     >
                       Next: Inspect Transparent Fair Wage
                     </button>
@@ -872,7 +872,7 @@ export const CustomerPage: React.FC = () => {
                       </button>
                       <button
                         onClick={handleConfirmStandardBooking}
-                        className="w-2/3 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-600 text-white font-bold"
+                        className="w-2/3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-600 text-white font-bold"
                       >
                         Confirm Booking
                       </button>
@@ -882,7 +882,7 @@ export const CustomerPage: React.FC = () => {
 
                 {bookingStep === 3 && (
                   <div className="space-y-4 text-center">
-                    <div className="w-12 h-12 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center mx-auto">
+                    <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto">
                       <CreditCard className="w-6 h-6" />
                     </div>
                     <h4 className="font-bold text-base text-slate-900">Cooperative Escrow Payment</h4>
@@ -984,7 +984,7 @@ export const CustomerPage: React.FC = () => {
                     <span>Direct Worker Earnings (Credited to Wallet):</span>
                     <span>₹{currentInvoice.itemizedBreakdown?.totalWorkerWage}</span>
                   </div>
-                  <div className="flex justify-between py-1 text-teal-800">
+                  <div className="flex justify-between py-1 text-blue-800">
                     <span>Cooperative Welfare Fund (12%):</span>
                     <span>+₹{currentInvoice.itemizedBreakdown?.cooperativeWelfareFund}</span>
                   </div>
@@ -1043,7 +1043,7 @@ export const CustomerPage: React.FC = () => {
                 placeholder="Share your experience (punctuality, quality, safety, demeanor)..."
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}
-                className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
+                className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-600 focus:outline-hidden"
               />
 
               <div className="flex gap-2">
@@ -1055,7 +1055,7 @@ export const CustomerPage: React.FC = () => {
                 </button>
                 <button
                   onClick={handleSubmitFeedback}
-                  className="w-2/3 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-600 text-white font-bold"
+                  className="w-2/3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-600 text-white font-bold"
                 >
                   {reviewSubmitted ? "✓ Submitted!" : "Submit Feedback"}
                 </button>

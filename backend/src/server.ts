@@ -1,4 +1,5 @@
 import path from "path";
+import fs from "fs";
 import dotenv from "dotenv";
 
 // Explicitly load backend/.env using absolute path BEFORE other imports
@@ -12,6 +13,7 @@ dotenv.config({ path: frontendEnvPath });
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { connectDB } from "./config/db";
+import { ensureDemoAccounts } from "./services/demoSeedService";
 import { apiRouter } from "./routes";
 import http from "http";
 
@@ -68,11 +70,41 @@ function startPortRedirectBridge(bridgePort: number, targetPort: number = 3000) 
   }
 }
 
-// Middleware
-app.use(cors({
-  origin: ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3001", "http://127.0.0.1:3001"],
-  credentials: true
-}));
+// Allowed Origins & CORS
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:3001",
+  "http://127.0.0.1:3001"
+];
+if (process.env.FRONTEND_URL) {
+  process.env.FRONTEND_URL.split(",").forEach((u) => {
+    const trimmed = u.trim();
+    if (trimmed) allowedOrigins.push(trimmed);
+  });
+}
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        process.env.NODE_ENV === "development" ||
+        origin.endsWith(".vercel.app") ||
+        origin.endsWith(".onrender.com") ||
+        origin.endsWith(".railway.app")
+      ) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Allow during production transitions
+      }
+    },
+    credentials: true
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -89,6 +121,18 @@ app.get("/health", (_req: Request, res: Response) => {
 // API Routes
 app.use("/api", apiRouter);
 
+// Production Static Serving
+const frontendDist = path.resolve(__dirname, "../../frontend/dist");
+if (fs.existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+  app.get("*", (req: Request, res: Response, next: NextFunction) => {
+    if (req.path.startsWith("/api") || req.path.startsWith("/health")) {
+      return next();
+    }
+    res.sendFile(path.join(frontendDist, "index.html"));
+  });
+}
+
 // Global Error Handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   console.error("[ServerError]", err);
@@ -102,6 +146,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 // Start Server
 const startServer = async () => {
   await connectDB();
+  await ensureDemoAccounts();
 
   // Start port bridges for 5173 and 3001 to forward browser traffic to port 3000
   startPortRedirectBridge(5173, 3000);

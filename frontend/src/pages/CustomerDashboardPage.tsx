@@ -4,13 +4,18 @@ import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
 import { WorkerProfile, Booking } from "../types";
 import { CustomerNavbar } from "../components/CustomerNavbar";
+import { CustomerAppShell } from "../components/customer/CustomerAppShell";
+import { CustomerMessagesView } from "../components/customer/CustomerMessagesView";
+import { CustomerNotificationsView } from "../components/customer/CustomerNotificationsView";
+import { CustomerPaymentsView } from "../components/customer/CustomerPaymentsView";
+import { CustomerFavoritesView } from "../components/customer/CustomerFavoritesView";
+import { CustomerSettingsView } from "../components/customer/CustomerSettingsView";
 import { VerificationBadge } from "../components/VerificationBadge";
 import { SpecialistProfileModal } from "../components/SpecialistProfileModal";
 import { CustomerBookingModal } from "../components/CustomerBookingModal";
 import { WhyThisWorkerModal } from "../components/WhyThisWorkerModal";
 import { ReviewModal } from "../components/ReviewModal";
 import { LeafletMap } from "../components/LeafletMap";
-import { CartoonWorkerMascot } from "../components/animations/CartoonWorkerMascot";
 import {
   Search,
   Zap,
@@ -270,11 +275,14 @@ export const CustomerDashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans pb-16 text-slate-900">
-      {/* Upgraded Customer Header Navbar */}
-      <CustomerNavbar />
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <CustomerAppShell
+      activeTab={activeTab}
+      onTabChange={(tabId) => setSearchParams({ tab: tabId })}
+      searchQuery={searchQuery}
+      onSearchChange={(q) => setSearchQuery(q)}
+      activeBookingsCount={activeBookings.length}
+    >
+      <div className="space-y-6">
         {/* Citizen Portal Header Banner */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs">
           <div>
@@ -369,36 +377,41 @@ export const CustomerDashboardPage: React.FC = () => {
                   Both skilled craftsmen and certified women technicians are dispatched across Vijayawada. Every booking guarantees 100% direct take-home pay to workers with full statutory social protection and PMSBY insurance.
                 </p>
 
-                {/* Mascot Gender Selector */}
-                <div className="pt-2 flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-blue-200 font-semibold mr-1">Cooperative Mascot:</span>
-                  <button
-                    type="button"
-                    onClick={() => setCustomerMascotGender("man")}
-                    className={`px-3.5 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
-                      customerMascotGender === "man"
-                        ? "bg-[#F59E0B] text-slate-950 shadow-xs"
-                        : "bg-white/10 text-white hover:bg-white/20"
-                    }`}
-                  >
-                    👨‍🔧 Male Craftsman
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCustomerMascotGender("woman")}
-                    className={`px-3.5 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
-                      customerMascotGender === "woman"
-                        ? "bg-[#F59E0B] text-slate-950 shadow-xs"
-                        : "bg-white/10 text-white hover:bg-white/20"
-                    }`}
-                  >
-                    👩‍🔧 Female Specialist
-                  </button>
+                {/* Certified Artisan Verification Metrics */}
+                <div className="pt-2 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-emerald-300 font-bold border border-white/15">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>UIDAI Biometric Verified</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-amber-300 font-bold border border-white/15">
+                    <Award className="w-3.5 h-3.5" />
+                    <span>NSDC Level 4 Skill Certified</span>
+                  </span>
                 </div>
               </div>
 
-              <div className="relative z-10 shrink-0">
-                <CartoonWorkerMascot gender={customerMascotGender} size="md" />
+              {/* Realistic Indian Artisan Photography Card */}
+              <div className="relative z-10 shrink-0 flex items-center gap-3">
+                <div className="relative">
+                  <img
+                    src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80"
+                    alt="Certified Cooperative Electrician"
+                    className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-2 border-white/30 shadow-xl"
+                  />
+                  <span className="absolute -bottom-2 -right-2 bg-emerald-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full border border-white shadow-xs">
+                    Verified Pro
+                  </span>
+                </div>
+                <div className="relative hidden sm:block">
+                  <img
+                    src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80"
+                    alt="Certified Female Specialist"
+                    className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-2 border-white/30 shadow-xl"
+                  />
+                  <span className="absolute -bottom-2 -right-2 bg-[#2563EB] text-white text-[9px] font-bold px-2 py-0.5 rounded-full border border-white shadow-xs">
+                    Skill Level 4
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -936,7 +949,7 @@ export const CustomerDashboardPage: React.FC = () => {
 
               {/* Right Column: Live Geospatial Map (5 cols) */}
               <div className="lg:col-span-5 space-y-4">
-                <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs sticky top-20">
+                <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs relative">
                   <div className="flex items-center justify-between mb-3 text-xs">
                     <span className="font-bold text-slate-800">Vijayawada Cooperative Fleet Map</span>
                     <span className="text-emerald-700 font-bold flex items-center gap-1.5">
@@ -1423,7 +1436,51 @@ export const CustomerDashboardPage: React.FC = () => {
             </div>
           </div>
         )}
-      </main>
+
+        {/* ======================================================== */}
+        {/* TAB 6: MESSAGES & ARTISAN CHAT */}
+        {/* ======================================================== */}
+        {activeTab === "messages" && (
+          <CustomerMessagesView
+            bookings={myBookings}
+            workers={workers}
+            onNavigateToBrowse={() => setSearchParams({ tab: "browse" })}
+          />
+        )}
+
+        {/* ======================================================== */}
+        {/* TAB 7: NOTIFICATIONS CENTER */}
+        {/* ======================================================== */}
+        {activeTab === "notifications" && (
+          <CustomerNotificationsView />
+        )}
+
+        {/* ======================================================== */}
+        {/* TAB 8: PAYMENTS & ESCROW LEDGER */}
+        {/* ======================================================== */}
+        {activeTab === "payments" && (
+          <CustomerPaymentsView bookings={myBookings} />
+        )}
+
+        {/* ======================================================== */}
+        {/* TAB 9: SAVED FAVORITE ARTISANS */}
+        {/* ======================================================== */}
+        {activeTab === "favorites" && (
+          <CustomerFavoritesView
+            workers={workers}
+            onBookWorker={(w) => setBookingModalWorker(w)}
+            onViewProfile={(w) => setProfileModalWorker(w)}
+            onExploreWorkers={() => setSearchParams({ tab: "browse" })}
+          />
+        )}
+
+        {/* ======================================================== */}
+        {/* TAB 10: SETTINGS */}
+        {/* ======================================================== */}
+        {activeTab === "settings" && (
+          <CustomerSettingsView />
+        )}
+      </div>
 
       {/* FULL SPECIALIST PROFILE MODAL (WITH STANDARD ← BACK BUTTON) */}
       <SpecialistProfileModal
@@ -1561,6 +1618,6 @@ export const CustomerDashboardPage: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </CustomerAppShell>
   );
 };

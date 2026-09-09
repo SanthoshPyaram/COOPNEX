@@ -72,9 +72,9 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
   };
 
   return (
-    <div className={`flex flex-col items-center space-y-4 max-w-md mx-auto select-none ${className}`}>
+    <div className={`worker-smart-id-print-zone flex flex-col items-center space-y-4 max-w-md mx-auto select-none ${className}`}>
       {/* Top Action Bar */}
-      <div className="w-full flex items-center justify-between px-2 text-xs">
+      <div className="w-full flex items-center justify-between px-2 text-xs no-print">
         <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-bold font-mono">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span>OFFICIAL COOPERATIVE SMART ID</span>
@@ -90,18 +90,20 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
         </button>
       </div>
 
-      {/* 3D FLIPPABLE ID CARD CONTAINER */}
-      <div className="w-full [perspective:1000px]">
+      {/* 3D FLIPPABLE ID CARD CONTAINER (SCREEN ONLY) */}
+      <div className="w-full [perspective:1000px] print:hidden">
         <motion.div
           animate={{ rotateY: isFlipped ? 180 : 0 }}
           transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 25 }}
-          className="w-full relative [transform-style:preserve-3d] min-h-[440px]"
+          className="w-full relative min-h-[460px]"
+          style={{ transformStyle: "preserve-3d" }}
         >
           {/* ============================================================= */}
           {/* FRONT FACE OF SMART ID CARD                                   */}
           {/* ============================================================= */}
           <div
-            className={`w-full rounded-3xl p-5 sm:p-6 text-slate-900 border-2 border-emerald-600/40 shadow-2xl relative overflow-hidden bg-gradient-to-br from-[#FCFBF7] via-[#F3F9F5] to-[#E5F3EC] dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 dark:text-white [backface-visibility:hidden] ${
+            style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
+            className={`w-full h-full rounded-3xl p-5 sm:p-6 text-slate-900 border-2 border-emerald-600/40 shadow-2xl relative overflow-hidden bg-gradient-to-br from-[#FCFBF7] via-[#F3F9F5] to-[#E5F3EC] dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 dark:text-white ${
               isFlipped ? "pointer-events-none" : ""
             }`}
           >
@@ -252,7 +254,8 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
           {/* BACK FACE OF SMART ID CARD (HIGH RESOLUTION QR CODE)           */}
           {/* ============================================================= */}
           <div
-            className={`w-full rounded-3xl p-5 sm:p-6 text-slate-900 border-2 border-emerald-600/40 shadow-2xl relative overflow-hidden bg-gradient-to-br from-[#101828] via-[#0F172A] to-[#020617] text-white [transform:rotateY(180deg)] [backface-visibility:hidden] absolute inset-0 flex flex-col justify-between ${
+            style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+            className={`w-full h-full rounded-3xl p-5 sm:p-6 text-slate-900 border-2 border-emerald-600/40 shadow-2xl relative overflow-hidden bg-gradient-to-br from-[#101828] via-[#0F172A] to-[#020617] text-white absolute inset-0 flex flex-col justify-between ${
               !isFlipped ? "pointer-events-none" : ""
             }`}
           >
@@ -348,8 +351,60 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
         </motion.div>
       </div>
 
+      {/* ============================================================= */}
+      {/* PRINT-ONLY TWO-SIDED CARD TEMPLATE                            */}
+      {/* ============================================================= */}
+      <div className="hidden print:block w-full max-w-3xl mx-auto p-4 space-y-6 bg-white text-slate-900">
+        <div className="text-center border-b pb-2 mb-4">
+          <h2 className="text-base font-black uppercase text-blue-900 tracking-wider">
+            Ministry of Cooperation — National Cooperative Artisan Identity Pass
+          </h2>
+          <p className="text-[11px] text-slate-500">
+            Official Government Labour Co-op Physical Card (Cut along dashed line)
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-4 border-2 border-dashed border-slate-400 p-4 rounded-2xl">
+          {/* Front Print Card */}
+          <div className="border border-slate-300 p-4 rounded-xl bg-slate-50 space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+              <span className="font-bold text-xs text-blue-800">COOPNEX SMART ID (FRONT)</span>
+              <span className="font-mono text-xs font-bold text-slate-700">{data.employeeId}</span>
+            </div>
+            <div className="flex gap-3">
+              <img src={photo} alt={data.name} className="w-20 h-24 object-cover rounded-lg border border-slate-300" />
+              <div className="text-xs space-y-1">
+                <div className="font-black text-sm text-slate-900">{data.name}</div>
+                <div className="text-[10px] text-slate-600">Age: {data.age} | {data.gender || "Male"}</div>
+                <div className="text-[10px] font-bold text-rose-700">Blood Group: {data.bloodGroup}</div>
+                <div className="text-[10px] text-emerald-800 font-bold">{nsqfLevel}</div>
+                <div className="text-[10px] text-slate-600">{data.societyName}</div>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-slate-200 text-[9px] flex justify-between text-slate-500">
+              <span>Valid: {issueDate} - {validUntil}</span>
+              <span className="font-bold text-emerald-700">✓ UIDAI & Police Cleared</span>
+            </div>
+          </div>
+
+          {/* Back Print Card */}
+          <div className="border border-slate-300 p-4 rounded-xl bg-slate-900 text-white space-y-3 flex flex-col justify-between">
+            <div className="flex items-center justify-between border-b border-slate-700 pb-2">
+              <span className="font-bold text-xs text-emerald-400">COOPNEX SMART ID (BACK)</span>
+              <span className="font-mono text-xs text-slate-400">{data.employeeId}</span>
+            </div>
+            <div className="flex items-center justify-center p-2 bg-white rounded-lg w-28 h-28 mx-auto">
+              <QrCode className="w-24 h-24 text-slate-900" />
+            </div>
+            <div className="text-center text-[9px] text-slate-300 space-y-0.5">
+              <div>Scan QR code to audit official police & skill dossier</div>
+              <div className="text-emerald-400 font-mono">SOS: 1800-425-COOP | Insured: ₹2,00,000</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Action Buttons: Print & Download */}
-      <div className="w-full flex items-center justify-center gap-3 pt-2">
+      <div className="w-full flex items-center justify-center gap-3 pt-2 no-print">
         <button
           type="button"
           onClick={handlePrint}

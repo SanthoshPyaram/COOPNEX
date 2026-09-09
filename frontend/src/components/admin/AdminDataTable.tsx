@@ -56,7 +56,7 @@ export function AdminDataTable<T>({
   emptyMessage = "No records found matching current criteria.",
   onRowClick,
   actionsBar,
-  exportFileName = "sahakari-export"
+  exportFileName = "coopnex-export"
 }: AdminDataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string>>({});

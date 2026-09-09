@@ -40,7 +40,7 @@ import { ArchitecturePage } from "./pages/demo/ArchitecturePage";
 // Public Consumer Layout wrapper
 const PublicLayout: React.FC = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-teal-700 selection:text-white transition-colors">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-600 selection:text-white transition-colors">
       <PublicNavbar />
       <main className="flex-1">
         <Outlet />

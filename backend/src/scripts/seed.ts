@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import { User } from "../models/User";
 import { Worker } from "../models/Worker";
+import { Admin } from "../models/Admin";
 import { Federation } from "../models/Federation";
 import { Society } from "../models/Society";
 import { Booking } from "../models/Booking";
@@ -23,6 +24,7 @@ export async function seedDatabase() {
   await Promise.all([
     User.deleteMany({}),
     Worker.deleteMany({}),
+    Admin.deleteMany({}),
     Federation.deleteMany({}),
     Society.deleteMany({}),
     Booking.deleteMany({}),
@@ -32,6 +34,9 @@ export async function seedDatabase() {
 
   const salt = await bcrypt.genSalt(10);
   const passwordHash = await bcrypt.hash(SEED_PASSWORD, salt);
+  const workerDemoHash = await bcrypt.hash("Coopnex@Worker2026!", salt);
+  const adminDemoHash = await bcrypt.hash("Coopnex@Admin2026!", salt);
+  const customerDemoHash = await bcrypt.hash("Coopnex@Customer2026!", salt);
 
   console.log("[Seed] Creating Federations...");
   const federation = await Federation.create({
@@ -108,17 +113,28 @@ export async function seedDatabase() {
     welfareReserveAmount: 280000
   });
 
-  console.log("[Seed] Creating Demo Users for all 5 roles...");
-  // 1. Customer
+  console.log("[Seed] Creating Demo Users and Core Accounts...");
+  // 1. Customers
   const demoCustomer = await User.create({
     name: "K. Venkata Rao",
     email: "customer@sahakariseva.gov.in",
     phone: "+91 94401 55667",
-    passwordHash,
+    passwordHash: customerDemoHash,
     role: USER_ROLES.CUSTOMER,
     district: "Vijayawada",
     city: "Vijayawada",
     address: "Flat 402, Sri Sai Residency, Near Benz Circle, Vijayawada"
+  });
+
+  await User.create({
+    name: "K. Venkata Rao",
+    email: "customer@coopnex.local",
+    phone: "+91 94401 99999",
+    passwordHash: customerDemoHash,
+    role: USER_ROLES.CUSTOMER,
+    district: "Vijayawada",
+    city: "Vijayawada",
+    address: "Benz Circle, Vijayawada"
   });
 
   // 2. Society Admin
@@ -146,19 +162,85 @@ export async function seedDatabase() {
     federationId: federation._id
   });
 
-  // 4. Super Admin
+  // 4. Super Admin Accounts
+  await User.create({
+    name: "COOPNEX Super Admin",
+    email: "admin@coopnex.local",
+    phone: "+91 11 23380001",
+    passwordHash: adminDemoHash,
+    role: USER_ROLES.SUPER_ADMIN,
+    district: "New Delhi",
+    city: "New Delhi",
+    status: "ACTIVE"
+  });
+
   await User.create({
     name: "National Cooperative Registrar Admin",
     email: "super.admin@sahakariseva.gov.in",
     phone: "+91 11 23380000",
-    passwordHash,
+    passwordHash: adminDemoHash,
     role: USER_ROLES.SUPER_ADMIN,
     district: "New Delhi",
-    city: "New Delhi"
+    city: "New Delhi",
+    status: "ACTIVE"
+  });
+
+  await Admin.create({
+    adminId: "SUPER-ADM-01",
+    email: "admin@coopnex.local",
+    name: "COOPNEX Super Admin",
+    passwordHash: adminDemoHash,
+    role: "SUPER_ADMIN",
+    status: "ACTIVE",
+    mfaEnabled: false
+  });
+
+  // 5. Dedicated Demo Worker (Arjun Kumar - Employee ID: COOP-EMP-0001)
+  const arjunUser = await User.create({
+    employeeId: "COOP-EMP-0001",
+    name: "Arjun Kumar",
+    email: "worker.arjun@coopnex.local",
+    phone: "+91 98480 00001",
+    passwordHash: workerDemoHash,
+    role: USER_ROLES.WORKER,
+    district: "Vijayawada",
+    city: "Vijayawada",
+    societyId: societyVijayawada._id,
+    federationId: federation._id,
+    address: "Plot 12, Cooperative Colony, Vijayawada",
+    status: "ACTIVE"
+  });
+
+  await Worker.create({
+    userId: arjunUser._id,
+    workerIdNumber: "COOP-EMP-0001",
+    employeeId: "COOP-EMP-0001",
+    name: "Arjun Kumar",
+    phone: "+91 98480 00001",
+    email: "worker.arjun@coopnex.local",
+    avatarUrl: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=480&q=80",
+    societyId: societyVijayawada._id,
+    societyName: "COOPNEX Vijayawada Electrical Cooperative",
+    federationId: federation._id,
+    district: "Vijayawada",
+    location: {
+      type: "Point",
+      coordinates: [80.6480, 16.5062]
+    },
+    serviceRadiusKm: 20,
+    skills: ["Electrician"],
+    experienceYears: 7,
+    languages: ["Telugu", "Hindi", "English"],
+    verificationLevel: 4,
+    verificationStatus: "VERIFIED",
+    status: "ACTIVE",
+    rating: 4.9,
+    totalJobs: 156
   });
 
   // 5. Worker (Raj Kumar - The Protagonist of the SIH Winning Demo Journey)
   const rajUser = await User.create({
+    employeeId: "SS-AP-2026-104",
     name: "Raj Kumar",
     email: "worker.raj@sahakariseva.gov.in",
     phone: "+91 98480 22341",
@@ -175,6 +257,7 @@ export async function seedDatabase() {
   const rajWorker = await Worker.create({
     userId: rajUser._id,
     workerIdNumber: "SS-AP-2026-104",
+    employeeId: "SS-AP-2026-104",
     name: "Raj Kumar",
     phone: "+91 98480 22341",
     email: "worker.raj@sahakariseva.gov.in",
@@ -666,7 +749,9 @@ export async function seedDatabase() {
 
   for (let i = 0; i < fullWorkersList.length; i++) {
     const w = fullWorkersList[i];
+    const workerEmpId = `SS-AP-2026-${200 + i}`;
     const u = await User.create({
+      employeeId: workerEmpId,
       name: w.name,
       gender: w.gender,
       email: `worker.${w.name.toLowerCase().replace(/[^a-z]/g, "")}@sahakariseva.gov.in`,
@@ -773,7 +858,8 @@ export async function seedDatabase() {
 
     await Worker.create({
       userId: u._id,
-      workerIdNumber: `SS-AP-2026-${200 + i}`,
+      workerIdNumber: workerEmpId,
+      employeeId: workerEmpId,
       name: w.name,
       gender: w.gender,
       phone: u.phone,
@@ -819,7 +905,6 @@ export async function seedDatabase() {
       }
     });
   }
-
 
   console.log("[Seed] Creating Cooperative Workforce Exchange proposals...");
   await WorkforceExchange.create([
@@ -912,14 +997,17 @@ export async function seedDatabase() {
   });
 
   console.log("===================================================================");
-  console.log(" 🎉 DATABASE SEEDING COMPLETED SUCCESSFULLY!");
+  console.log(" 🎉 COOPNEX DATABASE SEEDING COMPLETED SUCCESSFULLY!");
   console.log("===================================================================");
-  console.log(" DEMO CREDENTIALS (Password for all: DemoPassword123!):");
-  console.log(" 1. CUSTOMER:         customer@sahakariseva.gov.in");
-  console.log(" 2. WORKER (Raj):     worker.raj@sahakariseva.gov.in");
-  console.log(" 3. SOCIETY ADMIN:    society.admin@sahakariseva.gov.in");
-  console.log(" 4. FEDERATION ADMIN: federation.admin@sahakariseva.gov.in");
-  console.log(" 5. SUPER ADMIN:      super.admin@sahakariseva.gov.in");
+  console.log(" DEMO CREDENTIALS:");
+  console.log(" 1. CUSTOMER:    customer@sahakariseva.gov.in (or customer@coopnex.local)");
+  console.log("                 Password: Coopnex@Customer2026! (or DemoPassword123!)");
+  console.log(" 2. WORKER:      Employee ID: COOP-EMP-0001 (Arjun Kumar)");
+  console.log("                 Password: Coopnex@Worker2026!");
+  console.log(" 3. WORKER(Raj): Employee ID: SS-AP-2026-104 (Raj Kumar)");
+  console.log("                 Password: DemoPassword123!");
+  console.log(" 4. SUPER ADMIN: admin@coopnex.local (or super.admin@sahakariseva.gov.in)");
+  console.log("                 Password: Coopnex@Admin2026!");
   console.log("===================================================================");
 
   await mongoose.disconnect();

@@ -1,6 +1,11 @@
 import { WorkerProfile, Booking, WorkforceExchangeProposal, HeatmapZone } from "../types";
 
-const API_BASE = "/api";
+const RAW_API_URL = import.meta.env.VITE_API_URL || "";
+export const API_BASE = RAW_API_URL
+  ? RAW_API_URL.endsWith("/api")
+    ? RAW_API_URL
+    : `${RAW_API_URL.replace(/\/$/, "")}/api`
+  : "/api";
 
 export const api = {
   // Workers
@@ -291,6 +296,15 @@ export const api = {
     } catch (e) {
       return { success: false, registeredDonors: 0 };
     }
+  },
+
+  workerLogin: async (employeeId: string, pass: string) => {
+    const res = await fetch(`${API_BASE}/auth/worker/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employeeId, password: pass })
+    });
+    return res.json();
   }
 };
 

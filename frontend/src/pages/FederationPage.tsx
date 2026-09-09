@@ -106,14 +106,14 @@ export const FederationPage: React.FC = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
               <Link to="/federation" className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-teal-600 text-slate-950 flex items-center justify-center font-bold">
+                <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold">
                   <HandHeart className="w-4 h-4" />
                 </div>
                 <span className="font-display font-black text-base text-white">
-                  COOPNEX <span className="text-teal-400">FEDERATION COMMAND</span>
+                  COOPNEX <span className="text-blue-400">FEDERATION COMMAND</span>
                 </span>
               </Link>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-teal-950 text-teal-300 border border-teal-800 hidden sm:inline">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-blue-950 text-blue-300 border border-blue-800 hidden sm:inline">
                 AP State Federation • Vijayawada Central
               </span>
             </div>
@@ -144,7 +144,7 @@ export const FederationPage: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-              <span className="text-xs uppercase font-bold text-teal-400 tracking-wider">
+              <span className="text-xs uppercase font-bold text-blue-400 tracking-wider">
                 State Federation Command Center
               </span>
             </div>
@@ -157,7 +157,7 @@ export const FederationPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="bg-teal-950 text-teal-300 border border-teal-600/40 text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+            <span className="bg-blue-950 text-blue-300 border border-blue-600/40 text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-amber-400" />
               Scikit-Learn ML Engine Active
             </span>
@@ -205,7 +205,7 @@ export const FederationPage: React.FC = () => {
           <div className="bg-slate-800/80 border border-slate-700/60 p-5 rounded-2xl">
             <span className="text-[11px] font-bold text-slate-400 uppercase">Total Federated Workers</span>
             <div className="text-2xl font-black text-white mt-1">3,840</div>
-            <span className="text-[10px] text-teal-400 font-semibold">14 Affiliated Societies</span>
+            <span className="text-[10px] text-blue-400 font-semibold">14 Affiliated Societies</span>
           </div>
 
           <div className="bg-slate-800/80 border border-slate-700/60 p-5 rounded-2xl">
@@ -234,7 +234,7 @@ export const FederationPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-teal-400" />
+                  <MapPin className="w-4 h-4 text-blue-400" />
                   GIS Demand Heatmap & Shortage Zones
                 </h3>
                 <p className="text-xs text-slate-400">
@@ -276,7 +276,7 @@ export const FederationPage: React.FC = () => {
             {selectedZone ? (
               <div className="space-y-3 text-xs">
                 <div className="p-3 rounded-2xl bg-slate-900 border border-slate-700">
-                  <span className="text-[10px] text-teal-400 font-bold uppercase block">Selected Territory</span>
+                  <span className="text-[10px] text-blue-400 font-bold uppercase block">Selected Territory</span>
                   <h4 className="text-base font-bold text-white mt-0.5">{selectedZone.zoneName}</h4>
                   <p className="text-slate-400 text-[11px]">{selectedZone.district} District</p>
                 </div>
@@ -300,7 +300,7 @@ export const FederationPage: React.FC = () => {
                   <div className="text-[10px] text-slate-400 mt-1">Top Trade: {selectedZone.topService}</div>
                 </div>
 
-                <div className="p-3 bg-teal-950/60 border border-teal-700/50 rounded-xl text-teal-200 text-[11px]">
+                <div className="p-3 bg-blue-950/60 border border-blue-700/50 rounded-xl text-blue-200 text-[11px]">
                   <strong className="text-amber-300 block mb-1">AI Recommendation:</strong>
                   {selectedZone.aiRecommendation}
                 </div>
@@ -318,7 +318,7 @@ export const FederationPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-teal-400" />
+                <Layers className="w-4 h-4 text-blue-400" />
                 <h3 className="text-sm font-bold uppercase tracking-wider text-white">
                   COOPERATIVE WORKFORCE EXCHANGE (CROSS-SOCIETY BALANCING)
                 </h3>
@@ -327,7 +327,7 @@ export const FederationPage: React.FC = () => {
                 When one society experiences surplus while a neighbor has a deficit, AI formulates temporary deployment vectors. Admin approval required.
               </p>
             </div>
-            <span className="text-xs bg-teal-900 text-teal-300 px-3 py-1 rounded-full border border-teal-700 font-bold">
+            <span className="text-xs bg-blue-900 text-blue-300 px-3 py-1 rounded-full border border-blue-700 font-bold">
               Bipartite Optimization Solver
             </span>
           </div>
@@ -360,7 +360,7 @@ export const FederationPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <ArrowRight className="w-4 h-4 text-teal-400 flex-shrink-0" />
+                  <ArrowRight className="w-4 h-4 text-blue-400 flex-shrink-0" />
 
                   <div className="text-right">
                     <span className="text-[10px] text-slate-400 block uppercase">Deficit Target:</span>
@@ -381,7 +381,7 @@ export const FederationPage: React.FC = () => {
                   {exc.status !== "APPROVED" ? (
                     <button
                       onClick={() => handleApproveExchange(exc.exchangeCode)}
-                      className="bg-teal-600 hover:bg-teal-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 shadow-sm transition"
+                      className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 shadow-sm transition"
                     >
                       <Check className="w-3.5 h-3.5" />
                       <span>Approve Allocation</span>
@@ -404,7 +404,7 @@ export const FederationPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
-                  <Activity className="w-4 h-4 text-teal-400" />
+                  <Activity className="w-4 h-4 text-blue-400" />
                   AI 7-Day Demand Forecasting (Scikit-Learn)
                 </h3>
                 <p className="text-xs text-slate-400">
@@ -419,8 +419,8 @@ export const FederationPage: React.FC = () => {
                 <AreaChart data={forecastChartSeries} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorDemand" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#14b8a6" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorShortage" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.8} />
@@ -443,7 +443,7 @@ export const FederationPage: React.FC = () => {
                     type="monotone"
                     dataKey="demand"
                     name="Predicted Demand"
-                    stroke="#14b8a6"
+                    stroke="#3b82f6"
                     fillOpacity={1}
                     fill="url(#colorDemand)"
                   />
@@ -502,7 +502,7 @@ export const FederationPage: React.FC = () => {
               ))}
             </div>
 
-            <div className="p-3 bg-teal-950 border border-teal-800 rounded-xl text-[11px] text-teal-200">
+            <div className="p-3 bg-blue-950 border border-blue-800 rounded-xl text-[11px] text-blue-200">
               <strong className="text-amber-300 block mb-1">State Skill Council Directive:</strong>
               Conduct 3-day certified fast-track training camp for 12 Caregivers and 14 Plumbers in Krishna/Guntur districts.
             </div>

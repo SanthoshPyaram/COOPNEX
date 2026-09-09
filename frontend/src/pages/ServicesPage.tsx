@@ -223,7 +223,7 @@ export const ServicesPage: React.FC = () => {
                 }}
                 className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition ${
                   selectedService === cat
-                    ? "bg-teal-800 text-white shadow-xs"
+                    ? "bg-blue-600 text-white shadow-xs"
                     : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                 }`}
               >
@@ -247,7 +247,7 @@ export const ServicesPage: React.FC = () => {
 
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 text-slate-600 font-medium">
-                <MapPin className="w-3.5 h-3.5 text-teal-700" />
+                <MapPin className="w-3.5 h-3.5 text-blue-600" />
                 <span>Benz Circle, Vijayawada</span>
               </div>
 
@@ -283,7 +283,7 @@ export const ServicesPage: React.FC = () => {
                     setSearchQuery("");
                     setMinRating(0);
                   }}
-                  className="px-4 py-2 bg-teal-800 text-white text-xs font-bold rounded-xl hover:bg-teal-900 transition cursor-pointer"
+                  className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition cursor-pointer"
                 >
                   Reset Filters & View Available {selectedService}s
                 </button>
@@ -321,7 +321,7 @@ export const ServicesPage: React.FC = () => {
                         <span>•</span>
                         <span>{w.experienceYears} yrs exp</span>
                         <span>•</span>
-                        <span className="text-teal-700 font-semibold">{1.4 + idx * 0.5} km</span>
+                        <span className="text-blue-600 font-semibold">{1.4 + idx * 0.5} km</span>
                       </div>
                     </div>
                   </div>
@@ -332,7 +332,7 @@ export const ServicesPage: React.FC = () => {
                       <strong className="text-slate-900 text-sm font-black">₹{w.baseHourlyRate || 450}</strong>
                     </div>
                     <div className="text-right">
-                      <span className="text-[10px] text-teal-700 font-bold block">85% Direct Take-Home</span>
+                      <span className="text-[10px] text-blue-700 font-bold block">85% Direct Take-Home</span>
                       <span className="text-[10px] text-slate-400">Zero commission cut</span>
                     </div>
                   </div>
@@ -342,7 +342,7 @@ export const ServicesPage: React.FC = () => {
                       setSelectedWorker(w);
                       setBookingStep(1);
                     }}
-                    className="w-full py-2.5 bg-teal-800 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-xs transition"
+                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
                   >
                     Book {w.name.split(" ")[0]}
                   </button>
@@ -357,14 +357,14 @@ export const ServicesPage: React.FC = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
             <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
               {/* Header */}
-              <div className="bg-teal-900 text-white p-5 flex items-center justify-between">
+              <div className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white p-5 flex items-center justify-between">
                 <div>
                   <h3 className="font-bold text-base">Book {selectedWorker.name}</h3>
-                  <p className="text-xs text-teal-200">{selectedService} • Level {selectedWorker.verificationLevel} Verified</p>
+                  <p className="text-xs text-blue-100">{selectedService} • Level {selectedWorker.verificationLevel} Verified</p>
                 </div>
                 <button
                   onClick={() => setSelectedWorker(null)}
-                  className="text-teal-200 hover:text-white text-lg font-bold"
+                  className="text-blue-200 hover:text-white text-lg font-bold cursor-pointer"
                 >
                   ✕
                 </button>
@@ -384,7 +384,7 @@ export const ServicesPage: React.FC = () => {
                         placeholder="e.g. Switchboard sparking, fan regulator loose, light fixture repair..."
                         value={issueDescription}
                         onChange={(e) => setIssueDescription(e.target.value)}
-                        className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-teal-700 focus:outline-hidden"
+                        className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-600 focus:outline-hidden"
                       />
                     </div>
 
@@ -406,7 +406,7 @@ export const ServicesPage: React.FC = () => {
                           onClick={() => setBookingTimeType("NOW")}
                           className={`p-2.5 rounded-xl border font-semibold text-xs ${
                             bookingTimeType === "NOW"
-                              ? "border-teal-700 bg-teal-50 text-teal-900"
+                              ? "border-blue-600 bg-blue-50 text-blue-900"
                               : "border-slate-200 text-slate-600"
                           }`}
                         >
@@ -417,7 +417,7 @@ export const ServicesPage: React.FC = () => {
                           onClick={() => setBookingTimeType("SCHEDULE")}
                           className={`p-2.5 rounded-xl border font-semibold text-xs ${
                             bookingTimeType === "SCHEDULE"
-                              ? "border-teal-700 bg-teal-50 text-teal-900"
+                              ? "border-blue-600 bg-blue-50 text-blue-900"
                               : "border-slate-200 text-slate-600"
                           }`}
                         >
@@ -428,7 +428,7 @@ export const ServicesPage: React.FC = () => {
 
                     <button
                       onClick={() => setBookingStep(2)}
-                      className="w-full py-3 bg-teal-800 hover:bg-teal-700 text-white font-bold rounded-xl text-xs transition"
+                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition cursor-pointer"
                     >
                       Next: Inspect Transparent Pricing
                     </button>
@@ -455,14 +455,14 @@ export const ServicesPage: React.FC = () => {
                     <div className="flex gap-2">
                       <button
                         onClick={() => setBookingStep(1)}
-                        className="w-1/3 py-2.5 border border-slate-200 rounded-xl font-semibold text-slate-700"
+                        className="w-1/3 py-2.5 border border-slate-200 rounded-xl font-semibold text-slate-700 cursor-pointer"
                       >
                         Back
                       </button>
                       <button
                         onClick={handleProceedToPayment}
                         disabled={isProcessing}
-                        className="w-2/3 py-2.5 bg-teal-800 hover:bg-teal-700 text-white font-bold rounded-xl text-xs transition"
+                        className="w-2/3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition cursor-pointer"
                       >
                         {isProcessing ? "Initiating..." : "Confirm & Deposit to Escrow"}
                       </button>
@@ -473,7 +473,7 @@ export const ServicesPage: React.FC = () => {
                 {/* Step 3: Escrow Payment Authorization */}
                 {bookingStep === 3 && (
                   <div className="space-y-4 text-center">
-                    <div className="w-12 h-12 rounded-full bg-teal-100 text-teal-800 flex items-center justify-center mx-auto">
+                    <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center mx-auto">
                       <CreditCard className="w-6 h-6" />
                     </div>
                     <h4 className="font-bold text-base text-slate-900">Cooperative Trust Deposit</h4>
@@ -508,7 +508,7 @@ export const ServicesPage: React.FC = () => {
                           setSelectedWorker(null);
                           if (isAuthenticated) navigate("/app");
                         }}
-                        className="w-full py-2.5 bg-teal-800 text-white font-bold rounded-xl text-xs"
+                        className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs cursor-pointer"
                       >
                         {isAuthenticated ? "Go to Dashboard" : "Done"}
                       </button>

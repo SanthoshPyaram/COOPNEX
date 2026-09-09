@@ -25,6 +25,7 @@ apiRouter.get("/location/states", locationCtrl.getStates);
 // --- AUTHENTICATION & REAL-TIME OTP ---
 apiRouter.post("/auth/register", authCtrl.register);
 apiRouter.post("/auth/login", authCtrl.login);
+apiRouter.post("/auth/worker/login", authCtrl.workerLogin);
 apiRouter.post("/auth/demo-login", authCtrl.demoLogin);
 apiRouter.post("/auth/emailjs/record-otp", authCtrl.recordEmailJsOtp);
 apiRouter.post("/auth/send-otp", authCtrl.sendOtp);

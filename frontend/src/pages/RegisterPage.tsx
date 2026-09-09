@@ -5,8 +5,7 @@ import { CoopnexLogo } from "../components/brand/CoopnexLogo";
 import { useAuth } from "../context/AuthContext";
 import { checkLocalPincode } from "../data/indiaLocations";
 import { AnimatedCoopBackground } from "../components/animations/AnimatedCoopBackground";
-import { CartoonWorkerMascot } from "../components/animations/CartoonWorkerMascot";
-import { CartoonPasswordMascot } from "../components/animations/CartoonPasswordMascot";
+import { LanguageDropdown } from "../components/LanguageDropdown";
 import {
   User,
   Mail,
@@ -304,6 +303,14 @@ export const RegisterPage: React.FC = () => {
 
   return (
     <AnimatedCoopBackground className="min-h-screen bg-[#FFFDF7] dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 flex flex-col justify-center transition-colors">
+      {/* Top Utility Bar */}
+      <div className="max-w-2xl mx-auto w-full flex items-center justify-between mb-2">
+        <Link to="/" className="text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-[#2563EB] transition">
+          &larr; Back to Home
+        </Link>
+        <LanguageDropdown variant="pill" />
+      </div>
+
       <div className="max-w-2xl mx-auto w-full space-y-6 relative z-10">
         {/* Brand Header */}
         <div className="text-center space-y-2">
@@ -369,7 +376,7 @@ export const RegisterPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate(selectedRole === "WORKER" ? "/worker" : "/app")}
-                className="w-full max-w-md mx-auto bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black py-3 px-5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full max-w-md mx-auto bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white font-black py-3 px-5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>PROCEED TO COOPNEX DASHBOARD</span>
                 <ArrowRight className="w-4 h-4 text-amber-300" />
@@ -407,8 +414,10 @@ export const RegisterPage: React.FC = () => {
               </div>
 
               {selectedRole === "WORKER" && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl flex items-center gap-3 text-xs text-amber-900 dark:text-amber-200">
-                  <CartoonWorkerMascot size="sm" className="w-12 h-12 shrink-0" />
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl flex items-center gap-3 text-xs text-blue-900">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0 text-[#2563EB]">
+                    <Briefcase className="w-5 h-5" />
+                  </div>
                   <div>
                     <span className="font-bold block">Artisan &amp; Worker Onboarding</span>
                     <span>Verified cooperative workers receive identity verification, trade assessment, and fair wage protection.</span>
@@ -734,17 +743,41 @@ export const RegisterPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Dynamic Cartoon Password Mascot */}
-              <CartoonPasswordMascot
-                password={password}
-                strengthScore={strength.score}
-                strengthLabel={strength.label}
-                showPassword={showPassword}
-                hasMin8={passwordHasMin8}
-                hasNumber={passwordHasNumber}
-                hasUpper={passwordHasUpper}
-                hasSpecial={passwordHasSpecial}
-              />
+              {/* Modern Password Security Meter */}
+              {password && (
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-600 dark:text-slate-400">Password Strength:</span>
+                    <span className={`font-black ${
+                      strength.score >= 75 ? "text-emerald-600 dark:text-emerald-400" :
+                      strength.score >= 50 ? "text-amber-600 dark:text-amber-400" :
+                      "text-rose-600 dark:text-rose-400"
+                    }`}>
+                      {strength.label}
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-300 ${strength.color}`}
+                      style={{ width: `${strength.score}%` }}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 pt-1 text-[11px]">
+                    <span className={`flex items-center gap-1 ${passwordHasMin8 ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-slate-400"}`}>
+                      <CheckCircle2 className="w-3 h-3" /> Min 8 Characters
+                    </span>
+                    <span className={`flex items-center gap-1 ${passwordHasNumber ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-slate-400"}`}>
+                      <CheckCircle2 className="w-3 h-3" /> Contains Number
+                    </span>
+                    <span className={`flex items-center gap-1 ${passwordHasUpper ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-slate-400"}`}>
+                      <CheckCircle2 className="w-3 h-3" /> Uppercase Letter
+                    </span>
+                    <span className={`flex items-center gap-1 ${passwordHasSpecial ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-slate-400"}`}>
+                      <CheckCircle2 className="w-3 h-3" /> Special Symbol
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Pincode & Region */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -783,7 +816,7 @@ export const RegisterPage: React.FC = () => {
                   disabled={!isFormValid || isSubmitting}
                   className={`w-full py-3.5 px-5 rounded-xl font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
                     isFormValid
-                      ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-500/20"
+                      ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white shadow-blue-500/20"
                       : "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300/40 dark:border-slate-700/40"
                   }`}
                 >

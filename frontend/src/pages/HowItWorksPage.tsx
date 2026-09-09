@@ -18,7 +18,7 @@ export const HowItWorksPage: React.FC = () => {
       <div className="max-w-5xl mx-auto space-y-12">
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto space-y-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-teal-800">
+          <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
             Transparent Experience
           </span>
           <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
@@ -32,7 +32,7 @@ export const HowItWorksPage: React.FC = () => {
         {/* 4 Steps Visual Flow */}
         <div className="space-y-6">
           <div className="p-8 rounded-3xl border border-slate-200 bg-stone-50/60 flex flex-col md:flex-row items-start gap-6">
-            <div className="w-12 h-12 rounded-2xl bg-teal-800 text-white font-black text-lg flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-black text-lg flex items-center justify-center flex-shrink-0">
               01
             </div>
             <div className="space-y-2">
@@ -44,7 +44,7 @@ export const HowItWorksPage: React.FC = () => {
           </div>
 
           <div className="p-8 rounded-3xl border border-slate-200 bg-stone-50/60 flex flex-col md:flex-row items-start gap-6">
-            <div className="w-12 h-12 rounded-2xl bg-teal-800 text-white font-black text-lg flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-black text-lg flex items-center justify-center flex-shrink-0">
               02
             </div>
             <div className="space-y-2">
@@ -56,7 +56,7 @@ export const HowItWorksPage: React.FC = () => {
           </div>
 
           <div className="p-8 rounded-3xl border border-slate-200 bg-stone-50/60 flex flex-col md:flex-row items-start gap-6">
-            <div className="w-12 h-12 rounded-2xl bg-teal-800 text-white font-black text-lg flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-black text-lg flex items-center justify-center flex-shrink-0">
               03
             </div>
             <div className="space-y-2">
@@ -68,7 +68,7 @@ export const HowItWorksPage: React.FC = () => {
           </div>
 
           <div className="p-8 rounded-3xl border border-slate-200 bg-stone-50/60 flex flex-col md:flex-row items-start gap-6">
-            <div className="w-12 h-12 rounded-2xl bg-teal-800 text-white font-black text-lg flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-black text-lg flex items-center justify-center flex-shrink-0">
               04
             </div>
             <div className="space-y-2">
@@ -81,9 +81,9 @@ export const HowItWorksPage: React.FC = () => {
         </div>
 
         {/* CTA */}
-        <div className="p-8 rounded-3xl bg-teal-900 text-white text-center space-y-4">
+        <div className="p-8 rounded-3xl bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 text-white text-center space-y-4">
           <h2 className="text-2xl font-bold">Ready to book a verified worker?</h2>
-          <p className="text-xs text-teal-200 max-w-md mx-auto">
+          <p className="text-xs text-blue-100 max-w-md mx-auto">
             Experience community-owned digital services with complete transparency.
           </p>
           <Link

@@ -122,7 +122,7 @@ export const AdminSecurityPinModal: React.FC<AdminSecurityPinModalProps> = ({
         className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden relative"
       >
         {/* Top Header Strip */}
-        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-teal-700 p-6 text-white relative">
+        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 p-6 text-white relative">
           <button
             type="button"
             onClick={onClose}

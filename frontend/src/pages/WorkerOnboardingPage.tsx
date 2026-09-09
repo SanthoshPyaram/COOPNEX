@@ -37,8 +37,8 @@ import {
   Eye,
   EyeOff
 } from "lucide-react";
-import { CartoonWorkerMascot } from "../components/animations/CartoonWorkerMascot";
 import { WorkerSmartIdCard } from "../components/WorkerSmartIdCard";
+import { LanguageDropdown } from "../components/LanguageDropdown";
 
 const ONBOARDING_LANGUAGES = [
   "Telugu",
@@ -342,14 +342,30 @@ export const WorkerOnboardingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#FFFDF7] py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto space-y-8">
-        {/* Header with Cartoon Mascot */}
+        {/* Header with Authentic Cooperative Branding & Language Selector */}
+        <div className="flex justify-end">
+          <LanguageDropdown variant="pill" />
+        </div>
         <div className="text-center space-y-3">
           <Link to="/" className="inline-flex items-center gap-2.5">
             <CoopnexLogo variant="full" size="lg" />
           </Link>
           
           <div className="flex justify-center my-2">
-            <CartoonWorkerMascot size="sm" gender={gender === "Female" ? "woman" : "man"} />
+            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-orange-50 border border-orange-200/80 shadow-xs">
+              <img
+                src={gender === "Female"
+                  ? "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&q=80"
+                  : "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=100&q=80"
+                }
+                alt="Cooperative Member"
+                className="w-8 h-8 rounded-full object-cover ring-2 ring-[#FF6B00]"
+              />
+              <div className="text-left">
+                <span className="block text-[11px] font-black text-slate-800 leading-tight">National Cooperative Federation</span>
+                <span className="block text-[10px] text-amber-700 font-medium">Certified Artisan Direct Membership</span>
+              </div>
+            </div>
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900">
@@ -375,15 +391,15 @@ export const WorkerOnboardingPage: React.FC = () => {
         {!submitted && (
           <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-xs">
             <div className="flex items-center justify-between text-xs font-bold text-slate-500 mb-2 px-1">
-              <span className={step >= 1 ? "text-[#0B5D5A] font-black" : ""}>1. Personal & OTP</span>
-              <span className={step >= 2 ? "text-[#0B5D5A] font-black" : ""}>2. Trade</span>
-              <span className={step >= 3 ? "text-[#0B5D5A] font-black" : ""}>3. 5-Doc KYC</span>
-              <span className={step >= 4 ? "text-[#0B5D5A] font-black" : ""}>4. Society</span>
-              <span className={step >= 5 ? "text-[#0B5D5A] font-black" : ""}>5. Compact</span>
+              <span className={step >= 1 ? "text-blue-600 font-black" : ""}>1. Personal & OTP</span>
+              <span className={step >= 2 ? "text-blue-600 font-black" : ""}>2. Trade</span>
+              <span className={step >= 3 ? "text-blue-600 font-black" : ""}>3. 5-Doc KYC</span>
+              <span className={step >= 4 ? "text-blue-600 font-black" : ""}>4. Society</span>
+              <span className={step >= 5 ? "text-blue-600 font-black" : ""}>5. Compact</span>
             </div>
             <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
               <div
-                className="bg-gradient-to-r from-[#0B5D5A] via-[#166534] to-[#E7A93B] h-2 rounded-full transition-all duration-300"
+                className="bg-gradient-to-r from-blue-600 via-indigo-600 to-amber-500 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${(step / 5) * 100}%` }}
               />
             </div>
@@ -421,7 +437,7 @@ export const WorkerOnboardingPage: React.FC = () => {
               {/* GENERATED SMART ID CARD */}
               <div className="py-6 border-y border-slate-200/90 my-2 space-y-4 bg-slate-50/50 rounded-3xl p-4">
                 <div className="max-w-md mx-auto text-center space-y-1">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0B5D5A] text-white text-xs font-bold font-mono shadow-xs">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-bold font-mono shadow-xs">
                     <Sparkles className="w-3.5 h-3.5 text-amber-300" />
                     <span>OFFICIAL WORKER COOPERATIVE SMART ID</span>
                   </div>
@@ -466,7 +482,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-500 font-medium">Trade Specialization:</span>
-                    <span className="font-bold text-[#0B5D5A]">{primarySkill}</span>
+                    <span className="font-bold text-blue-600">{primarySkill}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-500 font-medium">Blood Group:</span>
@@ -506,7 +522,7 @@ export const WorkerOnboardingPage: React.FC = () => {
 
                 <button
                   onClick={() => navigate("/worker")}
-                  className="w-full sm:w-auto px-6 py-3 rounded-full bg-gradient-to-r from-[#084644] via-[#0B5D5A] to-[#166534] hover:from-[#0B5D5A] hover:to-[#084644] text-white font-black text-xs transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                  className="w-full sm:w-auto px-6 py-3 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-300" />
                   <span>Enter Worker Console Now</span>
@@ -534,7 +550,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                         placeholder="e.g. Rajesh Kumar"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-[#0B5D5A]"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                       />
                     </div>
 
@@ -545,7 +561,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                       <select
                         value={gender}
                         onChange={(e) => setGender(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-[#0B5D5A]"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                       >
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
@@ -572,7 +588,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                           setPhone(e.target.value.replace(/\D/g, ""));
                           setError(null);
                         }}
-                        className="w-full bg-white border border-slate-300 rounded-xl pl-12 pr-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-[#0B5D5A]"
+                        className="w-full bg-white border border-slate-300 rounded-xl pl-12 pr-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                       />
                     </div>
                   </div>
@@ -625,7 +641,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                           }}
                           className={`w-full bg-white border ${
                             emailOtpVerified ? "border-emerald-500 bg-emerald-50/20" : "border-slate-300"
-                          } rounded-xl pl-10 pr-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-[#0B5D5A]`}
+                          } rounded-xl pl-10 pr-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600`}
                         />
                       </div>
                       {!emailOtpVerified ? (
@@ -641,7 +657,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                           className={`px-4 py-2 text-white text-xs font-bold rounded-xl transition shrink-0 shadow-xs cursor-pointer disabled:opacity-50 ${
                             emailOtpJustSent
                               ? "bg-emerald-600 cursor-default"
-                              : "bg-[#0B5D5A] hover:bg-[#084644]"
+                              : "bg-blue-600 hover:bg-blue-700"
                           }`}
                         >
                           {isSendingEmailOtp ? (
@@ -704,7 +720,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                             type="button"
                             onClick={handleVerifyEmailOtp}
                             disabled={isVerifyingEmailOtp || emailOtpInput.trim().length !== 6}
-                            className="px-4 py-1.5 bg-[#0B5D5A] hover:bg-[#084644] text-white rounded-lg text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+                            className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 cursor-pointer"
                           >
                             {isVerifyingEmailOtp ? "Verifying..." : "Confirm OTP"}
                           </button>
@@ -737,7 +753,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                             placeholder="Enter password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-[#0B5D5A]"
+                            className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                           />
                           <button
                             type="button"
@@ -767,7 +783,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                                 : confirmPassword && confirmPassword === password
                                 ? "border-emerald-500"
                                 : "border-slate-300"
-                            } rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-[#0B5D5A]`}
+                            } rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600`}
                           />
                         </div>
                       </div>
@@ -785,7 +801,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                         max={70}
                         value={age}
                         onChange={(e) => setAge(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-[#0B5D5A]"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                       />
                     </div>
                     <div>
@@ -795,7 +811,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                       <select
                         value={district}
                         onChange={(e) => setDistrict(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-[#0B5D5A]"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                       >
                         <option value="Vijayawada">Vijayawada (NTR District)</option>
                         <option value="Guntur">Guntur District</option>
@@ -809,10 +825,10 @@ export const WorkerOnboardingPage: React.FC = () => {
                   <div className="p-4 bg-slate-50/90 rounded-2xl border border-slate-200 space-y-3">
                     <div className="flex items-center justify-between">
                       <strong className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                        <Award className="w-3.5 h-3.5 text-[#0B5D5A]" />
+                        <Award className="w-3.5 h-3.5 text-blue-600" />
                         <span>Smart ID Card Photo &amp; Blood Group *</span>
                       </strong>
-                      <span className="text-[10px] font-bold text-[#0B5D5A] bg-[#EAF7F1] px-2.5 py-0.5 rounded-full border border-[#0B5D5A]/20">
+                      <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
                         Printed on ID &amp; QR
                       </span>
                     </div>
@@ -824,11 +840,11 @@ export const WorkerOnboardingPage: React.FC = () => {
                           <img
                             src={photoPreview}
                             alt="Worker Avatar"
-                            className="w-14 h-14 rounded-2xl object-cover border-2 border-[#0B5D5A] shadow-xs"
+                            className="w-14 h-14 rounded-2xl object-cover border-2 border-blue-500 shadow-xs"
                           />
                           <label
                             htmlFor="worker-photo-upload"
-                            className="absolute -bottom-1 -right-1 bg-[#0B5D5A] text-white p-1 rounded-full cursor-pointer hover:bg-[#084644] transition shadow-xs"
+                            className="absolute -bottom-1 -right-1 bg-blue-600 text-white p-1 rounded-full cursor-pointer hover:bg-blue-700 transition shadow-xs"
                             title="Upload custom photo"
                           >
                             <Camera className="w-3 h-3" />
@@ -848,7 +864,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                           </span>
                           <label
                             htmlFor="worker-photo-upload"
-                            className="text-[11px] font-bold text-[#0B5D5A] hover:underline cursor-pointer inline-block mt-0.5"
+                            className="text-[11px] font-bold text-blue-600 hover:underline cursor-pointer inline-block mt-0.5"
                           >
                             Upload from Device →
                           </label>
@@ -864,7 +880,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                         <select
                           value={bloodGroup}
                           onChange={(e) => setBloodGroup(e.target.value)}
-                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-[#0B5D5A]"
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-600"
                         >
                           {ONBOARDING_BLOOD_GROUPS.map((bg) => (
                             <option key={bg} value={bg}>
@@ -880,10 +896,10 @@ export const WorkerOnboardingPage: React.FC = () => {
                   <div className="p-4 bg-slate-50/90 rounded-2xl border border-slate-200 space-y-2.5">
                     <div className="flex items-center justify-between">
                       <label className="block text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                        <Globe className="w-3.5 h-3.5 text-[#0B5D5A]" />
+                        <Globe className="w-3.5 h-3.5 text-blue-600" />
                         <span>Languages Known (Choose Multiple) *</span>
                       </label>
-                      <span className="text-[10px] font-bold text-[#0B5D5A] bg-[#EAF7F1] px-2.5 py-0.5 rounded-full border border-[#0B5D5A]/20">
+                      <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
                         {languagesKnown.length} Selected
                       </span>
                     </div>
@@ -900,7 +916,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                             onClick={() => toggleLanguage(lang)}
                             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
                               isSelected
-                                ? "bg-[#0B5D5A] text-white shadow-xs scale-105"
+                                ? "bg-blue-600 text-white shadow-xs scale-105"
                                 : "bg-white text-slate-700 border border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                             }`}
                           >
@@ -922,7 +938,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                       placeholder="Door number, street, landmark, pincode"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-[#0B5D5A]"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                     />
                   </div>
                 </div>
@@ -944,7 +960,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                       <select
                         value={primarySkill}
                         onChange={(e) => setPrimarySkill(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-[#0B5D5A]"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                       >
                         <option value="Electrician">Electrician (Residential & Commercial)</option>
                         <option value="Plumber">Plumber (Sanitary & Pipefitting)</option>
@@ -966,7 +982,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                       <select
                         value={experienceYears}
                         onChange={(e) => setExperienceYears(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-[#0B5D5A]"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                       >
                         <option value="1">Under 2 years (Apprentice)</option>
                         <option value="3">2 - 4 years (Skilled)</option>
@@ -985,7 +1001,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                       placeholder="e.g. Inverter Wiring, Submersible Pump Repair, Solar Panel Basics"
                       value={secondarySkills}
                       onChange={(e) => setSecondarySkills(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-[#0B5D5A]"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                     />
                   </div>
 
@@ -1362,13 +1378,13 @@ export const WorkerOnboardingPage: React.FC = () => {
                   </div>
 
                   {/* Pre-Check Button & Live Result */}
-                  <div className="p-4 bg-[#EAF7F1] border border-[#0B5D5A]/30 rounded-2xl space-y-3">
+                  <div className="p-4 bg-blue-50/50 border border-blue-200 rounded-2xl space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
                         <strong className="text-xs font-bold text-[#101828] block">
                           Algorithmic Pre-Check Engine
                         </strong>
-                        <span className="text-[11px] text-[#084644]">
+                        <span className="text-[11px] text-blue-900">
                           Run automated checksum validation before submitting your application
                         </span>
                       </div>
@@ -1398,7 +1414,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                             <span className="text-[11px] text-emerald-700">Tamper Risk: 0% (Low Risk). Ready for Society Onboarding.</span>
                           </div>
                         </div>
-                        <span className="bg-[#166534] text-white font-mono font-bold text-[10px] px-2 py-0.5 rounded-full">
+                        <span className="bg-emerald-600 text-white font-mono font-bold text-[10px] px-2 py-0.5 rounded-full">
                           SCORE: 0% RISK
                         </span>
                       </div>
@@ -1443,7 +1459,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                         onClick={() => setSelectedSociety(soc.name)}
                         className={`p-4 rounded-2xl border-2 cursor-pointer transition flex items-start justify-between ${
                           selectedSociety === soc.name
-                            ? "border-[#0B5D5A] bg-[#EAF7F1]/50"
+                            ? "border-blue-600 bg-blue-50/50"
                             : "border-slate-200 bg-white hover:border-slate-300"
                         }`}
                       >
@@ -1451,13 +1467,13 @@ export const WorkerOnboardingPage: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-xs text-slate-900">{soc.name}</span>
                             {soc.recommended && (
-                              <span className="bg-[#0B5D5A] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                              <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                                 Nearest to You
                               </span>
                             )}
                           </div>
                           <div className="text-[11px] text-slate-500 mt-0.5">{soc.address}</div>
-                          <div className="text-[11px] text-[#0B5D5A] font-semibold mt-1">
+                          <div className="text-[11px] text-blue-600 font-semibold mt-1">
                             {soc.members}
                           </div>
                         </div>
@@ -1466,7 +1482,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                           name="society"
                           checked={selectedSociety === soc.name}
                           onChange={() => setSelectedSociety(soc.name)}
-                          className="mt-1 text-[#0B5D5A] focus:ring-[#0B5D5A]"
+                          className="mt-1 text-blue-600 focus:ring-blue-500"
                         />
                       </div>
                     ))}
@@ -1504,7 +1520,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                         type="checkbox"
                         checked={agreedToFairWage}
                         onChange={(e) => setAgreedToFairWage(e.target.checked)}
-                        className="rounded text-[#0B5D5A] focus:ring-[#0B5D5A] w-4 h-4 mt-0.5"
+                        className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 mt-0.5"
                       />
                       <span>
                         I agree to uphold the <strong>Cooperative Fair Wage Floor</strong> and not solicit off-book cash surcharges.
@@ -1516,7 +1532,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                         type="checkbox"
                         checked={agreedToCode}
                         onChange={(e) => setAgreedToCode(e.target.checked)}
-                        className="rounded text-[#0B5D5A] focus:ring-[#0B5D5A] w-4 h-4 mt-0.5"
+                        className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 mt-0.5"
                       />
                       <span>
                         I accept the <strong>Worker Code of Conduct</strong> and agree to attend the in-person verification at my primary society.
@@ -1528,10 +1544,10 @@ export const WorkerOnboardingPage: React.FC = () => {
                   <div className="p-4 bg-slate-50/90 rounded-2xl border border-slate-200 space-y-2.5">
                     <div className="flex items-center justify-between">
                       <label className="block text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                        <FileCheck className="w-3.5 h-3.5 text-[#0B5D5A]" />
+                        <FileCheck className="w-3.5 h-3.5 text-blue-600" />
                         <span>Worker Digital Signature for Smart ID Card *</span>
                       </label>
-                      <span className="text-[10px] font-bold text-[#0B5D5A] bg-[#EAF7F1] px-2.5 py-0.5 rounded-full border border-[#0B5D5A]/20">
+                      <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
                         Cryptographically Sealed
                       </span>
                     </div>
@@ -1546,13 +1562,13 @@ export const WorkerOnboardingPage: React.FC = () => {
                           value={signatureText}
                           onChange={(e) => setSignatureText(e.target.value)}
                           placeholder="e.g. Rajesh Kumar"
-                          className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-medium focus:ring-2 focus:ring-[#0B5D5A]"
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-medium focus:ring-2 focus:ring-blue-600"
                         />
                       </div>
                       <div className="bg-white p-3 rounded-xl border border-slate-300 flex items-center justify-between">
                         <div>
                           <span className="text-[9px] text-slate-400 uppercase font-mono block">Signature Preview:</span>
-                          <span className="font-serif italic text-base font-bold text-[#084644] tracking-wider">
+                          <span className="font-serif italic text-base font-bold text-blue-950 tracking-wider">
                             {signatureText || name || "Rajesh Kumar"}
                           </span>
                         </div>
@@ -1595,7 +1611,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                     type="button"
                     disabled={isSubmitting}
                     onClick={handleSubmit}
-                    className="btn-primary !min-h-[46px] text-xs !py-2.5 !px-8 shadow-lg !bg-gradient-to-r !from-[#084644] !via-[#0B5D5A] !to-[#166534]"
+                    className="btn-primary !min-h-[46px] text-xs !py-2.5 !px-8 shadow-lg !bg-gradient-to-r !from-blue-600 !via-indigo-600 !to-blue-700"
                   >
                     <span>{isSubmitting ? "Submitting Application..." : "Submit 5 Documents for Society Verification"}</span>
                     <CheckCircle2 className="w-4 h-4" />

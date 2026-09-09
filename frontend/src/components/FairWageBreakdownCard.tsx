@@ -14,11 +14,11 @@ export const FairWageBreakdownCard: React.FC<FairWageProps> = ({ breakdown, comp
   const coopPct = Math.round((breakdown.cooperativeContribution / (breakdown.customerPaid || 1)) * 100);
 
   return (
-    <div className="bg-gradient-to-br from-teal-50/70 via-white to-emerald-50/50 border border-teal-200/80 rounded-2xl p-4 sm:p-5 shadow-sm text-slate-800">
+    <div className="bg-gradient-to-br from-blue-50/70 via-white to-indigo-50/40 border border-blue-200/80 rounded-2xl p-4 sm:p-5 shadow-sm text-slate-800">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-teal-100">
+      <div className="flex items-center justify-between pb-3 border-b border-blue-100">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-teal-700 text-amber-300 flex items-center justify-center font-bold">
+          <div className="w-8 h-8 rounded-lg bg-blue-600 text-amber-300 flex items-center justify-center font-bold">
             ₹
           </div>
           <div>
@@ -36,7 +36,7 @@ export const FairWageBreakdownCard: React.FC<FairWageProps> = ({ breakdown, comp
 
         <button
           onClick={() => setShowExplanation(!showExplanation)}
-          className="text-xs text-teal-700 hover:text-teal-900 font-medium flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-teal-200 transition"
+          className="text-xs text-blue-700 hover:text-blue-900 font-medium flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-blue-200 transition cursor-pointer"
         >
           <span>Fair Wage Insight</span>
           {showExplanation ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -62,11 +62,11 @@ export const FairWageBreakdownCard: React.FC<FairWageProps> = ({ breakdown, comp
         </div>
 
         <div className="text-center pl-1">
-          <div className="text-[10px] uppercase font-bold text-teal-800">Co-op Welfare Fund</div>
-          <div className="text-base sm:text-lg font-black text-teal-700">
+          <div className="text-[10px] uppercase font-bold text-blue-800">Co-op Welfare Fund</div>
+          <div className="text-base sm:text-lg font-black text-blue-700">
             ₹{breakdown.cooperativeContribution}
           </div>
-          <div className="text-[9px] text-teal-600 font-semibold">{coopPct}% Member Safety</div>
+          <div className="text-[9px] text-blue-600 font-semibold">{coopPct}% Member Safety</div>
         </div>
       </div>
 
@@ -122,11 +122,11 @@ export const FairWageBreakdownCard: React.FC<FairWageProps> = ({ breakdown, comp
           )}
 
           <div className="flex justify-between text-slate-600 py-0.5 border-t border-dashed border-slate-200 pt-1">
-            <span className="flex items-center gap-1.5 text-teal-800 font-medium">
-              <HeartHandshake className="w-3.5 h-3.5 text-teal-600" />
+            <span className="flex items-center gap-1.5 text-blue-800 font-medium">
+              <HeartHandshake className="w-3.5 h-3.5 text-blue-600" />
               Cooperative Welfare Fund (Health, Tools & Pension)
             </span>
-            <span className="font-semibold text-teal-800">+₹{breakdown.cooperativeContribution}</span>
+            <span className="font-semibold text-blue-800">+₹{breakdown.cooperativeContribution}</span>
           </div>
 
           {breakdown.taxGst > 0 && (
@@ -140,7 +140,7 @@ export const FairWageBreakdownCard: React.FC<FairWageProps> = ({ breakdown, comp
 
       {/* Expandable Explanation Panel */}
       {showExplanation && (
-        <div className="mt-3 p-3 bg-teal-900 text-teal-50 rounded-xl text-xs space-y-2 border border-teal-700 animate-fadeIn">
+        <div className="mt-3 p-3 bg-slate-900 text-slate-100 rounded-xl text-xs space-y-2 border border-blue-800 animate-fadeIn">
           <div className="font-bold flex items-center gap-1.5 text-amber-300">
             <ShieldCheck className="w-4 h-4" />
             Why is the wage structured this way?
@@ -151,7 +151,7 @@ export const FairWageBreakdownCard: React.FC<FairWageProps> = ({ breakdown, comp
             and travel allowance goes directly to the worker's wallet without platform deductions.
           </p>
           <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
-            <div className="bg-teal-800/80 p-2 rounded border border-teal-600/50">
+            <div className="bg-slate-800/80 p-2 rounded border border-slate-700">
               <span className="font-bold text-amber-300 block">Private App Aggregator:</span>
               Worker gets: ~₹420 out of ₹700 (55-60%)
             </div>

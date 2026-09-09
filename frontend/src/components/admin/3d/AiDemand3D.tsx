@@ -140,11 +140,11 @@ export const AiDemand3D: React.FC = () => {
     container.addEventListener("mousemove", handleMouseMove);
 
     let animId: number;
-    const clock = new THREE.Clock();
+    const startTime = performance.now();
 
     const animate = () => {
       animId = requestAnimationFrame(animate);
-      const elapsed = clock.getElapsedTime();
+      const elapsed = (performance.now() - startTime) / 1000;
 
       chartGroup.rotation.y = Math.sin(elapsed * 0.3) * 0.12;
 

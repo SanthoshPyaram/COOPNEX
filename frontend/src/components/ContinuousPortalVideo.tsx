@@ -582,8 +582,8 @@ export const VIDEO_NARRATIONS: Record<string, VideoNarrationContent> = {
         bgImageUrl: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=1200&q=80",
         title: "01. ಸಹಕಾರಿ ಕ್ರಾಂತಿ (0% ಕಮಿಷನ್)",
         subtitle: "ಖಾಸಗಿ ಕಂಪನಿಗಳ 25-35% ಕಮಿಷನ್ ರದ್ದು, 100% ನ್ಯಾಯಯುತ ವೇತನ ನೇರವಾಗಿ ಕಾರ್ಮಿಕರ ಖಾತೆಗೆ.",
-        narration: "ಸಹಕಾರಿ ಸೇವೆಗೆ ಸ್ವಾಗತ. ಖಾಸಗಿ ಮಧ್ಯವರ್ತಿಗಳ ಕಮಿಷನ್ ರದ್ದುಪಡಿಸಿ 100% ನ್ಯಾಯಯುತ ವೇತನವನ್ನು ನೇರವಾಗಿ ನುರಿತ ಕಾರ್ಮಿಕರಿಗೆ ತಲುಪಿಸುತ್ತೇವೆ.",
-        phoneticNarration: "Namaskara! Sahakari Sevege swagatha, Bharathada rashtriya sahakari karmika vedike. Madhyavarthigala commission raddu maadi 100% nyayayutha vethanavannu certified karmikarige direct talupisutthadhe.",
+        narration: "COOPNEX ಗೆ ಸ್ವಾಗತ. ಖಾಸಗಿ ಮಧ್ಯವರ್ತಿಗಳ ಕಮಿಷನ್ ರದ್ದುಪಡಿಸಿ 100% ನ್ಯಾಯಯುತ ವೇತನವನ್ನು ನೇರವಾಗಿ ನುರಿತ ಕಾರ್ಮಿಕರಿಗೆ ತಲುಪಿಸುತ್ತೇವೆ.",
+        phoneticNarration: "Namaskara! COOPNEX-ge swagatha, Bharathada rashtriya sahakari karmika vedike. Madhyavarthigala commission raddu maadi 100% nyayayutha vethanavannu certified karmikarige direct talupisutthadhe.",
         englishSub: "Zero intermediary fee. 100% of fair floor wage goes directly to certified technicians."
       },
       {
@@ -671,8 +671,8 @@ export const VIDEO_NARRATIONS: Record<string, VideoNarrationContent> = {
         bgImageUrl: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=1200&q=80",
         title: "01. सहकारी क्रांती (0% दलाली कमिशन)",
         subtitle: "खाजगी ॲप्सचे 25-35% कमिशन रद्द, 100% किमान वेतन थेट कामगाराच्या बँक खात्यात.",
-        narration: "सहकारी सेवेमध्ये आपले स्वागत आहे. मध्यस्थांचे कमिशन दूर करून 100% हक्काचे मानधन थेट तंत्रज्ञांच्या खात्यात पोहोचवले जाते.",
-        phoneticNarration: "Namaskar! Sahakari Seve madhe aple swagat aahe. Bharatacha rashtriya sahakari kamgar digital manch. Madhyasthanche commission sampvoon 100% manadhan thêt pramanit tantragyanchya bank khatyat jamate.",
+        narration: "COOPNEX मध्ये आपले स्वागत आहे. मध्यस्थांचे कमिशन दूर करून 100% हक्काचे मानधन थेट तंत्रज्ञांच्या खात्यात पोहोचवले जाते.",
+        phoneticNarration: "Namaskar! COOPNEX madhe aple swagat aahe. Bharatacha rashtriya sahakari kamgar digital manch. Madhyasthanche commission sampvoon 100% manadhan thêt pramanit tantragyanchya bank khatyat jamate.",
         englishSub: "Zero intermediary fee. 100% of fair floor wage goes directly to certified artisans."
       },
       {
@@ -712,7 +712,7 @@ export const VIDEO_NARRATIONS: Record<string, VideoNarrationContent> = {
         title: "03. सुरक्षितता ४-अंकी ओटीपी",
         subtitle: "लाईव्ह जीपीएस ट्रॅकिंग आणि ओळखपत्र पाहिल्यावरच ४-अंकी सुरक्षा ओटीपी सामायिक करा.",
         narration: "लाईव्ह जीपीएसने आगमन तपासा आणि ओळखपत्र पाहिल्यावरच आपला 4-अंकी सुरक्षा ओटीपी द्या.",
-        phoneticNarration: "Live GPS ne karagirache aagman track kara. Sahakari official photo ID card pahilyavarach apla 4-digit safety OTP share kara.",
+        phoneticNarration: "Live GPS ne karagirache aagman track kara. COOPNEX official photo ID card pahilyavarach apla 4-digit safety OTP share kara.",
         englishSub: "Track live on GPS. Share 4-digit safety OTP only after verifying official photo badge."
       },
       {
@@ -760,8 +760,8 @@ export const VIDEO_NARRATIONS: Record<string, VideoNarrationContent> = {
         bgImageUrl: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=1200&q=80",
         title: "০১. সমবায় পার্থক্য (০% কমিশন কর্তন)",
         subtitle: "বেসরকারি অ্যাপের ২৫-৩৫% কমিশন বাতিল, ১০০% ন্যায্য মজুরি সরাসরি শ্রমিকের অ্যাকাউন্টে।",
-        narration: "সহকারী সেবায় স্বাগতম। মধ্যস্থতাকারীদের কমিশন দূর করে ১০০% মজুরি সরাসরি কারিগরদের কাছে পৌঁছে দেওয়া হয়।",
-        phoneticNarration: "Nomoshkar! Sahakari Sebay swagotom. Bharoter jaateeyo somobay shromik platform. Moddhosthokari commission bondho kore 100% nyajjo mojoori shorashori certified karigor-der bank account-e pouchhe deoa hoy.",
+        narration: "COOPNEX-এ স্বাগতম। মধ্যস্থতাকারীদের কমিশন দূর করে ১০০% মজুরি সরাসরি কারিগরদের কাছে পৌঁছে দেওয়া হয়।",
+        phoneticNarration: "Nomoshkar! COOPNEX-e swagotom. Bharoter jaateeyo somobay shromik platform. Moddhosthokari commission bondho kore 100% nyajjo mojoori shorashori certified karigor-der bank account-e pouchhe deoa hoy.",
         englishSub: "Zero intermediary commission. 100% of fair floor wages go straight to certified technicians."
       },
       {

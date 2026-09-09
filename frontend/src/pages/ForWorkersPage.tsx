@@ -7,7 +7,8 @@ import {
   CheckCircle2,
   Calculator,
   Coins,
-  Droplet
+  Droplet,
+  Video
 } from "lucide-react";
 import { WorkerHero3D } from "../components/3d/webgl/WorkerHero3D";
 import { WorkerBenefitCard, WORKER_BENEFITS } from "../components/worker/WorkerBenefitCard";
@@ -17,6 +18,7 @@ import { WorkerEarnings3D } from "../components/3d/webgl/WorkerEarnings3D";
 import { WorkerCommunityNetwork3D } from "../components/3d/webgl/WorkerCommunityNetwork3D";
 import { WorkerFinalCta3D } from "../components/3d/webgl/WorkerFinalCta3D";
 import { WorkerTestimonialCard, WORKER_STORIES } from "../components/worker/WorkerTestimonialCard";
+import { WorkerTutorialVideo } from "../components/WorkerTutorialVideo";
 import "../styles/okaygo-gig.css";
 
 export const ForWorkersPage: React.FC = () => {
@@ -282,7 +284,29 @@ export const ForWorkersPage: React.FC = () => {
       </section>
 
       {/* ========================================================================= */}
-      {/* 10. FINAL CALL TO ACTION SHOWCASE                                         */}
+      {/* 10. ONBOARDING & SMART ID VIDEO GUIDE (PRE-LOGIN ORIENTATION)            */}
+      {/* ========================================================================= */}
+      <section id="orientation-video" className="py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto border-t border-slate-200">
+        <div className="text-center max-w-3xl mx-auto mb-10 space-y-3">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-black uppercase tracking-wider shadow-2xs">
+            <Video className="w-3.5 h-3.5 text-blue-600" />
+            <span>Worker Orientation Curriculum</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+            Worker Onboarding &amp; Smart ID Video Guide
+          </h2>
+          <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+            Watch our step-by-step curriculum before applying: 5-Document KYC verification, Smart ID Card QR backside scanning, customer OTP handshake, and 0% cut UPI payouts.
+          </p>
+        </div>
+
+        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xl">
+          <WorkerTutorialVideo />
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 11. FINAL CALL TO ACTION SHOWCASE                                         */}
       {/* ========================================================================= */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-slate-200">
         <WorkerFinalCta3D />

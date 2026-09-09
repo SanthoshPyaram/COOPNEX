@@ -20,7 +20,9 @@ import {
   ChevronDown,
   ChevronUp,
   Cpu,
-  HelpCircle
+  HelpCircle,
+  ArrowLeft,
+  Home
 } from "lucide-react";
 
 // Authentic UIDAI Dihedral D5 Verhoeff algorithm matrices
@@ -157,9 +159,30 @@ export const AdminPortalPage: React.FC = () => {
           </div>
         </Link>
 
-        <div className="flex items-center gap-2 text-xs font-mono text-slate-500">
-          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-          <span>Gateway Secure</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => navigate(-1)}
+              className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold flex items-center gap-1 transition cursor-pointer"
+              title="Go back"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline text-[11px]">Back</span>
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold flex items-center gap-1 transition cursor-pointer"
+              title="Return to National Home"
+            >
+              <Home className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline text-[11px]">Home</span>
+            </button>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-slate-500">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span>Gateway Secure</span>
+          </div>
         </div>
       </header>
 

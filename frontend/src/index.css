@@ -18,76 +18,269 @@
   --coopnex-success: #10B981;
 }
 
+/* =========================================================
+   BASE STYLES
+   ========================================================= */
+
 @layer base {
   body {
-    @apply bg-[#F8FAFC] text-[#172554] font-sans antialiased selection:bg-[#2563EB] selection:text-white;
+    @apply bg-[#F8FAFC] text-[#172554] font-sans antialiased
+      selection:bg-[#2563EB] selection:text-white;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply text-[#172554] tracking-tight font-bold;
   }
 }
 
+/* =========================================================
+   COOPNEX COMPONENT DESIGN SYSTEM
+   ========================================================= */
+
 @layer components {
-  /* =========================================================
-     COOPNEX BRAND DESIGN SYSTEM: BUTTON HIERARCHY
-     ========================================================= */
 
-  /* Primary CTA: Royal Blue → Indigo Gradient */
+  /* =======================================================
+     PRIMARY BUTTON
+     ======================================================= */
+
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 min-h-[42px] sm:min-h-[44px] rounded-xl font-semibold text-xs sm:text-sm text-white bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:from-[#1D4ED8] hover:to-[#4338CA] active:scale-[0.98] transition-all duration-200 shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/25 cursor-pointer disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2
+      px-5 py-2.5
+      min-h-[42px] sm:min-h-[44px]
+      rounded-xl
+      font-semibold
+      text-xs sm:text-sm
+      text-white
+      bg-gradient-to-r from-[#2563EB] to-[#4F46E5]
+      hover:from-[#1D4ED8] hover:to-[#4338CA]
+      active:scale-[0.98]
+      transition-all duration-200
+      shadow-md shadow-blue-500/20
+      hover:shadow-lg hover:shadow-blue-500/25
+      cursor-pointer
+      disabled:opacity-50
+      disabled:pointer-events-none;
   }
 
-  /* Secondary CTA: Crisp White with Blue Border & Blue Text */
+  /* =======================================================
+     SECONDARY BUTTON
+     ======================================================= */
+
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 min-h-[42px] sm:min-h-[44px] rounded-xl font-semibold text-xs sm:text-sm text-[#2563EB] bg-white hover:bg-blue-50/60 border border-[#2563EB]/30 hover:border-[#2563EB] active:scale-[0.98] transition-all duration-200 shadow-2xs cursor-pointer disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2
+      px-5 py-2.5
+      min-h-[42px] sm:min-h-[44px]
+      rounded-xl
+      font-semibold
+      text-xs sm:text-sm
+      text-[#2563EB]
+      bg-white
+      hover:bg-blue-50/60
+      border border-[#2563EB]/30
+      hover:border-[#2563EB]
+      active:scale-[0.98]
+      transition-all duration-200
+      shadow-sm
+      cursor-pointer
+      disabled:opacity-50
+      disabled:pointer-events-none;
   }
 
-  /* Accent CTA: Electric Violet */
-  .btn-accent, .btn-violet {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 min-h-[42px] sm:min-h-[44px] rounded-xl font-bold text-xs sm:text-sm text-white bg-gradient-to-r from-[#7C3AED] to-[#8B5CF6] hover:from-[#6D28D9] hover:to-[#7C3AED] active:scale-[0.98] transition-all duration-200 shadow-md shadow-violet-500/20 hover:shadow-lg cursor-pointer disabled:opacity-50 disabled:pointer-events-none;
+  /* =======================================================
+     ACCENT / VIOLET BUTTON
+     ======================================================= */
+
+  .btn-accent,
+  .btn-violet {
+    @apply inline-flex items-center justify-center gap-2
+      px-5 py-2.5
+      min-h-[42px] sm:min-h-[44px]
+      rounded-xl
+      font-bold
+      text-xs sm:text-sm
+      text-white
+      bg-gradient-to-r from-[#7C3AED] to-[#8B5CF6]
+      hover:from-[#6D28D9] hover:to-[#7C3AED]
+      active:scale-[0.98]
+      transition-all duration-200
+      shadow-md shadow-violet-500/20
+      hover:shadow-lg
+      cursor-pointer
+      disabled:opacity-50
+      disabled:pointer-events-none;
   }
 
-  /* Highlight CTA: Warm Gold / Amber */
-  .btn-gold, .btn-amber {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 min-h-[42px] sm:min-h-[44px] rounded-xl font-bold text-xs sm:text-sm text-white bg-gradient-to-r from-[#F59E0B] to-[#D97706] hover:from-[#D97706] hover:to-[#B45309] active:scale-[0.98] transition-all duration-200 shadow-md shadow-amber-500/20 cursor-pointer disabled:opacity-50 disabled:pointer-events-none;
+  /* =======================================================
+     GOLD / AMBER BUTTON
+     ======================================================= */
+
+  .btn-gold,
+  .btn-amber {
+    @apply inline-flex items-center justify-center gap-2
+      px-5 py-2.5
+      min-h-[42px] sm:min-h-[44px]
+      rounded-xl
+      font-bold
+      text-xs sm:text-sm
+      text-white
+      bg-gradient-to-r from-[#F59E0B] to-[#D97706]
+      hover:from-[#D97706] hover:to-[#B45309]
+      active:scale-[0.98]
+      transition-all duration-200
+      shadow-md shadow-amber-500/20
+      cursor-pointer
+      disabled:opacity-50
+      disabled:pointer-events-none;
   }
 
-  /* Controlled Emergency Button: Coral / Rose */
+  /* =======================================================
+     EMERGENCY BUTTON
+     ======================================================= */
+
   .btn-emergency {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 min-h-[44px] rounded-xl font-bold text-xs sm:text-sm text-white bg-gradient-to-r from-[#F43F5E] to-[#E11D48] hover:from-[#E11D48] hover:to-[#BE123C] active:scale-[0.98] transition-all duration-200 shadow-md shadow-rose-500/25 cursor-pointer;
+    @apply inline-flex items-center justify-center gap-2
+      px-5 py-2.5
+      min-h-[44px]
+      rounded-xl
+      font-bold
+      text-xs sm:text-sm
+      text-white
+      bg-gradient-to-r from-[#F43F5E] to-[#E11D48]
+      hover:from-[#E11D48] hover:to-[#BE123C]
+      active:scale-[0.98]
+      transition-all duration-200
+      shadow-md shadow-rose-500/25
+      cursor-pointer;
   }
 
-  /* Semantic Success Only */
+  /* =======================================================
+     SUCCESS BUTTON
+     ======================================================= */
+
   .btn-success {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 min-h-[42px] rounded-xl font-bold text-xs sm:text-sm text-white bg-[#10B981] hover:bg-[#059669] active:scale-[0.98] transition-all duration-200 shadow-sm cursor-pointer disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2
+      px-5 py-2.5
+      min-h-[42px]
+      rounded-xl
+      font-bold
+      text-xs sm:text-sm
+      text-white
+      bg-[#10B981]
+      hover:bg-[#059669]
+      active:scale-[0.98]
+      transition-all duration-200
+      shadow-sm
+      cursor-pointer
+      disabled:opacity-50;
   }
 
-  /* Ghost Button */
+  /* =======================================================
+     GHOST BUTTON
+     ======================================================= */
+
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 min-h-[40px] rounded-xl font-medium text-xs sm:text-sm text-[#172554] hover:text-[#2563EB] hover:bg-blue-50/60 active:scale-[0.98] transition-all duration-200 cursor-pointer;
+    @apply inline-flex items-center justify-center gap-2
+      px-4 py-2
+      min-h-[40px]
+      rounded-xl
+      font-medium
+      text-xs sm:text-sm
+      text-[#172554]
+      hover:text-[#2563EB]
+      hover:bg-blue-50/60
+      active:scale-[0.98]
+      transition-all duration-200
+      cursor-pointer;
   }
 
-  /* Rounded Pills */
+  /* =======================================================
+     PRIMARY PILL
+     ======================================================= */
+
   .btn-pill-primary {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-2.5 min-h-[42px] rounded-full font-bold text-xs sm:text-sm text-white bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:from-[#1D4ED8] hover:to-[#4338CA] active:scale-[0.98] transition-all duration-200 shadow-md shadow-blue-500/20 cursor-pointer;
+    @apply inline-flex items-center justify-center gap-2
+      px-6 py-2.5
+      min-h-[42px]
+      rounded-full
+      font-bold
+      text-xs sm:text-sm
+      text-white
+      bg-gradient-to-r from-[#2563EB] to-[#4F46E5]
+      hover:from-[#1D4ED8] hover:to-[#4338CA]
+      active:scale-[0.98]
+      transition-all duration-200
+      shadow-md shadow-blue-500/20
+      cursor-pointer;
   }
+
+  /* =======================================================
+     OUTLINE PILL
+     ======================================================= */
 
   .btn-pill-outline {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 min-h-[42px] rounded-full font-semibold text-xs sm:text-sm text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 hover:border-[#2563EB]/40 active:scale-[0.98] transition-all duration-200 cursor-pointer;
+    @apply inline-flex items-center justify-center gap-2
+      px-5 py-2.5
+      min-h-[42px]
+      rounded-full
+      font-semibold
+      text-xs sm:text-sm
+      text-slate-700
+      bg-white
+      hover:bg-slate-50
+      border border-slate-200
+      hover:border-[#2563EB]/40
+      active:scale-[0.98]
+      transition-all duration-200
+      cursor-pointer;
   }
 
-  /* Standardized Form Input */
+  /* =======================================================
+     STANDARD FORM INPUT
+     ======================================================= */
+
   .input-coop {
-    @apply w-full h-11 px-4 rounded-xl bg-white border border-[#E2E8F0] text-xs sm:text-sm text-[#172554] placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all duration-200;
+    @apply w-full
+      h-11
+      px-4
+      rounded-xl
+      bg-white
+      border border-[#E2E8F0]
+      text-xs sm:text-sm
+      text-[#172554]
+      placeholder-slate-400
+      focus:outline-none
+      focus:ring-2
+      focus:ring-[#2563EB]/20
+      focus:border-[#2563EB]
+      transition-all duration-200;
   }
 
-  /* Standardized Cards */
-  .card-coopnex, .card-premium {
-    @apply bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-[#2563EB]/30;
+  /* =======================================================
+     STANDARD CARDS
+     ======================================================= */
+
+  .card-coopnex,
+  .card-premium {
+    @apply bg-white
+      rounded-2xl
+      border border-[#E2E8F0]
+      p-5
+      shadow-sm
+      transition-all duration-200
+      hover:-translate-y-0.5
+      hover:shadow-md
+      hover:border-[#2563EB]/30;
   }
 
-  /* 3D Stage & Interactive Perspective */
+  /* =======================================================
+     3D STAGE
+     ======================================================= */
+
   .perspective-1000 {
     perspective: 1000px;
   }
@@ -96,22 +289,38 @@
     transform-style: preserve-3d;
   }
 
-  /* Subtle 3D Card Tilt on Hover */
+  /* =======================================================
+     3D CARD
+     ======================================================= */
+
   .card-3d {
-    transition: transform 0.25s ease-out, box-shadow 0.25s ease-out;
+    transition:
+      transform 0.25s ease-out,
+      box-shadow 0.25s ease-out;
   }
+
   .card-3d:hover {
-    transform: translateY(-3px) rotateX(2deg) rotateY(-1deg);
-    box-shadow: 0 16px 32px -8px rgba(37, 99, 235, 0.12);
+    transform:
+      translateY(-3px)
+      rotateX(2deg)
+      rotateY(-1deg);
+
+    box-shadow:
+      0 16px 32px -8px
+      rgba(37, 99, 235, 0.12);
   }
 }
 
-/* Animations */
+/* =========================================================
+   ANIMATIONS
+   ========================================================= */
+
 @keyframes fadeIn {
   from {
     opacity: 0;
     transform: translateY(4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -119,24 +328,32 @@
 }
 
 @keyframes floatGentle {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px);
   }
+
   50% {
     transform: translateY(-6px);
   }
 }
 
 @keyframes pulseGlow {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.8;
     transform: scale(1);
   }
+
   50% {
     opacity: 1;
     transform: scale(1.04);
   }
 }
+
+/* =========================================================
+   ANIMATION UTILITIES
+   ========================================================= */
 
 .animate-fadeIn {
   animation: fadeIn 0.25s ease-out forwards;
@@ -150,15 +367,88 @@
   animation: pulseGlow 3s ease-in-out infinite;
 }
 
-/* Reduced Motion Override */
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
 @media (prefers-reduced-motion: reduce) {
-  *, ::before, ::after {
+  *,
+  ::before,
+  ::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+
   .card-3d:hover {
     transform: none !important;
+  }
+}
+
+/* =========================================================
+/* =========================================================
+   PRINT STYLES FOR RECEIPTS & SMART ID CARDS
+   ========================================================= */
+
+@media print {
+  @page {
+    size: auto;
+    margin: 10mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .worker-smart-id-print-zone,
+  .worker-smart-id-print-zone *,
+  .coopnex-receipt-print-zone,
+  .coopnex-receipt-print-zone *,
+  .printable-area,
+  .printable-area * {
+    visibility: visible !important;
+  }
+
+  .worker-smart-id-print-zone {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+  }
+
+  .coopnex-receipt-print-zone,
+  .printable-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 600px !important;
+    margin: 0 auto !important;
+    padding: 24px !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    display: block !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
   }
 }

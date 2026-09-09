@@ -1,4 +1,19 @@
 import { Language } from "./languages";
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
+import enLoc from "./locales/en.json";
+import hiLoc from "./locales/hi.json";
+import teLoc from "./locales/te.json";
+import taLoc from "./locales/ta.json";
+import knLoc from "./locales/kn.json";
+import mlLoc from "./locales/ml.json";
+import mrLoc from "./locales/mr.json";
+import bnLoc from "./locales/bn.json";
+import guLoc from "./locales/gu.json";
+import paLoc from "./locales/pa.json";
+import orLoc from "./locales/or.json";
+import asLoc from "./locales/as.json";
+import urLoc from "./locales/ur.json";
 export * from "./languages";
 
 export interface TranslationDictionary {
@@ -20,6 +35,39 @@ export const translations: Record<Language, Record<string, string>> = {
     "nav.joinWorker": "Join as Worker",
     "nav.workerPortal": "Worker Portal",
     "nav.societyAdmin": "Society Admin",
+    "nav.dashboard": "Dashboard",
+    "nav.find_workers": "Find Workers",
+    "nav.bookings": "My Bookings",
+    "nav.messages": "Messages",
+    "nav.notifications": "Notifications",
+    "nav.payments": "Payments & Escrow",
+    "nav.favorites": "Saved Artisans",
+    "nav.emergency": "SOS Emergency",
+    "nav.profile": "Citizen Profile",
+    "nav.settings": "Settings",
+    "worker_nav.dashboard": "Dashboard",
+    "worker_nav.jobs": "Jobs",
+    "worker_nav.schedule": "Schedule",
+    "worker_nav.earnings": "Earnings",
+    "worker_nav.wallet": "Wallet",
+    "worker_nav.messages": "Messages",
+    "worker_nav.notifications": "Notifications",
+    "worker_nav.welfare": "Welfare & Benefits",
+    "worker_nav.smart_id": "Smart ID Card",
+    "worker_nav.profile": "Profile & Documents",
+    "worker_nav.settings": "Settings",
+    "worker_dash.greeting": "Good morning",
+    "worker_dash.field_ready": "Field Ready • Duty Shift Active",
+    "worker_dash.view_jobs": "View Jobs",
+    "worker_dash.my_schedule": "My Schedule",
+    "worker_dash.instant_withdrawal": "Instant Withdrawal",
+    "worker_dash.smart_id_card": "Smart ID Card",
+    "worker_dash.today_earnings": "Today's Earnings",
+    "worker_dash.completed_today": "Completed Today",
+    "worker_dash.active_requests": "Active Requests",
+    "worker_dash.punctuality": "Punctuality Rating",
+    "worker_dash.welfare_accrual": "Welfare Accrual",
+    "worker_dash.trust_safety": "Trust & Safety Score",
 
     "ticker.liveRoster": "LIVE NATIONAL ROSTER",
     "ticker.online": "Online",
@@ -215,6 +263,39 @@ export const translations: Record<Language, Record<string, string>> = {
     "nav.joinWorker": "श्रमिक के रूप में जुड़ें",
     "nav.workerPortal": "श्रमिक पोर्टल",
     "nav.societyAdmin": "सोसायटी एडमिन",
+    "nav.dashboard": "डैशबोर्ड",
+    "nav.find_workers": "कारीगर खोजें",
+    "nav.bookings": "मेरी बुकिंग",
+    "nav.messages": "संदेश",
+    "nav.notifications": "सूचनाएं",
+    "nav.payments": "भुगतान एवं एस्क्रो",
+    "nav.favorites": "पसंदीदा कारीगर",
+    "nav.emergency": "आपातकालीन SOS",
+    "nav.profile": "नागरिक प्रोफाइल",
+    "nav.settings": "सेटिंग्स",
+    "worker_nav.dashboard": "डैशबोर्ड",
+    "worker_nav.jobs": "कार्य / जॉब्स",
+    "worker_nav.schedule": "अनुसूची",
+    "worker_nav.earnings": "कमाई",
+    "worker_nav.wallet": "वॉलेट",
+    "worker_nav.messages": "संदेश",
+    "worker_nav.notifications": "सूचनाएं",
+    "worker_nav.welfare": "कल्याण एवं लाभ",
+    "worker_nav.smart_id": "स्मार्ट आईडी कार्ड",
+    "worker_nav.profile": "प्रोफ़ाइल एवं दस्तावेज़",
+    "worker_nav.settings": "सेटिंग्स",
+    "worker_dash.greeting": "शुभ प्रभात",
+    "worker_dash.field_ready": "ड्यूटी सक्रिय • सेवा के लिए तैयार",
+    "worker_dash.view_jobs": "कार्य देखें",
+    "worker_dash.my_schedule": "मेरी अनुसूची",
+    "worker_dash.instant_withdrawal": "तत्काल निकासी",
+    "worker_dash.smart_id_card": "स्मार्ट आईडी कार्ड",
+    "worker_dash.today_earnings": "आज की कमाई",
+    "worker_dash.completed_today": "आज पूर्ण कार्य",
+    "worker_dash.active_requests": "सक्रिय अनुरोध",
+    "worker_dash.punctuality": "समयबद्धता रेटिंग",
+    "worker_dash.welfare_accrual": "कल्याण कोष संचय",
+    "worker_dash.trust_safety": "विश्वास एवं सुरक्षा स्कोर",
 
     "ticker.liveRoster": "लाइव राष्ट्रीय रोस्टर",
     "ticker.online": "ऑनलाइन",
@@ -410,6 +491,39 @@ export const translations: Record<Language, Record<string, string>> = {
     "nav.joinWorker": "కార్మికుడిగా చేరండి",
     "nav.workerPortal": "కార్మిక పోర్టల్",
     "nav.societyAdmin": "సొసైటీ అడ్మిన్",
+    "nav.dashboard": "డ్యాష్‌బోర్డ్",
+    "nav.find_workers": "కార్మికులను వెతకండి",
+    "nav.bookings": "నా బుకింగ్‌లు",
+    "nav.messages": "సందేశాలు",
+    "nav.notifications": "నోటిఫికేషన్‌లు",
+    "nav.payments": "చెల్లింపులు & ఎస్క్రో",
+    "nav.favorites": "ఇష్టమైన నిపుణులు",
+    "nav.emergency": "అత్యవసర SOS",
+    "nav.profile": "పౌర ప్రొఫైల్",
+    "nav.settings": "సెట్టింగ్‌లు",
+    "worker_nav.dashboard": "డ్యాష్‌బోర్డ్",
+    "worker_nav.jobs": "పనులు / జాబ్స్",
+    "worker_nav.schedule": "షెడ్యూల్",
+    "worker_nav.earnings": "ఆదాయం",
+    "worker_nav.wallet": "వాలెట్",
+    "worker_nav.messages": "సందేశాలు",
+    "worker_nav.notifications": "నోటిఫికేషన్‌లు",
+    "worker_nav.welfare": "సంక్షేమం & ప్రయోజనాలు",
+    "worker_nav.smart_id": "స్మార్ట్ ఐడీ కార్డు",
+    "worker_nav.profile": "ప్రొఫైల్ & పత్రాలు",
+    "worker_nav.settings": "సెట్టింగ్‌లు",
+    "worker_dash.greeting": "శుభోదయం",
+    "worker_dash.field_ready": "డ్యూటీ రెడీ • షిఫ్ట్ యాక్టివ్",
+    "worker_dash.view_jobs": "పనులను చూడండి",
+    "worker_dash.my_schedule": "నా షెడ్యూల్",
+    "worker_dash.instant_withdrawal": "తక్షణ ఉపసంహరణ",
+    "worker_dash.smart_id_card": "స్మార్ట్ ఐడీ కార్డు",
+    "worker_dash.today_earnings": "నేటి ఆదాయం",
+    "worker_dash.completed_today": "నేడు పూర్తయినవి",
+    "worker_dash.active_requests": "యాక్టివ్ అభ్యర్థనలు",
+    "worker_dash.punctuality": "సమయపాలన రేటింగ్",
+    "worker_dash.welfare_accrual": "సంక్షేమ నిధి సేకరణ",
+    "worker_dash.trust_safety": "విశ్వసనీయత స్కోరు",
 
     "ticker.liveRoster": "లైవ్ జాతీయ రోస్టర్",
     "ticker.online": "ఆన్‌లైన్",
@@ -1778,3 +1892,66 @@ export const translations: Record<Language, Record<string, string>> = {
     "cta.joinBtn": "بطور ورکر شامل ہوں"
   }
 };
+
+function flattenObj(obj: any, prefix = ""): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const key of Object.keys(obj)) {
+    const val = obj[key];
+    const newKey = prefix ? `${prefix}.${key}` : key;
+    if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+      Object.assign(result, flattenObj(val, newKey));
+    } else {
+      result[newKey] = String(val);
+    }
+  }
+  return result;
+}
+
+const allLocales: Record<string, any> = {
+  en: enLoc,
+  hi: hiLoc,
+  te: teLoc,
+  ta: taLoc,
+  kn: knLoc,
+  ml: mlLoc,
+  mr: mrLoc,
+  bn: bnLoc,
+  gu: guLoc,
+  pa: paLoc,
+  or: orLoc,
+  as: asLoc,
+  ur: urLoc
+};
+
+for (const [langKey, locObj] of Object.entries(allLocales)) {
+  const typedKey = langKey as Language;
+  translations[typedKey] = {
+    ...(translations[typedKey] || {}),
+    ...flattenObj(locObj)
+  };
+}
+
+const initialLang = typeof window !== "undefined" ? localStorage.getItem("sahakari_lang") || "en" : "en";
+
+const resources = Object.entries(translations).reduce((acc, [langKey, trans]) => {
+  const merged: any = { ...trans };
+  if (allLocales[langKey]) {
+    Object.assign(merged, allLocales[langKey]);
+  }
+  acc[langKey] = { translation: merged };
+  return acc;
+}, {} as Record<string, { translation: any }>);
+
+if (!i18n.isInitialized) {
+  i18n.use(initReactI18next).init({
+    resources,
+    lng: initialLang,
+    fallbackLng: "en",
+    interpolation: {
+      escapeValue: false
+    }
+  });
+}
+
+export default i18n;
+

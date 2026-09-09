@@ -15,6 +15,7 @@ export interface IKYCDocument {
 export interface IWorker extends Document {
   userId: mongoose.Types.ObjectId;
   workerIdNumber: string; // e.g., "SS-AP-2026-104"
+  employeeId?: string; // Standard Employee ID (e.g. "COOP-EMP-0001" or "SS-AP-2026-104")
   name: string;
   gender: "Male" | "Female" | "Other";
   phone?: string;
@@ -79,6 +80,7 @@ const WorkerSchema = new Schema<IWorker>(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     workerIdNumber: { type: String, required: true, unique: true, index: true },
+    employeeId: { type: String, sparse: true, uppercase: true, trim: true, index: true },
     name: { type: String, required: true, trim: true },
     gender: { type: String, enum: ["Male", "Female", "Other"], default: "Male", index: true },
     phone: { type: String, required: false, default: "" },

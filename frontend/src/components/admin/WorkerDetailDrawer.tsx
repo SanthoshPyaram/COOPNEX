@@ -275,7 +275,7 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
                           {worker.skills?.map((skill: string, idx: number) => (
                             <span
                               key={idx}
-                              className="px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-950/50 border border-teal-200 dark:border-teal-800 text-[10px] font-bold text-teal-800 dark:text-teal-300"
+                              className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-[10px] font-bold text-blue-800 dark:text-blue-300"
                             >
                               {skill}
                             </span>

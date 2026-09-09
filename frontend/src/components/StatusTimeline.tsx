@@ -38,7 +38,7 @@ export const StatusTimeline: React.FC<StatusTimelineProps> = ({ currentStatus, t
           
           {/* Active Fill Track */}
           <div
-            className="absolute top-1/2 left-4 -translate-y-1/2 h-1 bg-teal-600 z-0 transition-all duration-500"
+            className="absolute top-1/2 left-4 -translate-y-1/2 h-1 bg-blue-600 z-0 transition-all duration-500"
             style={{
               width: `${(effectiveIndex / (STEPS.length - 1)) * 92}%`
             }}
@@ -53,7 +53,7 @@ export const StatusTimeline: React.FC<StatusTimelineProps> = ({ currentStatus, t
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
                     isDone
-                      ? "bg-teal-700 text-white shadow-sm"
+                      ? "bg-blue-600 text-white shadow-sm"
                       : isCurrent
                       ? "bg-amber-500 text-white ring-4 ring-amber-100 shadow-md scale-110 animate-pulse"
                       : "bg-white text-slate-400 border-2 border-slate-300"
@@ -66,7 +66,7 @@ export const StatusTimeline: React.FC<StatusTimelineProps> = ({ currentStatus, t
                     isCurrent
                       ? "text-slate-900 font-bold"
                       : isDone
-                      ? "text-teal-800"
+                      ? "text-blue-800"
                       : "text-slate-400"
                   }`}
                 >
@@ -93,13 +93,13 @@ export const StatusTimeline: React.FC<StatusTimelineProps> = ({ currentStatus, t
               key={idx}
               className={`flex items-start gap-3 p-3 rounded-xl border transition ${
                 isLatest
-                  ? "bg-teal-50/60 border-teal-200 text-teal-950 shadow-xs"
+                  ? "bg-blue-50/60 border-blue-200 text-blue-950 shadow-xs"
                   : "bg-slate-50/70 border-slate-200 text-slate-700"
               }`}
             >
               <div
                 className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5 ${
-                  isLatest ? "bg-teal-600 text-white" : "bg-slate-300 text-slate-700"
+                  isLatest ? "bg-blue-600 text-white" : "bg-slate-300 text-slate-700"
                 }`}
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />

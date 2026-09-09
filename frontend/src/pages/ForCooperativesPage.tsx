@@ -19,8 +19,8 @@ export const ForCooperativesPage: React.FC = () => {
   return (
     <div className="bg-slate-50 min-h-screen text-slate-800">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-teal-950 via-teal-900 to-slate-900 text-white py-20 px-4 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#34d399_1px,transparent_1px)] [background-size:16px_16px]"></div>
+      <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-blue-950 to-slate-900 text-white py-20 px-4 sm:px-6 lg:px-8">
+        <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
         <div className="relative max-w-5xl mx-auto text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300 text-xs font-bold uppercase tracking-wider">
             <Building2 className="w-3.5 h-3.5" />
@@ -66,7 +66,7 @@ export const ForCooperativesPage: React.FC = () => {
           {/* Tier 1 */}
           <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xs relative flex flex-col justify-between">
             <div>
-              <div className="text-xs font-black tracking-wider uppercase text-teal-700 mb-2">
+              <div className="text-xs font-black tracking-wider uppercase text-blue-600 mb-2">
                 Tier 1: Ground Operations
               </div>
               <h3 className="text-xl font-black text-slate-900 mb-3">
@@ -77,31 +77,31 @@ export const ForCooperativesPage: React.FC = () => {
               </p>
               <ul className="space-y-2.5 text-xs text-slate-700">
                 <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                   <span>Physical KYC, Aadhaar & Skill level inspections</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                   <span>Local dispute conciliation & grievance resolution</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                   <span>Tooling micro-loans & safety gear distribution</span>
                 </li>
               </ul>
             </div>
-            <div className="mt-8 pt-4 border-t border-slate-100 text-xs font-bold text-teal-800">
+            <div className="mt-8 pt-4 border-t border-slate-100 text-xs font-bold text-blue-800">
               Role: Society Admin Console
             </div>
           </div>
 
           {/* Tier 2 */}
-          <div className="bg-white rounded-3xl p-8 border-2 border-teal-600 shadow-md relative flex flex-col justify-between">
-            <div className="absolute -top-3.5 left-8 bg-teal-700 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">
+          <div className="bg-white rounded-3xl p-8 border-2 border-blue-600 shadow-md relative flex flex-col justify-between">
+            <div className="absolute -top-3.5 left-8 bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">
               Intelligence Hub
             </div>
             <div>
-              <div className="text-xs font-black tracking-wider uppercase text-teal-700 mb-2">
+              <div className="text-xs font-black tracking-wider uppercase text-blue-600 mb-2">
                 Tier 2: District Level
               </div>
               <h3 className="text-xl font-black text-slate-900 mb-3">
@@ -112,20 +112,20 @@ export const ForCooperativesPage: React.FC = () => {
               </p>
               <ul className="space-y-2.5 text-xs text-slate-700">
                 <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                   <span>Algorithmic Workforce Exchange for surplus rebalancing</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                   <span>District AI demand forecasting by skill and ward</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                   <span>Welfare fund oversight & emergency insurance clearance</span>
                 </li>
               </ul>
             </div>
-            <div className="mt-8 pt-4 border-t border-slate-100 text-xs font-bold text-teal-800">
+            <div className="mt-8 pt-4 border-t border-slate-100 text-xs font-bold text-blue-800">
               Role: Federation Intelligence Console
             </div>
           </div>
@@ -133,7 +133,7 @@ export const ForCooperativesPage: React.FC = () => {
           {/* Tier 3 */}
           <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xs relative flex flex-col justify-between">
             <div>
-              <div className="text-xs font-black tracking-wider uppercase text-teal-700 mb-2">
+              <div className="text-xs font-black tracking-wider uppercase text-blue-600 mb-2">
                 Tier 3: Apex Policy
               </div>
               <h3 className="text-xl font-black text-slate-900 mb-3">
@@ -144,20 +144,20 @@ export const ForCooperativesPage: React.FC = () => {
               </p>
               <ul className="space-y-2.5 text-xs text-slate-700">
                 <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                   <span>Statewide minimum wage notification enforcement</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                   <span>Integration with e-Shram and National Skill Registry</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                   <span>State cooperative development subsidy auditing</span>
                 </li>
               </ul>
             </div>
-            <div className="mt-8 pt-4 border-t border-slate-100 text-xs font-bold text-teal-800">
+            <div className="mt-8 pt-4 border-t border-slate-100 text-xs font-bold text-blue-800">
               Role: State Governance & Ministry Console
             </div>
           </div>
@@ -178,7 +178,7 @@ export const ForCooperativesPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
                 <GitBranch className="w-5 h-5" />
               </div>
               <h3 className="font-bold text-slate-900 text-base">Workforce Exchange</h3>
@@ -231,7 +231,7 @@ export const ForCooperativesPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             to="/login"
-            className="px-8 py-3.5 rounded-xl bg-teal-800 hover:bg-teal-700 text-white font-bold text-sm transition shadow-md"
+            className="px-8 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition shadow-md"
           >
             Access Society Portal
           </Link>

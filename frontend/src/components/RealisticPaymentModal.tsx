@@ -123,7 +123,7 @@ export const RealisticPaymentModal: React.FC<RealisticPaymentModalProps> = ({
   };
 
   const handleCopyUpiId = () => {
-    navigator.clipboard.writeText("sahakari.escrow@npci");
+    navigator.clipboard.writeText("coopnex.escrow@npci");
     setCopiedUpi(true);
     setTimeout(() => setCopiedUpi(false), 2000);
   };
@@ -316,7 +316,7 @@ export const RealisticPaymentModal: React.FC<RealisticPaymentModalProps> = ({
                     <div className="flex items-center justify-center gap-2 text-xs">
                       <span className="text-slate-500 dark:text-slate-400">VPA:</span>
                       <code className="font-mono font-bold text-slate-800 dark:text-slate-200 bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded">
-                        sahakari.escrow@npci
+                        coopnex.escrow@npci
                       </code>
                       <button
                         type="button"

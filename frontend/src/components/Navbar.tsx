@@ -14,7 +14,7 @@ export const Navbar: React.FC = () => {
   const navLinks = [
     { name: t("nav.home") || "Home", path: "/" },
     { name: "Workers", path: "/for-workers" },
-    { name: "Admin Panel", path: role === "SUPER_ADMIN" ? "/admin" : "/admin/login" }
+    ...(role === "SUPER_ADMIN" ? [{ name: "Admin Panel", path: "/admin" }] : [])
   ];
 
   return (

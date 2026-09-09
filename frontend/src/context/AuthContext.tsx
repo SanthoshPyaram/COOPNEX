@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import emailjs from "@emailjs/browser";
 import { emailJsConfig, isEmailJsConfigured, isEmailJsResetConfigured, getEmailJsStatus } from "../config/emailjs";
 import { UserRole } from "../types";
+import { API_BASE } from "../services/api";
 
 export interface UserData {
   id: string;
@@ -24,6 +25,7 @@ export interface UserData {
   bloodGroup?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;
+  employeeId?: string;
   workerProfile?: any;
 }
 
@@ -33,6 +35,7 @@ interface AuthContextType {
   role: UserRole | null;
   isAuthenticated: boolean;
   login: (identifier: string, pass: string, expectedRole?: UserRole) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
+  workerLogin: (employeeId: string, pass: string) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
   sendOtp: (identifier: string, purpose?: string, name?: string) => Promise<{ success: boolean; message?: string; emailDispatched?: boolean; retryAfterSeconds?: number }>;
   verifyOtp: (identifier: string, otpCode: string, purpose?: string) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
   forgotPasswordSendOtp: (identifier: string) => Promise<{ success: boolean; message?: string; otpCode?: string; emailDispatched?: boolean; previewUrl?: string }>;
@@ -51,6 +54,7 @@ const AuthContext = createContext<AuthContextType>({
   role: null,
   isAuthenticated: false,
   login: async () => ({ success: false }),
+  workerLogin: async () => ({ success: false }),
   sendOtp: async () => ({ success: false }),
   verifyOtp: async () => ({ success: false }),
   forgotPasswordSendOtp: async () => ({ success: false }),
@@ -77,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (identifier: string, pass: string, expectedRole?: UserRole): Promise<{ success: boolean; role?: UserRole; message?: string }> => {
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier, password: pass, expectedRole })
@@ -91,6 +95,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: true, role: data.user.role };
       }
       return { success: false, message: data.message || "Invalid credentials." };
+    } catch (err: any) {
+      return { success: false, message: "Network or server error." };
+    }
+  };
+
+  const workerLogin = async (employeeId: string, pass: string): Promise<{ success: boolean; role?: UserRole; message?: string }> => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/worker/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employeeId: employeeId.trim().toUpperCase(), password: pass })
+      });
+      const data = await res.json();
+      if (data.success && data.user) {
+        setUser(data.user);
+        setToken(data.token);
+        localStorage.setItem("sahakari_user", JSON.stringify(data.user));
+        localStorage.setItem("sahakari_token", data.token);
+        return { success: true, role: data.user.role };
+      }
+      return { success: false, message: data.message || "Invalid Employee ID or password." };
     } catch (err: any) {
       return { success: false, message: "Network or server error." };
     }
@@ -113,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const otpCode = (100000 + (array[0] % 900000)).toString();
 
       // Record OTP verification session in MongoDB with SHA-256 hash, 60s cooldown, 300s TTL
-      const recordRes = await fetch("/api/auth/emailjs/record-otp", {
+      const recordRes = await fetch(`${API_BASE}/auth/emailjs/record-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -132,12 +157,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
 
-      // Dispatch real email via EmailJS SDK using the Universal Verification Template
+      // Dispatch authentic verification email via EmailJS browser SDK (Template 1: Universal Verification)
       const status = getEmailJsStatus();
-      if (!status.isVerificationConfigured) {
+      if (!status.isConfigured) {
         return {
           success: false,
-          message: status.errorMessage || "EmailJS is not configured. Please set your real VITE_EMAILJS_* credentials in frontend .env."
+          message: status.errorMessage || "EmailJS configuration missing in frontend .env. Please set VITE_EMAILJS_SERVICE_ID and templates."
         };
       }
 
@@ -146,7 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           emailJsConfig.serviceId,
           emailJsConfig.verificationTemplateId,
           {
-            name: name || "COOPNEX User",
+            name: name || "COOPNEX Member",
             email: cleanEmail,
             otp: otpCode,
             expiry: "5"
@@ -157,24 +182,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error("EmailJS dispatch error:", emailErr);
         return {
           success: false,
-          message: "Failed to dispatch email via EmailJS. Please verify your EmailJS credentials in .env."
+          message: "Failed to dispatch verification email via EmailJS. Please verify your EmailJS credentials in .env."
         };
       }
 
       return {
         success: true,
-        message: "Verification code sent to your email.",
+        message: "Verification code dispatched to your email address. Valid for 5 minutes.",
         emailDispatched: true
       };
     } catch (err: any) {
-      console.error("sendOtp error:", err);
-      return { success: false, message: "Failed to dispatch verification code." };
+      return { success: false, message: "Network connection error." };
     }
   };
 
   const verifyOtp = async (identifier: string, otpCode: string, purpose: string = "VERIFY_ACCOUNT"): Promise<{ success: boolean; role?: UserRole; message?: string }> => {
     try {
-      const res = await fetch("/api/auth/verify-otp", {
+      const res = await fetch(`${API_BASE}/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier, otpCode, purpose })
@@ -206,7 +230,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const otpCode = (100000 + (array[0] % 900000)).toString();
 
       // Record reset OTP session with backend MongoDB
-      const recordRes = await fetch("/api/auth/emailjs/record-otp", {
+      const recordRes = await fetch(`${API_BASE}/auth/emailjs/record-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -265,7 +289,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const forgotPasswordReset = async (identifier: string, otpCode: string, newPass: string): Promise<{ success: boolean; role?: UserRole; message?: string }> => {
     try {
-      const res = await fetch("/api/auth/forgot-password/reset", {
+      const res = await fetch(`${API_BASE}/auth/forgot-password/reset`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier, otpCode, newPassword: newPass })
@@ -286,7 +310,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const registerCustomer = async (data: any): Promise<{ success: boolean; message?: string }> => {
     try {
-      const res = await fetch("/api/auth/register", {
+      const res = await fetch(`${API_BASE}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -310,7 +334,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const registerWorker = async (data: any): Promise<{ success: boolean; message?: string }> => {
     try {
-      const res = await fetch("/api/auth/register", {
+      const res = await fetch(`${API_BASE}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -349,7 +373,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Kept exclusively for the isolated /demo testing hub
   const switchDemoRoleForTesting = async (targetRole: UserRole): Promise<UserRole> => {
     try {
-      const res = await fetch("/api/auth/demo-login", {
+      const res = await fetch(`${API_BASE}/auth/demo-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: targetRole })
@@ -376,6 +400,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role,
         isAuthenticated,
         login,
+        workerLogin,
         sendOtp,
         verifyOtp,
         forgotPasswordSendOtp,

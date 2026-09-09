@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { Language, translations } from "../i18n";
+import i18n, { Language, translations } from "../i18n";
 import { ttsService } from "../services/tts";
 
 interface LanguageContextType {
@@ -46,6 +46,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       document.documentElement.lang = language;
     }
     ttsService.setLanguage(language);
+    i18n.changeLanguage(language);
   }, [language]);
 
   const setLanguage = (lang: Language) => {
@@ -53,6 +54,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     ttsService.stop();
     ttsService.setLanguage(lang);
     setLanguageState(lang);
+    i18n.changeLanguage(lang);
     if (typeof document !== "undefined") {
       document.documentElement.lang = lang;
     }
@@ -66,7 +68,14 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const t = (key: string): string => {
     const safeLang = (translations && (language in translations)) ? language : "en";
     const dict = (translations && translations[safeLang]) || (translations && translations.en) || {};
-    return dict[key] || (translations?.en && translations.en[key]) || defaultT(key);
+    const resolved = dict[key] || key.split('.').reduce((o: any, i) => o?.[i], dict);
+    if (resolved && typeof resolved === "string") return resolved;
+
+    const enDict = translations?.en || {};
+    const enResolved = enDict[key] || key.split('.').reduce((o: any, i) => o?.[i], enDict);
+    if (enResolved && typeof enResolved === "string") return enResolved;
+
+    return defaultT(key);
   };
 
   return (

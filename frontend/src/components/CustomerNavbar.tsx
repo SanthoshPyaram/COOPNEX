@@ -19,6 +19,8 @@ import {
   Menu
 } from "lucide-react";
 import { CoopnexLogo } from "./brand/CoopnexLogo";
+import { LanguageDropdown } from "./LanguageDropdown";
+import { CustomerLocationModal } from "./CustomerLocationModal";
 
 export const CustomerNavbar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -123,6 +125,7 @@ export const CustomerNavbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-2">
           {/* Brand Logo & Location Pill */}
+          <div className="flex items-center gap-3">
             {/* Citizen Portal Badge */}
             <Link to="/app" className="flex items-center gap-2 group shrink-0">
               <CoopnexLogo variant="full" size="sm" />
@@ -199,6 +202,11 @@ export const CustomerNavbar: React.FC = () => {
               <Zap className="w-3.5 h-3.5 fill-current text-[#F43F5E] animate-bounce" />
               <span className="hidden xs:inline">Emergency</span> 7m
             </button>
+
+            {/* Global Language Selector */}
+            <div className="hidden sm:block">
+              <LanguageDropdown variant="pill" />
+            </div>
 
             {/* Notification Center */}
             <div className="relative" ref={notifRef}>
@@ -435,84 +443,21 @@ export const CustomerNavbar: React.FC = () => {
             >
               Profile &amp; Settings
             </button>
+            <div className="pt-2 border-t border-slate-200">
+              <LanguageDropdown variant="pill" />
+            </div>
           </div>
         )}
       </div>
 
       {/* Location / Pincode Selector Modal */}
-      {locationModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center">
-                  <MapPin className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-slate-900">Select Cooperative Area</h3>
-                  <p className="text-[11px] text-slate-500">Vijayawada Municipal Cooperative Network</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setLocationModalOpen(false)}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Choose your residential ward to view nearby certified specialists with minimum transit time and statutory floor rates.
-            </p>
-
-            <div className="grid grid-cols-2 gap-2">
-              {predefinedAreas.map((area) => (
-                <button
-                  key={area.name}
-                  onClick={() => handleSelectArea(area.name, area.pincode)}
-                  className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
-                    activeArea === area.name
-                      ? "border-[#2563EB] bg-blue-50/70 ring-2 ring-blue-500/20"
-                      : "border-slate-200 hover:border-blue-300 hover:bg-slate-50"
-                  }`}
-                >
-                  <div className="font-bold text-xs text-slate-900">{area.name}</div>
-                  <div className="text-[10px] text-slate-500 font-mono">PIN: {area.pincode}</div>
-                  <div className="text-[9px] text-[#2563EB] font-semibold mt-0.5">{area.ward}</div>
-                </button>
-              ))}
-            </div>
-
-            {/* Custom Pincode Input */}
-            <div className="pt-2 border-t border-slate-100">
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                Enter Other Pincode (Vijayawada / Andhra Pradesh):
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  maxLength={6}
-                  placeholder="e.g. 520008"
-                  value={customPincodeInput}
-                  onChange={(e) => setCustomPincodeInput(e.target.value.replace(/\D/g, ""))}
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono focus:outline-hidden focus:ring-2 focus:ring-[#2563EB]"
-                />
-                <button
-                  onClick={() => {
-                    if (customPincodeInput.length === 6) {
-                      handleSelectArea(`PIN ${customPincodeInput}`, customPincodeInput);
-                    }
-                  }}
-                  disabled={customPincodeInput.length !== 6}
-                  className="px-4 py-2 bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white text-xs font-bold rounded-xl transition shadow-xs disabled:opacity-50 cursor-pointer"
-                >
-                  Apply
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <CustomerLocationModal
+        isOpen={locationModalOpen}
+        activeArea={activeArea}
+        activePincode={activePincode}
+        onClose={() => setLocationModalOpen(false)}
+        onSelectArea={handleSelectArea}
+      />
     </header>
   );
 };

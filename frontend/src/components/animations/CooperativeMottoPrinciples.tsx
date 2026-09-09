@@ -1729,6 +1729,7 @@ export const CooperativeMottoPrinciples: React.FC<{ className?: string }> = ({ c
 
                   {/* Right Arm: Welcoming Hand Gesture pointing towards center */}
                   <motion.path
+                    d="M110 135 C125 145, 138 140, 145 128"
                     animate={{
                       d: [
                         "M110 135 C125 145, 138 140, 145 128",
@@ -1776,6 +1777,7 @@ export const CooperativeMottoPrinciples: React.FC<{ className?: string }> = ({ c
 
                   {/* Talking Mouth Animation (MALE) */}
                   <motion.path
+                    d="M69 101 Q75 104, 81 101"
                     animate={{
                       d: audioActive && (speakerVoice === "both" || speakerVoice === "male")
                         ? ["M69 101 Q75 107, 81 101", "M69 101 Q75 104, 81 101", "M69 101 Q75 107, 81 101"]
@@ -1812,6 +1814,7 @@ export const CooperativeMottoPrinciples: React.FC<{ className?: string }> = ({ c
 
                   {/* Right Arm: Inspiring Presenting Gesture toward the Principle Card */}
                   <motion.path
+                    d="M105 138 C120 148, 134 135, 142 120"
                     animate={{
                       d: [
                         "M105 138 C120 148, 134 135, 142 120",
@@ -1868,6 +1871,7 @@ export const CooperativeMottoPrinciples: React.FC<{ className?: string }> = ({ c
 
                   {/* Talking Mouth Animation (FEMALE) */}
                   <motion.path
+                    d="M65 98 Q70 103, 75 98"
                     animate={{
                       d: audioActive && (speakerVoice === "both" || speakerVoice === "female")
                         ? ["M65 98 Q70 105, 75 98", "M65 98 Q70 102, 75 98", "M65 98 Q70 105, 75 98"]

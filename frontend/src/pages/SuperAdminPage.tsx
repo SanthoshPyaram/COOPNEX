@@ -13,6 +13,7 @@ import { FraudNetwork3D } from "../components/admin/3d/FraudNetwork3D";
 import { PaymentFlow3D } from "../components/admin/3d/PaymentFlow3D";
 import { AiDemand3D } from "../components/admin/3d/AiDemand3D";
 import { EmergencyDispatch3D } from "../components/admin/3d/EmergencyDispatch3D";
+import { AdminAiIntelligenceDashboard } from "../components/admin/AdminAiIntelligenceDashboard";
 import { AdminResponsibilitiesShowcase } from "../components/admin/AdminResponsibilitiesShowcase";
 
 import {
@@ -49,7 +50,9 @@ import {
   Star,
   ExternalLink,
   ChevronRight,
-  ArrowUpRight
+  ArrowUpRight,
+  Search,
+  X
 } from "lucide-react";
 
 // Animated Numeric Counter for Linear/Fintech feel
@@ -329,22 +332,205 @@ const SAMPLE_BOOKINGS = [
   { id: "BK-9018", customer: "V. Srinivas", worker: "Suresh Babu", service: "Solar Inverter Synchronization", amount: 1250, date: "05 Sep 2026", status: "COMPLETED" }
 ];
 
-// Sample Escrow Transactions Ledger
-const SAMPLE_ESCROW_TRANSACTIONS = [
-  { ref: "ESC-89410-AP", bookingId: "BK-9021", customer: "Dr. K. Rao", artisan: "Rajesh Kumar", total: 850, artisanPayout: 850, welfareFund: 17, status: "ESCROW_LOCKED", time: "Today, 02:30 PM" },
-  { ref: "ESC-89211-AP", bookingId: "BK-9020", customer: "Ananya Sharma", artisan: "Lakshmi Narayana", total: 650, artisanPayout: 650, welfareFund: 13, status: "DISBURSED (NPCI)", time: "Today, 11:42 AM" },
-  { ref: "ESC-88902-AP", bookingId: "BK-9019", customer: "Pooja Hegde", artisan: "Anita Rao", total: 1800, artisanPayout: 1800, welfareFund: 36, status: "DISBURSED (NPCI)", time: "Yesterday, 04:15 PM" },
-  { ref: "ESC-88710-AP", bookingId: "BK-9018", customer: "V. Srinivas", artisan: "Suresh Babu", total: 1250, artisanPayout: 1250, welfareFund: 25, status: "DISBURSED (NPCI)", time: "05 Sep 2026" }
+export interface AdminPaymentTransaction {
+  txId: string;
+  bookingId: string;
+  timestamp: string;
+  customer: string;
+  customerPhone: string;
+  worker: string;
+  employeeId: string;
+  service: string;
+  grossAmount: number;
+  workerEarning: number;
+  coopFee: number;
+  platformFee: number;
+  paymentMethod: string;
+  paymentStatus: "COMPLETED" | "PENDING" | "REFUNDED";
+  settlementStatus: "SETTLED" | "IN_ESCROW" | "ESCROW_LOCKED";
+  utrRef: string;
+  society: string;
+  bankAccount: string;
+}
+
+const DETAILED_PAYMENT_TRANSACTIONS: AdminPaymentTransaction[] = [
+  {
+    txId: "TXN-2026-9021",
+    bookingId: "BK-9021",
+    timestamp: "10 Sep 2026, 02:30 PM",
+    customer: "Dr. K. Rao",
+    customerPhone: "+91 98480 11223",
+    worker: "Rajesh Kumar",
+    employeeId: "COOP-EMP-0001",
+    service: "Emergency MCB Rewiring",
+    grossAmount: 850,
+    workerEarning: 765,
+    coopFee: 85,
+    platformFee: 0,
+    paymentMethod: "Bharat UPI QR",
+    paymentStatus: "COMPLETED",
+    settlementStatus: "SETTLED",
+    utrRef: "NPCI/UPI/2026/89410291",
+    society: "Vijayawada Central Labour Co-op (PLCS-04)",
+    bankAccount: "Andhra Pragathi Grameena Bank ••••9821"
+  },
+  {
+    txId: "TXN-2026-9020",
+    bookingId: "BK-9020",
+    timestamp: "10 Sep 2026, 11:15 AM",
+    customer: "Ananya Sharma",
+    customerPhone: "+91 98492 44556",
+    worker: "Lakshmi Narayana",
+    employeeId: "COOP-EMP-0002",
+    service: "Conduit Leakage Repair",
+    grossAmount: 650,
+    workerEarning: 585,
+    coopFee: 65,
+    platformFee: 0,
+    paymentMethod: "RuPay Card",
+    paymentStatus: "COMPLETED",
+    settlementStatus: "SETTLED",
+    utrRef: "NPCI/RUPAY/2026/78219011",
+    society: "Guntur East Labour Co-op (PLCS-02)",
+    bankAccount: "State Bank of India ••••4412"
+  },
+  {
+    txId: "TXN-2026-9019",
+    bookingId: "BK-9019",
+    timestamp: "09 Sep 2026, 04:15 PM",
+    customer: "Pooja Hegde",
+    customerPhone: "+91 94401 77889",
+    worker: "Anita Rao",
+    employeeId: "COOP-EMP-0005",
+    service: "Traditional Andhra Catering",
+    grossAmount: 1800,
+    workerEarning: 1620,
+    coopFee: 180,
+    platformFee: 0,
+    paymentMethod: "Direct Bank DBT",
+    paymentStatus: "COMPLETED",
+    settlementStatus: "SETTLED",
+    utrRef: "NPCI/DBT/2026/55672109",
+    society: "Bengaluru South Services Guild (KA-09)",
+    bankAccount: "Canara Bank ••••7812"
+  },
+  {
+    txId: "TXN-2026-9018",
+    bookingId: "BK-9018",
+    timestamp: "08 Sep 2026, 01:20 PM",
+    customer: "V. Srinivas",
+    customerPhone: "+91 98660 33221",
+    worker: "Suresh Babu",
+    employeeId: "COOP-EMP-0006",
+    service: "Solar Inverter Synchronization",
+    grossAmount: 1250,
+    workerEarning: 1125,
+    coopFee: 125,
+    platformFee: 0,
+    paymentMethod: "Bharat UPI QR",
+    paymentStatus: "COMPLETED",
+    settlementStatus: "SETTLED",
+    utrRef: "NPCI/UPI/2026/44321908",
+    society: "Visakhapatnam Port Artisan Society (AP-12)",
+    bankAccount: "Union Bank of India ••••1190"
+  },
+  {
+    txId: "TXN-2026-9017",
+    bookingId: "BK-9017",
+    timestamp: "08 Sep 2026, 10:00 AM",
+    customer: "K. Madhuri",
+    customerPhone: "+91 99881 22334",
+    worker: "Rajesh Kumar",
+    employeeId: "COOP-EMP-0001",
+    service: "Ceiling Fan & Switchboard Fix",
+    grossAmount: 550,
+    workerEarning: 495,
+    coopFee: 55,
+    platformFee: 0,
+    paymentMethod: "Escrow Locked",
+    paymentStatus: "PENDING",
+    settlementStatus: "IN_ESCROW",
+    utrRef: "ESC/HOLD/2026/99120481",
+    society: "Vijayawada Central Labour Co-op (PLCS-04)",
+    bankAccount: "Andhra Pragathi Grameena Bank ••••9821"
+  },
+  {
+    txId: "TXN-2026-9016",
+    bookingId: "BK-9016",
+    timestamp: "07 Sep 2026, 06:45 PM",
+    customer: "R. Venkatesh",
+    customerPhone: "+91 97000 66778",
+    worker: "Lakshmi Narayana",
+    employeeId: "COOP-EMP-0002",
+    service: "Water Tank Float Valve Repair",
+    grossAmount: 450,
+    workerEarning: 405,
+    coopFee: 45,
+    platformFee: 0,
+    paymentMethod: "Cash on Service (Audited)",
+    paymentStatus: "COMPLETED",
+    settlementStatus: "SETTLED",
+    utrRef: "CASH/REC/2026/11293844",
+    society: "Guntur East Labour Co-op (PLCS-02)",
+    bankAccount: "State Bank of India ••••4412"
+  },
+  {
+    txId: "TXN-2026-9015",
+    bookingId: "BK-9015",
+    timestamp: "06 Sep 2026, 03:10 PM",
+    customer: "T. Swathi",
+    customerPhone: "+91 99123 45678",
+    worker: "Sunita Devi",
+    employeeId: "COOP-EMP-0003",
+    service: "Elder Care & Patient Assistance",
+    grossAmount: 900,
+    workerEarning: 810,
+    coopFee: 90,
+    platformFee: 0,
+    paymentMethod: "Bharat UPI QR",
+    paymentStatus: "COMPLETED",
+    settlementStatus: "SETTLED",
+    utrRef: "NPCI/UPI/2026/33214567",
+    society: "Auto Nagar Industrial & Domestic Society",
+    bankAccount: "HDFC Bank ••••3199"
+  },
+  {
+    txId: "TXN-2026-9014",
+    bookingId: "BK-9014",
+    timestamp: "05 Sep 2026, 09:30 AM",
+    customer: "M. Harish",
+    customerPhone: "+91 96543 21098",
+    worker: "Suresh Babu",
+    employeeId: "COOP-EMP-0006",
+    service: "Heavy Load Circuit Breaker Fix",
+    grossAmount: 1100,
+    workerEarning: 0,
+    coopFee: 0,
+    platformFee: 0,
+    paymentMethod: "Refund to Source",
+    paymentStatus: "REFUNDED",
+    settlementStatus: "SETTLED",
+    utrRef: "REFUND/REV/2026/88910234",
+    society: "Visakhapatnam Port Artisan Society (AP-12)",
+    bankAccount: "Union Bank of India ••••1190"
+  }
 ];
 
 export const SuperAdminPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>("overview");
+  const [activeTab, setActiveTab] = useState<string>("command");
 
   // Data states
   const [workforceData, setWorkforceData] = useState<any[]>(INITIAL_WORKFORCE_REGISTRY);
   const [selectedWorkerForDrawer, setSelectedWorkerForDrawer] = useState<any | null>(null);
   const [selectedCityId, setSelectedCityId] = useState<string>("vja");
   const [isWelfareFlipped, setIsWelfareFlipped] = useState<boolean>(false);
+
+  // Payments & Revenue Center state
+  const [paymentTransactions] = useState<AdminPaymentTransaction[]>(DETAILED_PAYMENT_TRANSACTIONS);
+  const [selectedPaymentTx, setSelectedPaymentTx] = useState<AdminPaymentTransaction | null>(null);
+  const [paymentSearch, setPaymentSearch] = useState<string>("");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("ALL");
+  const [paymentSettlementFilter, setPaymentSettlementFilter] = useState<string>("ALL");
 
   // Security Center state
   const [securityEvents, setSecurityEvents] = useState<any[]>([
@@ -417,7 +603,7 @@ export const SuperAdminPage: React.FC = () => {
       sortable: true,
       render: (w) => (
         <div>
-          <span className="px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 text-[#075E54] dark:text-emerald-400 font-bold text-[11px]">
+          <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-bold text-[11px]">
             {w.trade}
           </span>
           <div className="text-[10px] text-slate-400 mt-1 truncate max-w-[140px]">
@@ -529,9 +715,9 @@ export const SuperAdminPage: React.FC = () => {
     >
       <div className="space-y-6 max-w-7xl mx-auto">
         {/* =========================================================================
-            1. TAB: OVERVIEW
+            1. TAB: COMMAND CENTER (OPERATIONS)
         ========================================================================== */}
-        {activeTab === "overview" && (
+        {activeTab === "command" && (
           <div className="space-y-6">
             {/* Top Operational Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E4E9F0] dark:border-slate-800 pb-4">
@@ -865,7 +1051,7 @@ export const SuperAdminPage: React.FC = () => {
                       onClick={() => setSelectedCityId(city.id)}
                       className={`p-3 rounded-xl border transition cursor-pointer flex items-center justify-between ${
                         selectedCityId === city.id
-                          ? "bg-teal-50 dark:bg-teal-950/40 border-[#075E54] dark:border-emerald-600 shadow-xs"
+                          ? "bg-blue-50 dark:bg-blue-950/40 border-blue-600 dark:border-blue-500 shadow-xs"
                           : "border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900"
                       }`}
                     >
@@ -986,94 +1172,432 @@ export const SuperAdminPage: React.FC = () => {
         {/* =========================================================================
             7. TAB: PAYMENTS & ESCROW
         ========================================================================== */}
-        {activeTab === "payments" && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E4E9F0] dark:border-slate-800 pb-4">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                  Payments &amp; Statutory Escrow Settlement
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  100% of base labor disbursed directly to artisans upon customer completion OTP. 0% middlemen deduction.
-                </p>
-              </div>
-            </div>
+        {activeTab === "payments" && (() => {
+          const filteredTransactions = paymentTransactions.filter((tx) => {
+            const matchesSearch =
+              paymentSearch.trim() === "" ||
+              tx.txId.toLowerCase().includes(paymentSearch.toLowerCase()) ||
+              tx.bookingId.toLowerCase().includes(paymentSearch.toLowerCase()) ||
+              tx.customer.toLowerCase().includes(paymentSearch.toLowerCase()) ||
+              tx.worker.toLowerCase().includes(paymentSearch.toLowerCase()) ||
+              tx.employeeId.toLowerCase().includes(paymentSearch.toLowerCase()) ||
+              tx.service.toLowerCase().includes(paymentSearch.toLowerCase());
 
-            {/* Informative Admin Mandate Banner - Light Style */}
-            <div className="rounded-2xl bg-gradient-to-r from-teal-50/80 via-white to-emerald-50/40 border border-slate-200 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
-              <div className="flex items-center gap-4">
-                <img
-                  src="https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?w=300&q=80"
-                  alt="Instant Payout"
-                  className="w-14 h-14 rounded-xl object-cover border-2 border-teal-300 shadow-xs shrink-0"
-                />
+            const matchesStatus =
+              paymentStatusFilter === "ALL" || tx.paymentStatus === paymentStatusFilter;
+
+            const matchesSettlement =
+              paymentSettlementFilter === "ALL" || tx.settlementStatus === paymentSettlementFilter;
+
+            return matchesSearch && matchesStatus && matchesSettlement;
+          });
+
+          const handleExportPaymentsCSV = () => {
+            const headers = [
+              "Transaction ID",
+              "Booking ID",
+              "Timestamp",
+              "Customer",
+              "Worker",
+              "Employee ID",
+              "Service",
+              "Gross Amount (INR)",
+              "Worker Earning (INR)",
+              "Cooperative Fee (INR)",
+              "Platform Fee (INR)",
+              "Payment Method",
+              "Payment Status",
+              "Settlement Status",
+              "UTR Reference"
+            ];
+
+            const rows = filteredTransactions.map((tx) => [
+              tx.txId,
+              tx.bookingId,
+              `"${tx.timestamp}"`,
+              `"${tx.customer}"`,
+              `"${tx.worker}"`,
+              tx.employeeId,
+              `"${tx.service}"`,
+              tx.grossAmount,
+              tx.workerEarning,
+              tx.coopFee,
+              tx.platformFee,
+              `"${tx.paymentMethod}"`,
+              tx.paymentStatus,
+              tx.settlementStatus,
+              tx.utrRef
+            ]);
+
+            const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `coopnex-payments-ledger-${new Date().toISOString().slice(0, 10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          };
+
+          return (
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E4E9F0] dark:border-slate-800 pb-4">
                 <div>
-                  <div className="text-[11px] font-black uppercase tracking-wider text-[#075E54]">
-                    Super Admin Mandate • Escrow &amp; Worker Welfare
-                  </div>
-                  <div className="text-sm font-bold text-slate-900 mt-0.5">
-                    100% Direct Payouts (0% Exploitation) &amp; 2% Welfare Pooling
-                  </div>
-                  <div className="text-xs text-slate-600 mt-0.5">
-                    Releases 100% base labor funds via NPCI directly to workers on OTP completion, while directing 2% into the cooperative emergency healthcare fund.
-                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                    Payments &amp; Statutory Escrow Settlement Center
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    100% of base floor wages disbursed directly to artisans upon customer completion OTP. 0% aggregator markups.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleExportPaymentsCSV}
+                    className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Export Ledger (CSV)</span>
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-2.5 shrink-0 text-xs font-mono">
-                <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-slate-800 shadow-2xs">
-                  0% Commission
-                </span>
-                <span className="px-3 py-1.5 rounded-xl bg-teal-100 text-[#075E54] font-bold">
-                  ₹14.85L Daily Settled
-                </span>
-              </div>
-            </div>
 
-            <PaymentFlow3D />
-
-            {/* Escrow Transactions Ledger */}
-            <div className="bg-white dark:bg-[#101828] rounded-2xl border border-[#E4E9F0] dark:border-slate-800 p-5 space-y-3 text-xs">
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
-                <span className="font-bold text-slate-900 dark:text-white text-sm">
-                  Statutory Escrow Settlement Ledger
-                </span>
-                <span className="text-[10px] font-mono text-emerald-600 font-bold">
-                  NPCI Direct Link Active
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                {SAMPLE_ESCROW_TRANSACTIONS.map((tx, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-emerald-600 font-bold">{tx.ref}</span>
-                        <span className="text-slate-800 dark:text-slate-200 font-semibold">
-                          Booking: {tx.bookingId}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-slate-500">
-                        Payer: {tx.customer} &rarr; Artisan: <strong>{tx.artisan}</strong>
-                      </div>
+              {/* Informative Admin Mandate Banner */}
+              <div className="rounded-2xl bg-gradient-to-r from-blue-50/90 via-white to-indigo-50/40 border border-slate-200 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
+                <div className="flex items-center gap-4">
+                  <img
+                    src="https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?w=300&q=80"
+                    alt="Instant Payout"
+                    className="w-14 h-14 rounded-xl object-cover border-2 border-blue-200 shadow-xs shrink-0"
+                  />
+                  <div>
+                    <div className="text-[11px] font-black uppercase tracking-wider text-blue-800">
+                      Super Admin Mandate • Escrow &amp; Worker Welfare Center
                     </div>
-
-                    <div className="text-right font-mono">
-                      <div className="font-bold text-slate-900 dark:text-white">
-                        ₹{tx.artisanPayout} <span className="text-[10px] text-emerald-600">(100% Labor)</span>
-                      </div>
-                      <div className="text-[10px] text-slate-400">
-                        Welfare (2%): ₹{tx.welfareFund} • {tx.status}
-                      </div>
+                    <div className="text-sm font-bold text-slate-900 mt-0.5">
+                      Statutory 100% Worker Payouts (0% Exploitation) &amp; 10% Cooperative Fund
+                    </div>
+                    <div className="text-xs text-slate-600 mt-0.5">
+                      Releases direct DBT bank deposits upon citizen OTP verification. Full NPCI audit trail and zero hidden surcharge deductions.
                     </div>
                   </div>
-                ))}
+                </div>
+                <div className="flex items-center gap-2.5 shrink-0 text-xs font-mono">
+                  <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-slate-800 shadow-2xs">
+                    0% Commission
+                  </span>
+                  <span className="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 font-bold">
+                    ₹24.85L Settled
+                  </span>
+                </div>
               </div>
+
+              {/* 7 TOP SUMMARY METRIC CARDS */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+                {/* 1. Total Revenue */}
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-1">
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Total Revenue</div>
+                  <div className="text-xl font-black font-mono text-slate-900 dark:text-white">₹24,85,600</div>
+                  <div className="text-[10px] text-emerald-600 font-semibold">1,248 Bookings</div>
+                </div>
+
+                {/* 2. Worker Earnings */}
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-emerald-200/90 dark:border-emerald-900 shadow-xs space-y-1 bg-emerald-50/30">
+                  <div className="text-[10px] uppercase font-bold text-emerald-700">Worker Earnings</div>
+                  <div className="text-xl font-black font-mono text-emerald-700">₹22,37,040</div>
+                  <div className="text-[10px] text-emerald-600 font-bold">90% Direct Pay</div>
+                </div>
+
+                {/* 3. Cooperative Share */}
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-blue-200/90 dark:border-blue-900 shadow-xs space-y-1">
+                  <div className="text-[10px] uppercase font-bold text-blue-700">Co-op Share</div>
+                  <div className="text-xl font-black font-mono text-blue-700">₹2,48,560</div>
+                  <div className="text-[10px] text-slate-500">10% Welfare Fund</div>
+                </div>
+
+                {/* 4. Platform Revenue */}
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-1">
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Platform Revenue</div>
+                  <div className="text-xl font-black font-mono text-slate-700 dark:text-slate-300">₹0</div>
+                  <div className="text-[10px] text-emerald-600 font-bold">0% Cut (Public Grid)</div>
+                </div>
+
+                {/* 5. Pending Payments */}
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-amber-200/90 dark:border-amber-900 shadow-xs space-y-1">
+                  <div className="text-[10px] uppercase font-bold text-amber-700">Pending Payments</div>
+                  <div className="text-xl font-black font-mono text-amber-600">₹48,200</div>
+                  <div className="text-[10px] text-amber-700 font-medium">In Escrow Lock</div>
+                </div>
+
+                {/* 6. Completed Payments */}
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-1">
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Completed Payouts</div>
+                  <div className="text-xl font-black font-mono text-slate-900 dark:text-white">₹24,37,400</div>
+                  <div className="text-[10px] text-emerald-600 font-semibold">99.8% Success</div>
+                </div>
+
+                {/* 7. Refunds Issued */}
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-rose-200/90 dark:border-rose-900 shadow-xs space-y-1">
+                  <div className="text-[10px] uppercase font-bold text-rose-700">Refunds Issued</div>
+                  <div className="text-xl font-black font-mono text-rose-600">₹12,400</div>
+                  <div className="text-[10px] text-slate-500">0.5% Dispute Rate</div>
+                </div>
+              </div>
+
+              {/* 3D Payment Flow Telemetry */}
+              <PaymentFlow3D />
+
+              {/* Filter Controls Bar */}
+              <div className="bg-white dark:bg-[#101828] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <div className="flex-1 w-full sm:w-auto relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={paymentSearch}
+                    onChange={(e) => setPaymentSearch(e.target.value)}
+                    placeholder="Search by Tx ID, Booking ID, Worker, Customer, Service..."
+                    className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:border-blue-600 text-xs"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-slate-500 font-bold text-[11px]">Status:</span>
+                    <select
+                      value={paymentStatusFilter}
+                      onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                      className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold focus:outline-none"
+                    >
+                      <option value="ALL">All Statuses</option>
+                      <option value="COMPLETED">Completed</option>
+                      <option value="PENDING">Pending</option>
+                      <option value="REFUNDED">Refunded</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-slate-500 font-bold text-[11px]">Settlement:</span>
+                    <select
+                      value={paymentSettlementFilter}
+                      onChange={(e) => setPaymentSettlementFilter(e.target.value)}
+                      className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold focus:outline-none"
+                    >
+                      <option value="ALL">All Settlements</option>
+                      <option value="SETTLED">Settled</option>
+                      <option value="IN_ESCROW">In Escrow</option>
+                    </select>
+                  </div>
+
+                  <span className="text-[11px] font-mono text-slate-500 pl-1">
+                    Showing {filteredTransactions.length} of {paymentTransactions.length}
+                  </span>
+                </div>
+              </div>
+
+              {/* 14-COLUMN ESCROW & PAYMENTS LEDGER TABLE */}
+              <div className="bg-white dark:bg-[#101828] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                        <th className="py-3 px-3">1. Tx ID</th>
+                        <th className="py-3 px-3">2. Booking ID</th>
+                        <th className="py-3 px-3">3. Date &amp; Time</th>
+                        <th className="py-3 px-3">4. Customer</th>
+                        <th className="py-3 px-3">5. Worker</th>
+                        <th className="py-3 px-3">6. Employee ID</th>
+                        <th className="py-3 px-3">7. Service</th>
+                        <th className="py-3 px-3 text-right">8. Gross</th>
+                        <th className="py-3 px-3 text-right">9. Worker Net</th>
+                        <th className="py-3 px-3 text-right">10. Co-op Fee</th>
+                        <th className="py-3 px-3 text-center">11. Platform</th>
+                        <th className="py-3 px-3">12. Method</th>
+                        <th className="py-3 px-3 text-center">13. Status</th>
+                        <th className="py-3 px-3 text-center">14. Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 font-medium">
+                      {filteredTransactions.map((tx) => (
+                        <tr
+                          key={tx.txId}
+                          onClick={() => setSelectedPaymentTx(tx)}
+                          className="hover:bg-blue-50/40 dark:hover:bg-slate-900/40 transition cursor-pointer"
+                        >
+                          {/* 1. Tx ID */}
+                          <td className="py-3 px-3 font-mono font-bold text-blue-700 dark:text-blue-400 whitespace-nowrap">
+                            {tx.txId}
+                          </td>
+                          {/* 2. Booking ID */}
+                          <td className="py-3 px-3 font-mono text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                            {tx.bookingId}
+                          </td>
+                          {/* 3. Date & Time */}
+                          <td className="py-3 px-3 text-slate-500 whitespace-nowrap">
+                            {tx.timestamp}
+                          </td>
+                          {/* 4. Customer */}
+                          <td className="py-3 px-3 text-slate-900 dark:text-white font-bold whitespace-nowrap">
+                            {tx.customer}
+                          </td>
+                          {/* 5. Worker */}
+                          <td className="py-3 px-3 text-slate-900 dark:text-white font-semibold whitespace-nowrap">
+                            {tx.worker}
+                          </td>
+                          {/* 6. Employee ID */}
+                          <td className="py-3 px-3 font-mono text-slate-600 whitespace-nowrap">
+                            {tx.employeeId}
+                          </td>
+                          {/* 7. Service */}
+                          <td className="py-3 px-3 text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                            {tx.service}
+                          </td>
+                          {/* 8. Gross */}
+                          <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                            ₹{tx.grossAmount}
+                          </td>
+                          {/* 9. Worker Net */}
+                          <td className="py-3 px-3 text-right font-mono font-bold text-emerald-700 whitespace-nowrap">
+                            ₹{tx.workerEarning}
+                          </td>
+                          {/* 10. Co-op Fee */}
+                          <td className="py-3 px-3 text-right font-mono text-amber-700 whitespace-nowrap">
+                            ₹{tx.coopFee}
+                          </td>
+                          {/* 11. Platform Fee */}
+                          <td className="py-3 px-3 text-center font-mono text-slate-500 whitespace-nowrap">
+                            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-600">
+                              ₹0 (0%)
+                            </span>
+                          </td>
+                          {/* 12. Payment Method */}
+                          <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
+                            {tx.paymentMethod}
+                          </td>
+                          {/* 13. Status */}
+                          <td className="py-3 px-3 text-center whitespace-nowrap">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                              tx.paymentStatus === "COMPLETED"
+                                ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                                : tx.paymentStatus === "PENDING"
+                                ? "bg-amber-50 text-amber-800 border-amber-300"
+                                : "bg-rose-50 text-rose-800 border-rose-300"
+                            }`}>
+                              {tx.paymentStatus}
+                            </span>
+                          </td>
+                          {/* 14. Action */}
+                          <td className="py-3 px-3 text-center whitespace-nowrap">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedPaymentTx(tx);
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11px] transition"
+                            >
+                              Audit View
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* TRANSACTION DETAILS AUDIT DRAWER / MODAL */}
+              {selectedPaymentTx && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+                  <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 relative max-h-[90vh] overflow-y-auto">
+                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-emerald-600 font-mono">
+                          NPCI / RBI Escrow Audit Trail
+                        </span>
+                        <h3 className="text-base font-black text-slate-900 dark:text-white">
+                          Transaction #{selectedPaymentTx.txId}
+                        </h3>
+                      </div>
+                      <button
+                        onClick={() => setSelectedPaymentTx(null)}
+                        className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2.5 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Booking Reference:</span>
+                        <strong className="font-mono text-slate-900 dark:text-white">{selectedPaymentTx.bookingId}</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Service Executed:</span>
+                        <strong className="text-slate-800 dark:text-slate-200">{selectedPaymentTx.service}</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Citizen Payer:</span>
+                        <span className="font-semibold text-slate-900 dark:text-white">
+                          {selectedPaymentTx.customer} ({selectedPaymentTx.customerPhone})
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Beneficiary Artisan:</span>
+                        <span className="font-semibold text-slate-900 dark:text-white">
+                          {selectedPaymentTx.worker} ({selectedPaymentTx.employeeId})
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Primary Cooperative:</span>
+                        <span className="text-slate-700 dark:text-slate-300 font-medium">{selectedPaymentTx.society}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Worker Passbook DBT:</span>
+                        <span className="font-mono text-slate-800 dark:text-slate-200">{selectedPaymentTx.bankAccount}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">NPCI UTR Reference:</span>
+                        <span className="font-mono text-emerald-700 font-bold">{selectedPaymentTx.utrRef}</span>
+                      </div>
+                    </div>
+
+                    {/* Statutory Breakdown Box */}
+                    <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200 text-xs space-y-1.5">
+                      <div className="text-[10px] font-black uppercase tracking-wider text-emerald-900">
+                        Statutory Floor Wage Settlement Audit
+                      </div>
+                      <div className="flex justify-between text-slate-700">
+                        <span>Customer Gross Payment:</span>
+                        <strong className="font-mono">₹{selectedPaymentTx.grossAmount}</strong>
+                      </div>
+                      <div className="flex justify-between text-amber-800">
+                        <span>Cooperative Welfare &amp; Society Share (10%):</span>
+                        <strong className="font-mono">-₹{selectedPaymentTx.coopFee}</strong>
+                      </div>
+                      <div className="flex justify-between text-slate-600">
+                        <span>Private Intermediary Aggregator Cut:</span>
+                        <strong className="font-mono text-emerald-700">₹0 (0%)</strong>
+                      </div>
+                      <div className="pt-2 border-t border-emerald-200 flex justify-between text-sm font-black text-emerald-900">
+                        <span>Net Artisan DBT Take-Home:</span>
+                        <span className="font-mono">₹{selectedPaymentTx.workerEarning}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <button
+                        onClick={() => setSelectedPaymentTx(null)}
+                        className="py-2.5 px-6 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition cursor-pointer"
+                      >
+                        Close Audit Inspector
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* =========================================================================
             8. TAB: WORKER WELFARE (WITH 3D FLIP CARD)
@@ -1232,18 +1756,7 @@ export const SuperAdminPage: React.FC = () => {
         ========================================================================== */}
         {activeTab === "ai" && (
           <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E4E9F0] dark:border-slate-800 pb-4">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                  AI Demand Forecast &amp; Capacity Optimization
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  3D predictive models forecasting peak service hours and suggested artisan buffer allocations.
-                </p>
-              </div>
-            </div>
-
-            <AiDemand3D />
+            <AdminAiIntelligenceDashboard />
           </div>
         )}
 

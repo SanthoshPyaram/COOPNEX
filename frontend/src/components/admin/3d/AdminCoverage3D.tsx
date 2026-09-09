@@ -185,11 +185,11 @@ export const AdminCoverage3D: React.FC<AdminCoverage3DProps> = ({
     container.addEventListener("click", handleClick);
 
     let animId: number;
-    const clock = new THREE.Clock();
+    const startTime = performance.now();
 
     const animate = () => {
       animId = requestAnimationFrame(animate);
-      const elapsed = clock.getElapsedTime();
+      const elapsed = (performance.now() - startTime) / 1000;
 
       // Gentle rotation
       landGroup.rotation.y = elapsed * 0.08;

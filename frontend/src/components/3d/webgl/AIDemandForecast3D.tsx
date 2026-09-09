@@ -158,11 +158,11 @@ export const AIDemandForecast3D: React.FC = () => {
     beaconRing.rotation.x = Math.PI / 2;
     scene.add(beaconRing);
 
-    let clock = new THREE.Clock();
+    const startTime = performance.now();
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
-      const time = clock.getElapsedTime();
+      const time = (performance.now() - startTime) / 1000;
 
       // Smoothly scale height of bars
       bars.forEach((b) => {

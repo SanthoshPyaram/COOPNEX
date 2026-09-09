@@ -22,9 +22,9 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
     },
     2: {
       title: "Level 2: Co-op Member",
-      color: "text-teal-700",
-      bg: "bg-teal-50",
-      border: "border-teal-200",
+      color: "text-indigo-700",
+      bg: "bg-indigo-50",
+      border: "border-indigo-200",
       desc: "Registered member of certified Labour Cooperative Society"
     },
     3: {

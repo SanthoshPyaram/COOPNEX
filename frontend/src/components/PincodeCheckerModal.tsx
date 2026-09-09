@@ -40,6 +40,18 @@ export const PincodeCheckerModal: React.FC<PincodeCheckerModalProps> = ({
     }
   }, [initialPincode]);
 
+  // Keyboard accessibility: Escape key closes modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleCheck = async (e?: React.FormEvent) => {
@@ -73,10 +85,17 @@ export const PincodeCheckerModal: React.FC<PincodeCheckerModalProps> = ({
           isCovered: true,
           activeCooperative: true,
           city,
-          district,
           state,
-          servicesAvailable: d.servicesAvailable || d.services || ALL_SERVICES,
-          cooperativeName: `${city} Central Primary Labour Cooperative Society (PLCS)`,
+          district,
+          cooperativeName: `${city} Primary Labour Cooperative`,
+          servicesAvailable: d.servicesAvailable || localRes.servicesAvailable || [
+            "Electrician",
+            "Plumber",
+            "Carpenter",
+            "Appliance Repair",
+            "Painter",
+            "House Cleaning"
+          ],
           slaMinutes: d.slaMinutes || 16,
           nearestHub: `${city} Cooperative Seva Kendra`,
           message: `Cooperative Service Available in ${city}, ${state}! Verified cooperative artisans ready for immediate dispatch.`
@@ -116,8 +135,18 @@ export const PincodeCheckerModal: React.FC<PincodeCheckerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden relative my-6 text-slate-900 dark:text-slate-100 transition-colors">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-sm overflow-y-auto"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pincode-modal-title"
+        className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden relative my-6 text-slate-900 dark:text-slate-100 transition-colors"
+      >
         {/* Modal Header */}
         <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 p-5 sm:p-7 text-white relative">
           <button
@@ -131,7 +160,7 @@ export const PincodeCheckerModal: React.FC<PincodeCheckerModalProps> = ({
             <MapPin className="w-4 h-4 text-orange-400" />
             <span>National Coverage Detection Engine</span>
           </div>
-          <h3 className="text-xl sm:text-2xl font-black font-display text-white">
+          <h3 id="pincode-modal-title" className="text-xl sm:text-2xl font-black font-display text-white">
             {t("pincode.modalTitle") || "Check Cooperative Service Availability"}
           </h3>
           <p className="text-xs sm:text-sm text-blue-100/90 mt-1 leading-relaxed">
