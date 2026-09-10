@@ -30,3 +30,4 @@ sequenceDiagram
     UI->>API: POST /api/admin/workforce-exchanges/:id/approve
     API->>DB: WorkforceExchange.updateOne(status: "APPROVED")
     API-->>UI: Inter-society mutual aid transfer authorized
+
