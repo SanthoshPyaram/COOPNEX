@@ -20,6 +20,7 @@ coverage/
 .env.test.local
 .env.production.local
 !.env.example
+!frontend/.env.production
 
 # Python
 __pycache__/

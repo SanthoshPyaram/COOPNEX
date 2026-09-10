@@ -1,11 +1,25 @@
 import { WorkerProfile, Booking, WorkforceExchangeProposal, HeatmapZone } from "../types";
 
-const RAW_API_URL = import.meta.env.VITE_API_URL || "";
-export const API_BASE = RAW_API_URL
-  ? RAW_API_URL.endsWith("/api")
-    ? RAW_API_URL
-    : `${RAW_API_URL.replace(/\/$/, "")}/api`
-  : "/api";
+// Production Backend API Base URL
+// In production, fallback to the deployed production backend if VITE_API_URL is omitted
+export const DEFAULT_PROD_API_URL = "https://coopnex-backend.onrender.com";
+
+const getApiBaseUrl = (): string => {
+  const envUrl = (import.meta.env.VITE_API_URL || "").trim();
+  if (envUrl) {
+    return envUrl.endsWith("/api") ? envUrl : `${envUrl.replace(/\/$/, "")}/api`;
+  }
+
+  // In browser runtime on GitHub Pages (static host), never make API calls
+  // back to the static host origin because GitHub Pages returns 405 Method Not Allowed
+  if (typeof window !== "undefined" && window.location && window.location.hostname.includes("github.io")) {
+    return `${DEFAULT_PROD_API_URL}/api`;
+  }
+
+  return "/api";
+};
+
+export const API_BASE = getApiBaseUrl();
 
 export const api = {
   // Workers

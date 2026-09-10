@@ -12,6 +12,7 @@ import {
   speakViaBrowserFallback,
   selectBestBrowserVoice
 } from "./browserFallback";
+import { API_BASE } from "../api";
 
 export type TtsPlaybackStatus = "IDLE" | "LOADING" | "PLAYING" | "PAUSED" | "ERROR";
 
@@ -267,7 +268,7 @@ class TtsService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 6500); // 6.5s timeout for complete audio streaming
 
-      const res = await fetch("/api/tts", {
+      const res = await fetch(`${API_BASE}/tts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

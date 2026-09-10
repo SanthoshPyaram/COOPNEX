@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Trash2
 } from "lucide-react";
+import { API_BASE } from "../services/api";
 
 export interface ReviewModalProps {
   isOpen: boolean;
@@ -97,7 +98,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
 
     try {
       if (token && bookingId && !bookingId.startsWith("DEMO-")) {
-        await fetch("/api/reviews", {
+        await fetch(`${API_BASE}/reviews`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

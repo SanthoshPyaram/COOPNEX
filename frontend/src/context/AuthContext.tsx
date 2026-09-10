@@ -79,6 +79,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const role: UserRole | null = user?.role || null;
   const isAuthenticated = !!user && !!token;
 
+  /**
+   * Resilient HTTP response parser that safely handles JSON and non-JSON (HTML 404/405/502) error pages
+   * without crashing JSON.parse or displaying internal server details.
+   */
+  const parseApiResponse = async (res: Response): Promise<{ ok: boolean; status: number; data: any; errorMessage: string }> => {
+    const status = res.status;
+    const contentType = res.headers.get("content-type") || "";
+    let data: any = {};
+
+    if (contentType.includes("application/json")) {
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
+    } else {
+      try {
+        await res.text();
+      } catch {}
+    }
+
+    let errorMessage = data?.message;
+    if (!errorMessage) {
+      if (status === 404 || status === 405) {
+        errorMessage = "Backend verification service endpoint is not reachable. Please verify the backend API is online.";
+      } else if (status === 429) {
+        errorMessage = "Too many requests. Please wait a moment before trying again.";
+      } else if (status >= 500) {
+        errorMessage = "Verification service is temporarily unavailable. Please try again in a moment.";
+      } else if (!res.ok) {
+        errorMessage = "Unable to connect to verification service. Please check your network and try again.";
+      }
+    }
+
+    return { ok: res.ok, status, data, errorMessage };
+  };
+
   const login = async (identifier: string, pass: string, expectedRole?: UserRole): Promise<{ success: boolean; role?: UserRole; message?: string }> => {
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
@@ -86,17 +123,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier, password: pass, expectedRole })
       });
-      const data = await res.json();
-      if (data.success && data.user) {
-        setUser(data.user);
-        setToken(data.token);
-        localStorage.setItem("sahakari_user", JSON.stringify(data.user));
-        localStorage.setItem("sahakari_token", data.token);
-        return { success: true, role: data.user.role };
+      const parsed = await parseApiResponse(res);
+      if (parsed.ok && parsed.data.success && parsed.data.user) {
+        setUser(parsed.data.user);
+        setToken(parsed.data.token);
+        localStorage.setItem("sahakari_user", JSON.stringify(parsed.data.user));
+        localStorage.setItem("sahakari_token", parsed.data.token);
+        return { success: true, role: parsed.data.user.role };
       }
-      return { success: false, message: data.message || "Invalid credentials." };
+      return { success: false, message: parsed.errorMessage || "Invalid credentials." };
     } catch (err: any) {
-      return { success: false, message: "Network or server error." };
+      return { success: false, message: "Unable to connect to authentication server. Please check your internet connection." };
     }
   };
 
@@ -107,17 +144,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ employeeId: employeeId.trim().toUpperCase(), password: pass })
       });
-      const data = await res.json();
-      if (data.success && data.user) {
-        setUser(data.user);
-        setToken(data.token);
-        localStorage.setItem("sahakari_user", JSON.stringify(data.user));
-        localStorage.setItem("sahakari_token", data.token);
-        return { success: true, role: data.user.role };
+      const parsed = await parseApiResponse(res);
+      if (parsed.ok && parsed.data.success && parsed.data.user) {
+        setUser(parsed.data.user);
+        setToken(parsed.data.token);
+        localStorage.setItem("sahakari_user", JSON.stringify(parsed.data.user));
+        localStorage.setItem("sahakari_token", parsed.data.token);
+        return { success: true, role: parsed.data.user.role };
       }
-      return { success: false, message: data.message || "Invalid Employee ID or password." };
+      return { success: false, message: parsed.errorMessage || "Invalid Employee ID or password." };
     } catch (err: any) {
-      return { success: false, message: "Network or server error." };
+      return { success: false, message: "Unable to connect to worker authentication server. Please check your internet connection." };
     }
   };
 
@@ -148,12 +185,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })
       });
 
-      const recordData = await recordRes.json();
-      if (!recordRes.ok || !recordData.success) {
+      const parsed = await parseApiResponse(recordRes);
+      if (!parsed.ok || !parsed.data.success) {
         return {
           success: false,
-          message: recordData.message || "Failed to initialize verification session.",
-          retryAfterSeconds: recordData.retryAfterSeconds
+          message: parsed.errorMessage || "Failed to initialize verification session.",
+          retryAfterSeconds: parsed.data?.retryAfterSeconds
         };
       }
 
@@ -192,7 +229,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         emailDispatched: true
       };
     } catch (err: any) {
-      return { success: false, message: "Network connection error." };
+      console.error("[Auth] sendOtp unexpected error:", err);
+      return {
+        success: false,
+        message: "Unable to connect to the verification service. Please check your network connection or try again."
+      };
     }
   };
 
@@ -203,17 +244,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier, otpCode, purpose })
       });
-      const data = await res.json();
-      if (data.success && data.user) {
-        setUser(data.user);
-        setToken(data.token);
-        localStorage.setItem("sahakari_user", JSON.stringify(data.user));
-        localStorage.setItem("sahakari_token", data.token);
-        return { success: true, role: data.user.role };
+      const parsed = await parseApiResponse(res);
+      if (parsed.ok && parsed.data.success && parsed.data.user) {
+        setUser(parsed.data.user);
+        setToken(parsed.data.token);
+        localStorage.setItem("sahakari_user", JSON.stringify(parsed.data.user));
+        localStorage.setItem("sahakari_token", parsed.data.token);
+        return { success: true, role: parsed.data.user.role };
       }
-      return { success: data.success || false, message: data.message || "Invalid or expired OTP." };
+      return { success: parsed.data.success || false, message: parsed.errorMessage || "Invalid or expired OTP." };
     } catch (err: any) {
-      return { success: false, message: "Verification failed. Please try again." };
+      return { success: false, message: "Verification service connection failed. Please try again." };
     }
   };
 
@@ -240,12 +281,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })
       });
 
-      const recordData = await recordRes.json();
-      if (!recordRes.ok || !recordData.success) {
+      const parsed = await parseApiResponse(recordRes);
+      if (!parsed.ok || !parsed.data.success) {
         return {
           success: false,
-          message: recordData.message || "Failed to initialize password reset session.",
-          retryAfterSeconds: recordData.retryAfterSeconds
+          message: parsed.errorMessage || "Failed to initialize password reset session.",
+          retryAfterSeconds: parsed.data?.retryAfterSeconds
         };
       }
 
@@ -283,7 +324,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         message: "Password reset verification code dispatched to your email. Valid for 5 minutes."
       };
     } catch (err: any) {
-      return { success: false, message: "Failed to send reset code." };
+      return { success: false, message: "Unable to connect to password reset service. Please try again." };
     }
   };
 
@@ -294,17 +335,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier, otpCode, newPassword: newPass })
       });
-      const data = await res.json();
-      if (data.success && data.user) {
-        setUser(data.user);
-        setToken(data.token);
-        localStorage.setItem("sahakari_user", JSON.stringify(data.user));
-        localStorage.setItem("sahakari_token", data.token);
-        return { success: true, role: data.user.role };
+      const parsed = await parseApiResponse(res);
+      if (parsed.ok && parsed.data.success && parsed.data.user) {
+        setUser(parsed.data.user);
+        setToken(parsed.data.token);
+        localStorage.setItem("sahakari_user", JSON.stringify(parsed.data.user));
+        localStorage.setItem("sahakari_token", parsed.data.token);
+        return { success: true, role: parsed.data.user.role };
       }
-      return { success: false, message: data.message || "Password reset failed." };
+      return { success: false, message: parsed.errorMessage || "Password reset failed." };
     } catch (err: any) {
-      return { success: false, message: "Password reset error." };
+      return { success: false, message: "Unable to connect to password reset service. Please try again." };
     }
   };
 
@@ -318,17 +359,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: "CUSTOMER"
         })
       });
-      const resData = await res.json();
-      if (resData.success && resData.user) {
-        setUser(resData.user);
-        setToken(resData.token);
-        localStorage.setItem("sahakari_user", JSON.stringify(resData.user));
-        localStorage.setItem("sahakari_token", resData.token);
+      const parsed = await parseApiResponse(res);
+      if (parsed.ok && parsed.data.success && parsed.data.user) {
+        setUser(parsed.data.user);
+        setToken(parsed.data.token);
+        localStorage.setItem("sahakari_user", JSON.stringify(parsed.data.user));
+        localStorage.setItem("sahakari_token", parsed.data.token);
         return { success: true };
       }
-      return { success: false, message: resData.message || "Registration failed." };
+      return { success: false, message: parsed.errorMessage || "Registration failed." };
     } catch {
-      return { success: false, message: "Server connection failed." };
+      return { success: false, message: "Unable to connect to registration server. Please check your internet connection." };
     }
   };
 
@@ -342,17 +383,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: "WORKER"
         })
       });
-      const resData = await res.json();
-      if (resData.success && resData.user) {
-        setUser(resData.user);
-        setToken(resData.token);
-        localStorage.setItem("sahakari_user", JSON.stringify(resData.user));
-        localStorage.setItem("sahakari_token", resData.token);
+      const parsed = await parseApiResponse(res);
+      if (parsed.ok && parsed.data.success && parsed.data.user) {
+        setUser(parsed.data.user);
+        setToken(parsed.data.token);
+        localStorage.setItem("sahakari_user", JSON.stringify(parsed.data.user));
+        localStorage.setItem("sahakari_token", parsed.data.token);
         return { success: true };
       }
-      return { success: false, message: resData.message || "Registration failed." };
+      return { success: false, message: parsed.errorMessage || "Registration failed." };
     } catch {
-      return { success: false, message: "Server connection failed." };
+      return { success: false, message: "Unable to connect to worker registration server. Please check your internet connection." };
     }
   };
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { api } from "../services/api";
+import { api, API_BASE } from "../services/api";
 import { WorkerProfile, Booking } from "../types";
 import { VerificationBadge } from "../components/VerificationBadge";
 import {
@@ -45,7 +45,7 @@ export const SocietyAdminPage: React.FC = () => {
 
   const handleApproveVerification = async (workerId: string, targetLevel: number) => {
     try {
-      const res = await fetch(`/api/workers/${workerId}/verify`, {
+      const res = await fetch(`${API_BASE}/workers/${workerId}/verify`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

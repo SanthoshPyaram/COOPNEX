@@ -57,6 +57,7 @@ import { ContinuousPortalVideo } from "../components/ContinuousPortalVideo";
 import { VoiceButton } from "../components/VoiceButton";
 import { ttsService } from "../services/tts";
 import { TiltCard3D } from "../components/3d/TiltCard3D";
+import { API_BASE } from "../services/api";
 
 // WebGL 3D Components
 import { HeroCoopNetwork3D } from "../components/3d/webgl/HeroCoopNetwork3D";
@@ -258,7 +259,7 @@ export const LandingPage: React.FC = () => {
         const params = new URLSearchParams();
         if (activeWorkerTrade !== "ALL") params.append("skill", activeWorkerTrade);
         if (selectedPincode) params.append("pincode", selectedPincode);
-        const res = await fetch(`/api/workers?${params.toString()}`);
+        const res = await fetch(`${API_BASE}/workers?${params.toString()}`);
         const data = await res.json();
         if (data.workers && data.workers.length > 0) {
           setLiveWorkers(data.workers);

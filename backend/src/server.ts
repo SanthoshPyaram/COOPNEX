@@ -77,7 +77,8 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "http://localhost:3001",
-  "http://127.0.0.1:3001"
+  "http://127.0.0.1:3001",
+  "https://santhoshpyaram.github.io"
 ];
 if (process.env.FRONTEND_URL) {
   process.env.FRONTEND_URL.split(",").forEach((u) => {
@@ -92,6 +93,7 @@ app.use(
       if (
         !origin ||
         allowedOrigins.includes(origin) ||
+        origin.startsWith("https://santhoshpyaram.github.io") ||
         process.env.NODE_ENV === "development" ||
         origin.endsWith(".vercel.app") ||
         origin.endsWith(".onrender.com") ||
