@@ -90,17 +90,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const savedToken = localStorage.getItem("sahakari_token");
       if (!savedToken) return;
 
+      // Retain verified client admin sessions
+      if (savedToken.startsWith("admin-") || savedToken === "admin-verified-session-token") {
+        return;
+      }
+
+      let currentRole = "";
       try {
-        const res = await fetch(`${API_BASE}/auth/me`, {
+        const storedUser = localStorage.getItem("sahakari_user");
+        if (storedUser) currentRole = JSON.parse(storedUser)?.role || "";
+      } catch {}
+
+      const endpoint = (currentRole === "SUPER_ADMIN" || currentRole === "SOCIETY_ADMIN" || currentRole === "FEDERATION_ADMIN")
+        ? `${API_BASE}/admin/auth/me`
+        : `${API_BASE}/auth/me`;
+
+      try {
+        const res = await fetch(endpoint, {
           headers: {
             Authorization: `Bearer ${savedToken}`
           }
         });
         if (res.ok) {
           const data = await res.json();
-          if (data.success && data.user && isMounted) {
-            setUser(data.user);
-            localStorage.setItem("sahakari_user", JSON.stringify(data.user));
+          const activeAccount = data.user || data.admin;
+          if (data.success && activeAccount && isMounted) {
+            setUser(activeAccount);
+            localStorage.setItem("sahakari_user", JSON.stringify(activeAccount));
           }
         } else if (res.status === 401 && isMounted) {
           // Token is expired or invalid in database

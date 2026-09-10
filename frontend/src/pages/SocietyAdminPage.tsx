@@ -5,6 +5,7 @@ import { api, API_BASE } from "../services/api";
 import { WorkerProfile, Booking } from "../types";
 import { VerificationBadge } from "../components/VerificationBadge";
 import { AvatarPlaceholder } from "../components/common/AvatarPlaceholder";
+import { WorkerDetailDrawer } from "../components/admin/WorkerDetailDrawer";
 import {
   Users,
   CheckCircle2,
@@ -17,7 +18,8 @@ import {
   Check,
   X,
   LogOut,
-  HandHeart
+  HandHeart,
+  Eye
 } from "lucide-react";
 
 export const SocietyAdminPage: React.FC = () => {
@@ -28,6 +30,7 @@ export const SocietyAdminPage: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState<"verification" | "workers" | "bookings">("verification");
   const [searchTerm, setSearchTerm] = useState("");
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [selectedWorkerForDrawer, setSelectedWorkerForDrawer] = useState<any | null>(null);
 
   const loadData = async () => {
     try {
@@ -301,6 +304,15 @@ export const SocietyAdminPage: React.FC = () => {
 
                   {/* Actions to Elevate Verification */}
                   <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedWorkerForDrawer(w)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 shadow-xs transition cursor-pointer"
+                      title="Inspect KYC documents & profile"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Inspect</span>
+                    </button>
                     {w.verificationLevel < 4 && (
                       <button
                         onClick={() => handleApproveVerification(w._id, 4)}
@@ -356,6 +368,7 @@ export const SocietyAdminPage: React.FC = () => {
                     <th className="p-3">Jobs Done</th>
                     <th className="p-3">Lifetime Pay</th>
                     <th className="p-3">Status</th>
+                    <th className="p-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -382,6 +395,17 @@ export const SocietyAdminPage: React.FC = () => {
                             {w.isAvailable ? "Online" : "Off-Duty"}
                           </span>
                         </td>
+                        <td className="p-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedWorkerForDrawer(w)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-2.5 py-1 rounded-lg text-xs inline-flex items-center gap-1 shadow-xs transition cursor-pointer"
+                            title="Inspect artisan credentials & dossier"
+                          >
+                            <Eye className="w-3 h-3" />
+                            <span>Inspect</span>
+                          </button>
+                        </td>
                       </tr>
                     ))}
                 </tbody>
@@ -390,6 +414,23 @@ export const SocietyAdminPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* COMPREHENSIVE WORKER PROFILE & AUDIT SLIDE-IN DRAWER */}
+      <WorkerDetailDrawer
+        worker={selectedWorkerForDrawer}
+        isOpen={Boolean(selectedWorkerForDrawer)}
+        onClose={() => setSelectedWorkerForDrawer(null)}
+        onApprove={(workerId, level) => {
+          handleApproveVerification(workerId, level);
+          setSelectedWorkerForDrawer(null);
+        }}
+        onReject={(workerId, reason) => {
+          setActionSuccess(`Worker rejected: ${reason}`);
+          setTimeout(() => setActionSuccess(null), 2500);
+          setSelectedWorkerForDrawer(null);
+        }}
+        initialTab="kyc"
+      />
     </div>
   );
 };

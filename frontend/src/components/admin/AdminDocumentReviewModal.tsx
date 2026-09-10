@@ -181,7 +181,7 @@ export const AdminDocumentReviewModal: React.FC<AdminDocumentReviewModalProps> =
       role="dialog"
       aria-modal="true"
       aria-labelledby="doc-review-title"
-      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden animate-fadeIn"
+      className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden animate-fadeIn"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

@@ -965,17 +965,20 @@ export const SuperAdminPage: React.FC = () => {
     },
     {
       key: "actions",
-      header: "Audit View",
-      align: "right",
+      header: "Inspect",
+      align: "center",
+      width: "120px",
       render: (w) => (
         <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
             setSelectedWorkerForDrawer(w);
           }}
-          className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition flex items-center gap-1.5 ml-auto"
+          className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 mx-auto shadow-xs cursor-pointer active:scale-95"
+          title={`Inspect KYC & documents for ${w.name}`}
         >
-          <Eye className="w-3.5 h-3.5 text-slate-500" />
+          <Eye className="w-3.5 h-3.5" />
           <span>Inspect</span>
         </button>
       )

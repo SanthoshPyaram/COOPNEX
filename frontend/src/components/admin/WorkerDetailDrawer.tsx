@@ -63,6 +63,17 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
   const [showApprovalConfirmModal, setShowApprovalConfirmModal] = useState<boolean>(false);
   const [confirmedManualReview, setConfirmedManualReview] = useState<boolean>(false);
 
+  React.useEffect(() => {
+    if (worker) {
+      setSelectedLevel(worker.verificationLevel || 1);
+      setActiveTab(initialTab);
+      setIsRejecting(false);
+      setRejectReason("");
+      setShowApprovalConfirmModal(false);
+      setConfirmedManualReview(false);
+    }
+  }, [worker, initialTab]);
+
   if (!worker) return null;
 
   const police = worker.policeVerification;
@@ -259,7 +270,7 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
+        <div className="fixed inset-0 z-[80] overflow-hidden flex justify-end">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}

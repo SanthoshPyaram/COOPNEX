@@ -48,6 +48,7 @@ export const PublicFooter: React.FC = () => {
               <li><Link to="/for-cooperatives" className="hover:text-white transition">For Primary Societies</Link></li>
               <li><Link to="/how-it-works" className="hover:text-white transition">How It Works</Link></li>
               <li><Link to="/about" className="hover:text-white transition">About the Cooperative</Link></li>
+              <li><Link to="/admin/login" className="text-blue-400 hover:text-white font-semibold transition">Admin Operations Portal</Link></li>
             </ul>
           </div>
 
