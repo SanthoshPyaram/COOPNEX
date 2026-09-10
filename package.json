@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Sahakari Seva - Cooperative Labour Digital Service Marketplace Platform for SIH 2026",
   "scripts": {
-    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "install:all": "npm install --include=dev && cd backend && npm install --include=dev && cd ../frontend && npm install --include=dev",
+    "postinstall": "cd backend && npm install --include=dev && cd ../frontend && npm install --include=dev",
     "seed": "cd backend && npm run seed",
     "start:backend": "cd backend && npm run dev",
     "start:ai": "cd ai-service && python app.py",

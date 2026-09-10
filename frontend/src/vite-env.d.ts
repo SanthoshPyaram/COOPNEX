@@ -1,4 +1,7 @@
-﻿/// <reference types="vite/client" />
+/// <reference types="vite/client" />
+/// <reference types="react" />
+/// <reference types="react-dom" />
+/// <reference types="react/jsx-runtime" />
 
 interface ImportMetaEnv {
   readonly VITE_EMAILJS_SERVICE_ID: string;
