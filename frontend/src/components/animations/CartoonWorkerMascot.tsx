@@ -218,7 +218,7 @@ export const CartoonWorkerMascot: React.FC<MascotProps> = ({
           )}
 
           {/* Worker Torso / Overalls in Electric Blue */}
-          <motion.path
+          <path
             d="M60 140 C60 115, 140 115, 140 140 L145 180 L55 180 Z"
             fill={gender === "woman" ? "#4F46E5" : "#2563EB"}
           />
@@ -237,7 +237,7 @@ export const CartoonWorkerMascot: React.FC<MascotProps> = ({
           <path d="M96 156 L104 156 M94 162 L106 162" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" />
 
           {/* Left Arm resting friendly */}
-          <motion.path
+          <path
             d="M62 132 C46 142, 42 165, 52 176"
             stroke={gender === "woman" ? "#4338CA" : "#1D4ED8"}
             strokeWidth="14"
@@ -350,12 +350,16 @@ export const CartoonWorkerMascot: React.FC<MascotProps> = ({
               />
               <circle cx="1.5" cy="0" r="2.5" fill="#E2E8F0" />
               {/* Sparkle on wrench */}
-              <motion.path
-                d="M-2 -8 L1 -4 L-2 0 L-5 -4 Z"
-                fill="#E7A93B"
+              <motion.g
                 animate={{ scale: [0, 1.2, 0] }}
                 transition={{ duration: 1.5, repeat: Infinity, delay: 0.8 }}
-              />
+                style={{ transformOrigin: "-2px -4px" }}
+              >
+                <path
+                  d="M-2 -8 L1 -4 L-2 0 L-5 -4 Z"
+                  fill="#E7A93B"
+                />
+              </motion.g>
             </g>
           </motion.g>
         </motion.svg>

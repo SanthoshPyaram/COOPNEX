@@ -109,12 +109,16 @@ export const CartoonOtpMascot: React.FC<OtpMascotProps> = ({
         <ellipse cx="128" cy="105" rx="6" ry="10" fill="#FDBA74" />
 
         {/* Floating Sparkle Stars */}
-        <motion.path
-          d="M78 142 L80 148 L86 150 L80 152 L78 158 L76 152 L70 150 L76 148 Z"
-          fill="#FF6B00"
+        <motion.g
           animate={{ scale: [0.8, 1.2, 0.8], rotate: [0, 90, 180, 270, 360] }}
           transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-        />
+          style={{ transformOrigin: "78px 150px" }}
+        >
+          <path
+            d="M78 142 L80 148 L86 150 L80 152 L78 158 L76 152 L70 150 L76 148 Z"
+            fill="#FF6B00"
+          />
+        </motion.g>
       </motion.svg>
     </div>
   );

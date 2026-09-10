@@ -659,10 +659,10 @@ export const TharDoorstepRoadAnimation: React.FC = () => {
     };
   }, []);
 
-  const activeStep = STEP_BANNERS[activeStepIndex];
-  const langKey = activeStep.translations[language] ? language : "en";
-  const activeContent = activeStep.translations[langKey] || activeStep.translations.en;
-  const currentTheme = STAGE_THEMES[activeStepIndex];
+  const activeStep = STEP_BANNERS[activeStepIndex] || STEP_BANNERS[0];
+  const langKey = activeStep?.translations?.[language] ? language : "en";
+  const activeContent = activeStep?.translations?.[langKey] || activeStep?.translations?.en;
+  const currentTheme = STAGE_THEMES[activeStepIndex] || STAGE_THEMES[0];
 
   // Walking limb angles calculated from walkPhase
   const legSwing1 = isWalking ? Math.sin(walkPhase) * 22 : 0;

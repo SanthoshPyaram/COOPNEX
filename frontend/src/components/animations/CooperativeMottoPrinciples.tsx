@@ -1727,21 +1727,19 @@ export const CooperativeMottoPrinciples: React.FC<{ className?: string }> = ({ c
                   <line x1="16" y1="187" x2="38" y2="187" stroke="#1E293B" strokeWidth="1.5" />
 
                   {/* Right Arm: Welcoming Hand Gesture pointing towards center */}
-                  <motion.path
-                    d="M110 135 C125 145, 138 140, 145 128"
-                    animate={{
-                      d: [
-                        "M110 135 C125 145, 138 140, 145 128",
-                        "M110 135 C128 142, 142 132, 148 120",
-                        "M110 135 C125 145, 138 140, 145 128"
-                      ]
-                    }}
+                  <motion.g
+                    animate={{ rotate: [0, -6, 0] }}
                     transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
-                    stroke="#1D4ED8"
-                    strokeWidth="12"
-                    strokeLinecap="round"
-                  />
-                  <circle cx="145" cy="125" r="6" fill="#FDBA74" />
+                    style={{ transformOrigin: "110px 135px" }}
+                  >
+                    <path
+                      d="M110 135 C125 145, 138 140, 145 128"
+                      stroke="#1D4ED8"
+                      strokeWidth="12"
+                      strokeLinecap="round"
+                    />
+                    <circle cx="145" cy="125" r="6" fill="#FDBA74" />
+                  </motion.g>
 
                   {/* Neck */}
                   <rect x="67" y="105" width="16" height="18" rx="3" fill="#FDBA74" />
@@ -1777,12 +1775,17 @@ export const CooperativeMottoPrinciples: React.FC<{ className?: string }> = ({ c
                   {/* Talking Mouth Animation (MALE) */}
                   <motion.path
                     d="M69 101 Q75 104, 81 101"
-                    animate={{
-                      d: audioActive && (speakerVoice === "both" || speakerVoice === "male")
-                        ? ["M69 101 Q75 107, 81 101", "M69 101 Q75 104, 81 101", "M69 101 Q75 107, 81 101"]
-                        : ["M69 101 Q75 104, 81 101"]
-                    }}
-                    transition={{ duration: 0.25, repeat: Infinity }}
+                    animate={
+                      audioActive && (speakerVoice === "both" || speakerVoice === "male")
+                        ? { scaleY: [1, 2.2, 1] }
+                        : { scaleY: 1 }
+                    }
+                    transition={
+                      audioActive && (speakerVoice === "both" || speakerVoice === "male")
+                        ? { duration: 0.25, repeat: Infinity, ease: "easeInOut" }
+                        : { duration: 0.2 }
+                    }
+                    style={{ transformOrigin: "75px 101px" }}
                     stroke="#9A3412"
                     strokeWidth="2"
                     strokeLinecap="round"
@@ -1812,21 +1815,19 @@ export const CooperativeMottoPrinciples: React.FC<{ className?: string }> = ({ c
                   <line x1="19" y1="186" x2="28" y2="188" stroke="#34D399" strokeWidth="1.5" />
 
                   {/* Right Arm: Inspiring Presenting Gesture toward the Principle Card */}
-                  <motion.path
-                    d="M105 138 C120 148, 134 135, 142 120"
-                    animate={{
-                      d: [
-                        "M105 138 C120 148, 134 135, 142 120",
-                        "M105 138 C124 142, 140 125, 145 108",
-                        "M105 138 C120 148, 134 135, 142 120"
-                      ]
-                    }}
+                  <motion.g
+                    animate={{ rotate: [0, -7, 0] }}
                     transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
-                    stroke="#0F766E"
-                    strokeWidth="11"
-                    strokeLinecap="round"
-                  />
-                  <circle cx="142" cy="116" r="6" fill="#FDBA74" />
+                    style={{ transformOrigin: "105px 138px" }}
+                  >
+                    <path
+                      d="M105 138 C120 148, 134 135, 142 120"
+                      stroke="#0F766E"
+                      strokeWidth="11"
+                      strokeLinecap="round"
+                    />
+                    <circle cx="142" cy="116" r="6" fill="#FDBA74" />
+                  </motion.g>
 
                   {/* Neck */}
                   <rect x="62" y="105" width="16" height="18" rx="3" fill="#FDBA74" />
@@ -1871,12 +1872,17 @@ export const CooperativeMottoPrinciples: React.FC<{ className?: string }> = ({ c
                   {/* Talking Mouth Animation (FEMALE) */}
                   <motion.path
                     d="M65 98 Q70 103, 75 98"
-                    animate={{
-                      d: audioActive && (speakerVoice === "both" || speakerVoice === "female")
-                        ? ["M65 98 Q70 105, 75 98", "M65 98 Q70 102, 75 98", "M65 98 Q70 105, 75 98"]
-                        : ["M65 98 Q70 103, 75 98"]
-                    }}
-                    transition={{ duration: 0.25, repeat: Infinity }}
+                    animate={
+                      audioActive && (speakerVoice === "both" || speakerVoice === "female")
+                        ? { scaleY: [1, 2.2, 1] }
+                        : { scaleY: 1 }
+                    }
+                    transition={
+                      audioActive && (speakerVoice === "both" || speakerVoice === "female")
+                        ? { duration: 0.25, repeat: Infinity, ease: "easeInOut" }
+                        : { duration: 0.2 }
+                    }
+                    style={{ transformOrigin: "70px 98px" }}
                     stroke="#9A3412"
                     strokeWidth="2"
                     strokeLinecap="round"
