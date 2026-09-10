@@ -29,6 +29,7 @@ import { ttsService } from "../services/tts";
 
 interface ContinuousPortalVideoProps {
   currentLanguage?: Language;
+  onLanguageChange?: (lang: Language) => void;
   onOpenModal?: () => void;
   onClose?: () => void;
 }
@@ -1117,6 +1118,7 @@ export const getSceneDurationMs = (lang: string): number => {
 
 export const ContinuousPortalVideo: React.FC<ContinuousPortalVideoProps> = ({
   currentLanguage = "en",
+  onLanguageChange,
   onOpenModal,
   onClose
 }) => {
@@ -1308,6 +1310,9 @@ export const ContinuousPortalVideo: React.FC<ContinuousPortalVideoProps> = ({
 
   const handleLanguageSelect = (code: string) => {
     setSelectedLang(code);
+    if (onLanguageChange) {
+      onLanguageChange(code as Language);
+    }
     setIsVoiceoverActive(true);
     setIsMuted(false);
     setElapsedInSceneMs(0);

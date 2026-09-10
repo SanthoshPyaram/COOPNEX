@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
+import { useLanguage } from "../context/LanguageContext";
 import { LanguageDropdown } from "./LanguageDropdown";
 import { CoopnexLogo } from "./brand/CoopnexLogo";
 import {
@@ -18,14 +19,15 @@ import {
 export const PublicNavbar: React.FC = () => {
   const { isAuthenticated, user, role, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useLanguage();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Streamlined Navigation: Home, Workers, and Admin Panel (ONLY for authenticated SUPER_ADMIN)
   const navLinks = [
-    { name: "Home", path: "/" },
-    { name: "Workers", path: "/for-workers" },
-    ...(role === "SUPER_ADMIN" ? [{ name: "Admin Panel", path: "/admin" }] : [])
+    { name: t("nav.home", "Home"), path: "/" },
+    { name: t("nav.workers", "Workers"), path: "/for-workers" },
+    ...(role === "SUPER_ADMIN" ? [{ name: t("nav.admin", "Admin Panel"), path: "/admin" }] : [])
   ];
 
   const getDashboardRoute = () => {
@@ -45,7 +47,7 @@ export const PublicNavbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0B1220]/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 transition-colors shadow-xs">
+    <header className="sticky top-0 z-50 bg-white/95 dark:bg-[#0B1220]/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 transition-colors shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-[72px]">
           {/* Brand Identity: COOPNEX Logo & Tagline */}
@@ -59,7 +61,7 @@ export const PublicNavbar: React.FC = () => {
               const active = isLinkActive(link.path);
               return (
                 <Link
-                  key={link.name}
+                  key={link.path}
                   to={link.path}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                     active
@@ -76,7 +78,7 @@ export const PublicNavbar: React.FC = () => {
           {/* Right Action Controls: Languages, Dark Mode, Sign In */}
           <div className="hidden md:flex items-center gap-2.5 shrink-0">
             {/* Language Selector Dropdown */}
-            <div className="relative">
+            <div className="relative z-50">
               <LanguageDropdown variant="pill" />
             </div>
 
@@ -99,7 +101,7 @@ export const PublicNavbar: React.FC = () => {
                   className="flex items-center gap-1.5 h-9 px-4 rounded-xl font-bold text-xs text-white bg-[#0A66C2] hover:bg-[#004182] transition shadow-xs"
                 >
                   <UserCheck className="w-3.5 h-3.5 text-amber-300" />
-                  <span>{user?.name?.split(" ")[0] || "Dashboard"}</span>
+                  <span>{user?.name?.split(" ")[0] || t("nav.dashboard", "Dashboard")}</span>
                 </Link>
                 <button
                   type="button"
@@ -118,7 +120,7 @@ export const PublicNavbar: React.FC = () => {
                   title="Sign In as Customer"
                 >
                   <UserCheck className="w-3.5 h-3.5 text-[#0A66C2]" />
-                  <span>Customer Login</span>
+                  <span>{t("nav.customerLogin", "Customer Login")}</span>
                 </Link>
                 <Link
                   to="/worker/login"
@@ -126,7 +128,7 @@ export const PublicNavbar: React.FC = () => {
                   title="Sign In as Worker"
                 >
                   <Briefcase className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Worker Login</span>
+                  <span>{t("nav.workerLogin", "Worker Login")}</span>
                 </Link>
               </div>
             )}
@@ -210,7 +212,7 @@ export const PublicNavbar: React.FC = () => {
                   className="flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   <UserCheck className="w-3.5 h-3.5 text-[#0A66C2]" />
-                  <span>Customer Sign In</span>
+                  <span>{t("nav.customerSignIn", "Customer Sign In")}</span>
                 </Link>
                 <Link
                   to="/worker/login"
@@ -218,7 +220,7 @@ export const PublicNavbar: React.FC = () => {
                   className="flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-[#0A66C2] text-white font-bold text-xs shadow-sm"
                 >
                   <Briefcase className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Worker Sign In</span>
+                  <span>{t("nav.workerSignIn", "Worker Sign In")}</span>
                 </Link>
                 <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] font-bold text-center">
                   <Link
@@ -226,14 +228,14 @@ export const PublicNavbar: React.FC = () => {
                     onClick={() => setMobileMenuOpen(false)}
                     className="py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200"
                   >
-                    Register Customer
+                    {t("nav.registerCustomer", "Register Customer")}
                   </Link>
                   <Link
                     to="/join-worker"
                     onClick={() => setMobileMenuOpen(false)}
                     className="py-2 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#0A66C2] dark:text-blue-300 hover:bg-blue-100"
                   >
-                    Register Worker
+                    {t("nav.registerWorker", "Register Worker")}
                   </Link>
                 </div>
               </div>

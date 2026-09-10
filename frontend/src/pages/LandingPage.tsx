@@ -75,7 +75,7 @@ import { EmergencyBloodCoopBanner } from "../components/animations/EmergencyBloo
 
 export const LandingPage: React.FC = () => {
   const { isAuthenticated, user, switchDemoRoleForTesting } = useAuth();
-  const { t, language } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
   const { theme } = useTheme();
   const navigate = useNavigate();
 
@@ -431,20 +431,20 @@ export const LandingPage: React.FC = () => {
                 <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-emerald-500/10 border border-blue-500/20 px-4 py-1.5 rounded-full text-xs font-bold text-blue-700 dark:text-blue-300 shadow-xs">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   <ShieldCheck className="w-4 h-4 text-[#0A66C2] dark:text-blue-400" />
-                  <span>COOPNEX • CONNECTED COOPERATIVE NETWORK</span>
+                  <span>{t("hero.badge", "COOPNEX • CONNECTED COOPERATIVE NETWORK")}</span>
                 </div>
               </div>
 
               {/* Headline & Core Brand Statement */}
               <div className="space-y-2">
                 <h1 className="font-display font-extrabold text-4xl sm:text-5xl lg:text-6xl text-slate-900 dark:text-white tracking-tight leading-[1.12]">
-                  People. Skills.{" "}
+                  {t("hero.tagline_part1", "People. Skills.")}{" "}
                   <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 bg-clip-text text-transparent block sm:inline">
-                    Cooperatives. Connected.
+                    {t("hero.tagline_part2", "Cooperatives. Connected.")}
                   </span>
                 </h1>
                 <p className="text-slate-600 dark:text-slate-300 text-base sm:text-lg max-w-xl leading-relaxed pt-1">
-                  Connect with trusted local services and skilled workers through a cooperative-powered network built around people and opportunity.
+                  {t("hero.subheadline", "Connect with trusted local services and skilled workers through a cooperative-powered network built around people and opportunity.")}
                 </p>
               </div>
 
@@ -458,7 +458,7 @@ export const LandingPage: React.FC = () => {
                       maxLength={6}
                       value={pincodeInput}
                       onChange={(e) => setPincodeInput(e.target.value.replace(/\D/g, ""))}
-                      placeholder="Enter 6-Digit Pincode (e.g. 520001)"
+                      placeholder={t("hero.searchPlaceholder", "Enter 6-Digit Pincode (e.g. 520001)")}
                       className="w-full bg-transparent text-xs font-semibold text-slate-900 dark:text-white focus:outline-hidden placeholder:text-slate-400"
                     />
                   </div>
@@ -484,11 +484,11 @@ export const LandingPage: React.FC = () => {
                     className="bg-[#0A66C2] hover:bg-[#004182] text-white !min-h-[44px] !py-2 !px-5 rounded-xl text-xs font-bold shrink-0 cursor-pointer shadow-md shadow-blue-500/25 active:scale-[0.98] transition flex items-center justify-center gap-1.5"
                   >
                     {isSearching ? (
-                      <span>Searching...</span>
+                      <span>{t("hero.searching", "Searching...")}</span>
                     ) : (
                       <>
                         <Search className="w-3.5 h-3.5" />
-                        <span>Find Pro</span>
+                        <span>{t("hero.findPro", "Find Pro")}</span>
                       </>
                     )}
                   </button>
@@ -497,7 +497,7 @@ export const LandingPage: React.FC = () => {
                 {/* Quick Hub Chips */}
                 <div className="mt-3 px-1 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
                   <span>
-                    Quick hubs:{" "}
+                    {t("hero.quickHubs", "Quick hubs:")}{" "}
                     {[
                       { name: "Vijayawada", pin: "520001" },
                       { name: "Hyderabad", pin: "500001" },
@@ -522,7 +522,7 @@ export const LandingPage: React.FC = () => {
                     onClick={() => setPincodeModalOpen(true)}
                     className="text-[#0A66C2] dark:text-blue-400 font-bold hover:underline hidden sm:inline cursor-pointer"
                   >
-                    All 28 States →
+                    {t("hero.allStates", "All 28 States →")}
                   </button>
                 </div>
               </div>
@@ -535,7 +535,7 @@ export const LandingPage: React.FC = () => {
                   className="px-7 py-3 rounded-xl bg-gradient-to-r from-[#0A66C2] to-[#0256A8] hover:from-[#004182] hover:to-[#023e7d] text-white text-xs font-black shadow-lg shadow-blue-500/20 flex items-center gap-2 transition active:scale-[0.98]"
                 >
                   <Search className="w-4 h-4 text-blue-200" />
-                  <span>Find a Service</span>
+                  <span>{t("hero.findService", "Find a Service")}</span>
                 </a>
 
                 {/* Secondary CTA: Join as a Worker */}
@@ -544,7 +544,7 @@ export const LandingPage: React.FC = () => {
                   className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#059669] to-[#047857] hover:from-[#047857] hover:to-[#065F46] text-white text-xs font-bold shadow-md shadow-emerald-500/20 flex items-center gap-2 transition active:scale-[0.98]"
                 >
                   <Briefcase className="w-4 h-4 text-emerald-200" />
-                  <span>Join as a Worker</span>
+                  <span>{t("hero.joinWorker", "Join as a Worker")}</span>
                 </Link>
 
                 {/* Video Tour */}
@@ -560,7 +560,7 @@ export const LandingPage: React.FC = () => {
                   <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
                     <Play className="w-2.5 h-2.5 fill-current ml-0.5 text-white" />
                   </div>
-                  <span>Watch Video Tour</span>
+                  <span>{t("hero.watchVideo", "Watch Video Tour")}</span>
                 </button>
               </div>
 
@@ -568,15 +568,15 @@ export const LandingPage: React.FC = () => {
               <div className="pt-4 border-t border-slate-200 dark:border-white/10 grid grid-cols-3 gap-4 max-w-lg">
                 <div>
                   <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">3,800+</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t("hero.verifiedArtisans") || "Verified Artisans"}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t("hero.verifiedArtisans", "Verified Artisans")}</div>
                 </div>
                 <div>
                   <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">4.94 / 5.0</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t("hero.citizenRating") || "Citizen Rating"}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t("hero.citizenRating", "Citizen Rating")}</div>
                 </div>
                 <div>
                   <div className="text-2xl sm:text-3xl font-extrabold text-blue-600 dark:text-blue-400 tracking-tight">100%</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t("hero.directFloorWages") || "Direct Floor Wages"}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t("hero.directFloorWages", "Direct Floor Wages")}</div>
                 </div>
               </div>
             </div>
@@ -641,6 +641,7 @@ export const LandingPage: React.FC = () => {
           <div className="relative animate-fadeIn">
             <ContinuousPortalVideo
               currentLanguage={language}
+              onLanguageChange={setLanguage}
               onClose={() => setShowPortalVideo(false)}
             />
           </div>
@@ -716,7 +717,7 @@ export const LandingPage: React.FC = () => {
             {t("how.headline") || "How COOPNEX Works"}
           </h2>
           <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
-            Follow the complete 5-stage dispatch corridor with real-time road telemetry from automated society dispatch to direct Bharat UPI soundbox settlement.
+            {t("how.subtitle_road", "Follow the complete 5-stage dispatch corridor with real-time road telemetry from automated society dispatch to direct Bharat UPI soundbox settlement.")}
           </p>
         </div>
 
@@ -733,7 +734,8 @@ export const LandingPage: React.FC = () => {
             <span>{t("about.badge") || "Radical Economic Fairness"}</span>
           </span>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            0% Platform Cut. <span className="text-blue-600 dark:text-blue-400">100% Dignity.</span>
+            {t("about.headline_cut", "0% Platform Cut.")}{" "}
+            <span className="text-blue-600 dark:text-blue-400">{t("about.headline_dignity", "100% Dignity.")}</span>
           </h2>
           <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
             {t("about.subheadline") || "Unlike commercial gig apps that extract 25-35% from every job, COOPNEX passes the entire base wage directly to the artisan."}
@@ -1570,6 +1572,7 @@ export const LandingPage: React.FC = () => {
             <div className="p-2 sm:p-4">
               <ContinuousPortalVideo
                 currentLanguage={language}
+                onLanguageChange={setLanguage}
                 onClose={() => {
                   ttsService.stop();
                   setVideoModalOpen(false);

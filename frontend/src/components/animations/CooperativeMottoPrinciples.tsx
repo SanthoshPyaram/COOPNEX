@@ -1332,8 +1332,7 @@ export const CooperativeMottoPrinciples: React.FC<{ className?: string }> = ({ c
 
   const handleLanguageChange = (code: string) => {
     setSelectedLang(code);
-    // Note: Kept strictly local to this card so the user can explore 10 languages
-    // without unexpectedly changing the entire website's global navbar language.
+    setGlobalLanguage(code as Language);
     if (audioActive) {
       const targetContent = COOPERATIVE_LANGUAGES_CONTENT[code] || COOPERATIVE_LANGUAGES_CONTENT.en;
       const targetPrinciple = targetContent.principles[activeIdx] || targetContent.principles[0];
