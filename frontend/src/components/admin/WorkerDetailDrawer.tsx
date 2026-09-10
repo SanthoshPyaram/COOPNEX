@@ -63,6 +63,7 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
   const [showApprovalConfirmModal, setShowApprovalConfirmModal] = useState<boolean>(false);
   const [confirmedManualReview, setConfirmedManualReview] = useState<boolean>(false);
 
+  const workerIdKey = worker?._id || worker?.id || worker?.employeeId;
   React.useEffect(() => {
     if (worker) {
       setSelectedLevel(worker.verificationLevel || 1);
@@ -72,7 +73,7 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
       setShowApprovalConfirmModal(false);
       setConfirmedManualReview(false);
     }
-  }, [worker, initialTab]);
+  }, [workerIdKey, initialTab]);
 
   const effectiveKycDocuments = React.useMemo(() => {
     if (!worker) return [];
@@ -124,13 +125,18 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
       return;
     }
     const token = localStorage.getItem("sahakari_token");
+    const isImageFile = /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(doc.originalFilename || targetUrl);
     let resolvedUrl = targetUrl;
-    let resolvedMime = targetUrl.startsWith("data:image") ? "image/png" : "application/pdf";
+    let resolvedMime = doc.mimeType || (isImageFile ? (doc.originalFilename?.endsWith(".svg") ? "image/svg+xml" : "image/jpeg") : (targetUrl.startsWith("data:image") ? "image/png" : "application/pdf"));
 
     try {
-      const fullUrl = targetUrl.startsWith("http") || targetUrl.startsWith("data:")
+      const rawBase = targetUrl.startsWith("http") || targetUrl.startsWith("data:")
         ? targetUrl
-        : `${API_BASE.replace("/api", "")}${targetUrl.startsWith("/") ? "" : "/"}${targetUrl}`;
+        : `${API_BASE.replace(/\/api\/?$/, "")}${targetUrl.startsWith("/") ? "" : "/"}${targetUrl}`;
+
+      const fullUrl = rawBase.startsWith("http") && token && !rawBase.includes("token=")
+        ? `${rawBase}${rawBase.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
+        : rawBase;
 
       if (fullUrl.startsWith("data:")) {
         resolvedUrl = fullUrl;
@@ -142,7 +148,7 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
         if (res.ok) {
           const blob = await res.blob();
           resolvedUrl = URL.createObjectURL(blob);
-          resolvedMime = blob.type;
+          resolvedMime = blob.type || resolvedMime;
         } else {
           resolvedUrl = fullUrl;
         }

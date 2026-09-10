@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import fs from "fs";
 import { AuthenticatedRequest } from "../middleware/auth";
-import { saveDocument, getDocumentFilePath } from "../services/documentService";
+import { saveDocument, getDocumentData, getDocumentFilePath } from "../services/documentService";
 import { USER_ROLES } from "../config/constants";
 import { Worker } from "../models/Worker";
 
@@ -10,7 +10,7 @@ import { Worker } from "../models/Worker";
  */
 export const uploadDocument = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { fileData, originalName, mimeType, isAvatar } = req.body;
+    const { fileData, originalName, mimeType, isAvatar, workerId, documentType } = req.body;
 
     if (!fileData || !originalName) {
       res.status(400).json({
@@ -24,7 +24,9 @@ export const uploadDocument = async (req: AuthenticatedRequest, res: Response): 
       rawContent: fileData,
       originalName,
       mimeType,
-      isAvatar: Boolean(isAvatar)
+      isAvatar: Boolean(isAvatar),
+      workerId: workerId || req.user?._id?.toString(),
+      documentType
     });
 
     res.status(201).json({
@@ -43,7 +45,7 @@ export const uploadDocument = async (req: AuthenticatedRequest, res: Response): 
 
 /**
  * Protected document streaming endpoint.
- * STRICT RBAC: Accessible ONLY by authenticated SUPER_ADMIN or the document owner.
+ * Accessible by authenticated SUPER_ADMIN or the document owner.
  */
 export const getDocument = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -60,7 +62,13 @@ export const getDocument = async (req: AuthenticatedRequest, res: Response): Pro
     // Check if worker owns this document
     let isOwner = false;
     if (!isSuperAdmin) {
-      const worker = await Worker.findOne({ userId: req.user._id });
+      const worker = await Worker.findOne({
+        $or: [
+          { userId: req.user._id },
+          { _id: req.user._id },
+          { workerIdNumber: req.user.workerIdNumber }
+        ]
+      });
       if (worker && Array.isArray(worker.kycDocuments)) {
         isOwner = worker.kycDocuments.some(
           (doc) => doc.fileUrl?.includes(id) || (doc as any).storageReference?.includes(id)
@@ -76,18 +84,17 @@ export const getDocument = async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
 
-    const result = getDocumentFilePath(id);
-    if (!result || !fs.existsSync(result.filePath)) {
+    // Retrieve document (Disk cache -> MongoDB Atlas -> SVG generator fallback)
+    const result = await getDocumentData(id);
+    if (!result) {
       res.status(404).json({ success: false, message: "Requested document was not found or has expired." });
       return;
     }
 
     res.setHeader("Content-Type", result.mimeType);
-    res.setHeader("Content-Disposition", "inline");
+    res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(result.filename)}"`);
     res.setHeader("Cache-Control", "private, no-cache, no-store, must-revalidate");
-
-    const stream = fs.createReadStream(result.filePath);
-    stream.pipe(res);
+    res.send(result.buffer);
   } catch (error: any) {
     console.error("getDocument streaming error:", error);
     res.status(500).json({ success: false, message: "Failed to retrieve identity document." });
@@ -100,20 +107,18 @@ export const getDocument = async (req: AuthenticatedRequest, res: Response): Pro
 export const getAvatar = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const result = getDocumentFilePath(id);
+    const result = await getDocumentData(id);
 
-    if (!result || !fs.existsSync(result.filePath)) {
+    if (!result) {
       res.status(404).json({ success: false, message: "Profile photo not found." });
       return;
     }
 
     res.setHeader("Content-Type", result.mimeType);
     res.setHeader("Cache-Control", "public, max-age=86400");
-    const stream = fs.createReadStream(result.filePath);
-    stream.pipe(res);
+    res.send(result.buffer);
   } catch (error: any) {
     console.error("getAvatar streaming error:", error);
     res.status(500).json({ success: false, message: "Failed to stream profile photo." });
   }
 };
-
