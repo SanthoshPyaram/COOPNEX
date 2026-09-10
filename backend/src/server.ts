@@ -12,6 +12,7 @@ dotenv.config({ path: frontendEnvPath });
 
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
+import mongoose from "mongoose";
 import { connectDB } from "./config/db";
 import { ensureDemoAccounts } from "./services/demoSeedService";
 import { apiRouter } from "./routes";
@@ -110,10 +111,16 @@ app.use(
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-// Health Check
-app.get("/health", (_req: Request, res: Response) => {
-  res.json({
-    status: "HEALTHY",
+// Health Check & Database Telemetry
+app.get(["/health", "/api/health"], (_req: Request, res: Response) => {
+  const dbStates = ["DISCONNECTED", "CONNECTED", "CONNECTING", "DISCONNECTING"];
+  const dbState = dbStates[mongoose.connection.readyState] || "UNKNOWN";
+  const isHealthy = mongoose.connection.readyState === 1;
+
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? "HEALTHY" : "DEGRADED",
+    database: dbState,
+    databaseConnected: isHealthy,
     service: "Sahakari Seva Backend API",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "development"

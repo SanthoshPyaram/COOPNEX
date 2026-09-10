@@ -80,6 +80,15 @@ export const checkPhone = async (req: Request, res: Response): Promise<void> => 
  */
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      res.status(503).json({
+        success: false,
+        message: "Database connection unavailable. Please ensure your cloud MongoDB Atlas database (MONGODB_URI) is configured in your Render environment variables.",
+        error: "MongoDB not connected (readyState = " + mongoose.connection.readyState + ")"
+      });
+      return;
+    }
+
     const {
       name: providedName,
       firstName,
@@ -611,6 +620,15 @@ export const register = async (req: Request, res: Response): Promise<void> => {
  */
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      res.status(503).json({
+        success: false,
+        message: "Database connection unavailable. Please ensure your cloud MongoDB Atlas database (MONGODB_URI) is configured in your Render environment variables.",
+        error: "MongoDB not connected (readyState = " + mongoose.connection.readyState + ")"
+      });
+      return;
+    }
+
     const { email, identifier, phone, password, expectedRole = USER_ROLES.CUSTOMER } = req.body;
     const target = (email || identifier || phone || "").trim().toLowerCase();
 
