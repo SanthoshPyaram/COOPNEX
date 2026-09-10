@@ -1,4 +1,10 @@
 import mongoose from "mongoose";
+import dns from "dns";
+
+// Guarantee SRV lookup resilience across varied network/ISP DNS resolvers
+try {
+  dns.setServers(["8.8.8.8", "1.1.1.1"]);
+} catch {}
 
 export const isDbConnected = (): boolean => {
   return mongoose.connection.readyState === 1;

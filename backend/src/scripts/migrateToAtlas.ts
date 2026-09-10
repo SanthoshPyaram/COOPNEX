@@ -1,6 +1,11 @@
 import mongoose from "mongoose";
 import path from "path";
 import dotenv from "dotenv";
+import dns from "dns";
+
+try {
+  dns.setServers(["8.8.8.8", "1.1.1.1"]);
+} catch {}
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
