@@ -1,0 +1,35 @@
+flowchart TD
+    subgraph InputParams ["Matching Criteria Inputs"]
+        R1["Customer Request (Service Trade, Lat, Lon, IsEmergency)"]
+        R2["Nearby Verified Cooperative Workers (MongoDB 2dsphere $near)"]
+    end
+
+    subgraph MultiObjectiveWeights ["Multi-Objective Weighted Scoring"]
+        W1["1. Skill & Certification Match: 30%<br/>(Exact match = 1.0, related = 0.4)"]
+        W2["2. Distance & Transit ETA: 25%<br/>(Haversine Decay: 1.0 - dist/15km, ETA in mins)"]
+        W3["3. Verification Level: 15%<br/>(Level 1 to Level 5: 0.2 to 1.0)"]
+        W4["4. Rating & Experience: 15%<br/>(Rating/5.0 * 0.7 + ExpYears/15.0 * 0.3)"]
+        W5["5. Workload Equity & Anti-Fatigue: 15%<br/>(0 jobs today = 1.0, 1 job = 0.85, 2 jobs = 0.70, 3+ = 0.45)"]
+        W6["Emergency Priority Bonus: +5%<br/>(If is_emergency and emergencyReady === true)"]
+    end
+
+    subgraph CompositeCalculation ["Composite Score Formulation"]
+        C1["Score = (Skill * 0.30) + (Distance * 0.25) + (Verification * 0.15) + (RatingExp * 0.15) + (Workload * 0.15) + Bonus"]
+        C2["Normalize Composite Score to 0 - 100%"]
+    end
+
+    subgraph RationaleEngine ["Explainability Generation"]
+        E1["Generate Specific Verification Badges (Level 4 NSDC / Verhoeff)"]
+        E2["Generate Distance & Proximity Text (Hyper-local 1.4km away, ETA 7m)"]
+        E3["Generate Workload Equity Badges (Available immediately)"]
+    end
+
+    subgraph OutputRanking ["Ranked Allocation Output"]
+        O1["Sort Candidate Workers by Match Score (Descending)"]
+        O2["Return Top Match & Ranked Array to Frontend UI"]
+    end
+
+    InputParams --> MultiObjectiveWeights
+    MultiObjectiveWeights --> CompositeCalculation
+    CompositeCalculation --> RationaleEngine
+    RationaleEngine --> OutputRanking

@@ -1,0 +1,47 @@
+flowchart TD
+    subgraph DataIngestion ["Data & Historical Ingestion"]
+        H1["180-Day Cooperative Service Records"]
+        H2["Day of Week, Weekend & Month Index"]
+        H3["Monsoon & Summer Seasonal Multipliers"]
+        H4["Active Cooperative Roster Capacity"]
+    end
+
+    subgraph Preprocessing ["Feature Engineering & Encoding"]
+        P1["One-Hot Encoding (pd.get_dummies for Trades)"]
+        P2["Cyclic Calendar Features (day_of_week, month)"]
+        P3["Weather & Seasonal Feature Scaling"]
+        P4["Feature Vector Alignment Matrix"]
+    end
+
+    subgraph ModelTraining ["ML Model Training (Python FastAPI Microservice)"]
+        M1["Scikit-Learn GradientBoostingRegressor"]
+        M2["Parameters: n_estimators=70, max_depth=4, lr=0.08"]
+        M3["Cross-Validation & Baseline Convergence"]
+    end
+
+    subgraph InferencePipeline ["Inference & Multi-Objective Logic"]
+        I1["Daily Demand Count Prediction (7 to 30 Days Ahead)"]
+        I2["95% Confidence Interval Calculation (+/- 14% Margin)"]
+        I3["Capacity vs. Projected Demand Shortage Computation"]
+        I4["Multi-Criteria Worker Ranking (Match Score 0-100%)"]
+        I5["Statistical Surge Detection (Z-Score & Surge Ratio)"]
+        I6["Inter-Society Workforce Exchange Solver"]
+    end
+
+    subgraph Explainability ["Explainability & Recommendations"]
+        E1["Explainability Badges ('Weekend Peak +35%', 'Monsoon Cycle')"]
+        E2["Transparent 'Why This Worker?' Rationale"]
+        E3["Cooperative Action Plan ('Activate 5 Standby Electricians')"]
+    end
+
+    subgraph Consumers ["Frontend / Backend Consumers"]
+        F1["Node.js Express Proxy (/api/ai/*)"]
+        F2["Super Admin AI Intelligence Dashboard"]
+        F3["Customer Matching & Booking Flow"]
+    end
+
+    DataIngestion --> Preprocessing
+    Preprocessing --> ModelTraining
+    ModelTraining --> InferencePipeline
+    InferencePipeline --> Explainability
+    Explainability --> Consumers

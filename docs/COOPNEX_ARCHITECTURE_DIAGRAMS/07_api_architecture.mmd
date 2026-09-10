@@ -1,0 +1,50 @@
+graph LR
+    subgraph Client ["Client Apps"]
+        Web["Web / Mobile Browser (React 18)"]
+    end
+
+    subgraph Gateway ["API Entrypoint (/api)"]
+        Router["Express REST Router"]
+        JWTAuth["authenticateJwt Middleware"]
+        RoleRBAC["requireRoles Middleware"]
+    end
+
+    subgraph Modules ["API Controller Domains"]
+        A1["/auth/*<br/>(Register, Login, OTP, Forgot Password)"]
+        A2["/workers/*<br/>(Categories, Nearby, Profile, Verify)"]
+        A3["/bookings/*<br/>(Create, My, Status, Reviews)"]
+        A4["/fair-wage/*<br/>(Calculate Wage, Policy Rules)"]
+        A5["/payments/*<br/>(Create Order, Verify, Invoices)"]
+        A6["/emergency/*<br/>(Trigger SOS, Track, Blood Network)"]
+        A7["/admin/*<br/>(Intelligence, KYC, Heatmap, Exchanges)"]
+        A8["/welfare/*<br/>(Benefits, Insurance Claims, Complaints)"]
+        A9["/location/*<br/>(Check Pincode, State Coverages)"]
+        A10["/tts/*<br/>(Google Cloud Speech Synthesizer)"]
+        A11["/ai/*<br/>(Forecast, Skill-Gap, Surge Proxies)"]
+    end
+
+    subgraph Services ["Core Engine Services"]
+        FW["fairWageEngine.ts"]
+        GEO["geoService.ts"]
+        COV["serviceCoverageEngine.ts"]
+        AI["aiService.ts"]
+        MAIL["emailJsService.ts & emailService.ts"]
+        TTS["ttsService.ts"]
+    end
+
+    Web --> Router
+    Router --> A1 & A9 & A10
+    Router --> JWTAuth
+    JWTAuth --> A2 & A3 & A4 & A5 & A6 & A8 & A11
+    JWTAuth --> RoleRBAC
+    RoleRBAC --> A7
+
+    A1 --> MAIL
+    A2 --> GEO & AI & COV
+    A3 --> FW & GEO
+    A4 --> FW
+    A6 --> AI & GEO & FW
+    A7 --> AI
+    A9 --> COV
+    A10 --> TTS
+    A11 --> AI

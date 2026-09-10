@@ -1,0 +1,49 @@
+graph TD
+    subgraph VCS ["Source Code & Version Control"]
+        Git["GitHub Repository<br/>(https://github.com/SanthoshPyaram/COOPNEX.git)"]
+        Workflows[".github/workflows/deploy.yml"]
+    end
+
+    subgraph FrontendHosting ["Frontend Hosting (GitHub Pages / SPA)"]
+        GHPages["GitHub Pages CDN<br/>(https://santhoshpyaram.github.io/COOPNEX/)"]
+        ViteConfig["Vite Config (base: '/COOPNEX/')"]
+        SPAFallback["404.html & index.html Query Redirection<br/>(pathSegmentsToKeep = 1)"]
+        StaticAssets["Static JS, CSS & Media Bundles"]
+    end
+
+    subgraph BackendHosting ["Backend API Hosting (Render / Railway / Docker)"]
+        Render["Render / Railway Web Service<br/>(render.yaml or Node.js / Docker)"]
+        ExpressEnv["Express Server (Port 5000 / 4000)"]
+        EnvConfig["Environment Config (JWT, Bcrypt, CORS)"]
+    end
+
+    subgraph AIHosting ["AI Microservice Hosting (FastAPI / Render)"]
+        PythonApp["FastAPI Service (Port 8000 / AI_SERVICE_URL)"]
+        ScikitModel["Trained GradientBoosting Model (app.py)"]
+    end
+
+    subgraph CloudDB ["Managed Database (MongoDB Atlas)"]
+        AtlasCluster["MongoDB Atlas Cluster M0/M10"]
+        Collections["16 Collections + 2dsphere Geospatial Indexes"]
+    end
+
+    subgraph ExternalThirdParty ["External Cloud Services"]
+        EmailJS["EmailJS / SMTP (Real 6-Digit Email OTP Delivery)"]
+        GoogleCloud["Google Cloud / Translate TTS Audio Engine"]
+        Razorpay["Razorpay Test Gateway (Order Simulation)"]
+        OpenStreet["OpenStreetMap & Leaflet Tile Server"]
+    end
+
+    Git --> Workflows
+    Workflows -->|Automated Build & Deploy| GHPages
+    GHPages --> ViteConfig & SPAFallback & StaticAssets
+    Git -->|render.yaml Blueprint| Render
+    Render --> ExpressEnv & EnvConfig
+    Git -->|Dockerfile / requirements.txt| PythonApp
+    PythonApp --> ScikitModel
+    ExpressEnv <-->|REST Proxy| PythonApp
+    ExpressEnv <-->|Mongoose ODM Connection| AtlasCluster
+    AtlasCluster --> Collections
+    ExpressEnv --> EmailJS & GoogleCloud & Razorpay
+    GHPages <-->|HTTPS API Calls| ExpressEnv
+    GHPages --> OpenStreet

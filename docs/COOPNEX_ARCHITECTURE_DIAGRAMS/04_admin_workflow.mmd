@@ -1,0 +1,32 @@
+sequenceDiagram
+    autonumber
+    actor Admin as Super Admin / Registrar
+    participant UI as Command Gateway (/admin)
+    participant Auth as Admin Auth & MFA Engine
+    participant API as Express Admin Router
+    participant DB as MongoDB Atlas
+
+    Admin->>UI: Enter Admin Email / ID (admin@coopnex.local) & Password
+    UI->>Auth: POST /api/admin/auth/login
+    Auth->>DB: Admin.findOne({ email, role: "SUPER_ADMIN" })
+    Auth->>Auth: Verify Bcrypt Hash & Check Account Lockout Policy
+    Auth-->>UI: Password validated, Issue 5m MFA Challenge Token
+    UI-->>Admin: Prompt TOTP 2-Factor Authentication Code
+    Admin->>UI: Enter 6-Digit MFA Authenticator Code (e.g. 892104)
+    UI->>Auth: POST /api/admin/auth/verify-mfa
+    Auth-->>UI: 200 OK: Issue 12h Super Admin JWT Token
+    UI->>API: GET /api/admin/intelligence
+    API->>DB: Aggregate total workers, active jobs, earnings & welfare corpus
+    API-->>UI: KPI Metrics, Demand Heatmaps & Real-time Surge Alerts
+    Admin->>UI: Open KYC Verification Queue (e.g. Worker Level 4 review)
+    UI->>API: GET /api/admin/kyc-submissions
+    API->>DB: Worker.find({ "kycDocuments.verificationStatus": "PENDING" })
+    Admin->>UI: Inspect Aadhaar Verhoeff & Police Clearance Certificate
+    Admin->>UI: Click "Approve & Promote to Level 4"
+    UI->>API: POST /api/admin/kyc/:workerId/review (action: "APPROVE_PROMOTE")
+    API->>DB: Worker.updateOne(verificationStatus: "VERIFIED", verificationLevel: 4)
+    API->>DB: AdminAuditLog.create(action: "APPROVE_KYC_PROMOTION", adminId)
+    Admin->>UI: Review Inter-Cooperative Workforce Exchange Proposals
+    UI->>API: POST /api/admin/workforce-exchanges/:id/approve
+    API->>DB: WorkforceExchange.updateOne(status: "APPROVED")
+    API-->>UI: Inter-society mutual aid transfer authorized

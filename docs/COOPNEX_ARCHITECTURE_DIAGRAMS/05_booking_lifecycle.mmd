@@ -1,0 +1,17 @@
+stateDiagram-v2
+    [*] --> REQUESTED: Customer initiates booking via Pincode/Service
+    REQUESTED --> MATCHING: AI Match Engine analyzes candidate pool
+    MATCHING --> ASSIGNED: Best qualified local cooperative worker allocated
+    ASSIGNED --> ACCEPTED: Worker accepts dispatched shift
+    ASSIGNED --> CANCELLED: Customer or Worker cancels before dispatch
+    ACCEPTED --> ON_THE_WAY: Worker initiates travel (live ETA broadcast)
+    ON_THE_WAY --> ARRIVED: Worker arrives at customer doorstep
+    ARRIVED --> IN_PROGRESS: Doorstep 4-digit safety OTP validated
+    IN_PROGRESS --> COMPLETED: Service completed, payment verified & wallet credited
+    COMPLETED --> REVIEWED: Customer submits rating & media proof (photos/video)
+    IN_PROGRESS --> DISPUTED: Customer files complaint regarding work quality
+    DISPUTED --> RESOLVED: Society Admin / Registrar arbitrates resolution
+    COMPLETED --> [*]
+    CANCELLED --> [*]
+    REVIEWED --> [*]
+    RESOLVED --> [*]

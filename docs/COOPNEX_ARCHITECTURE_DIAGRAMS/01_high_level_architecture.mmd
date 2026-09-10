@@ -1,0 +1,80 @@
+graph TD
+    subgraph Users ["User Personas"]
+        C["Citizen / Customer"]
+        W["Cooperative Artisan / Worker"]
+        SA["Super Admin / Registrar"]
+    end
+
+    subgraph Presentation ["Presentation Layer (React 18 + Vite + Tailwind CSS)"]
+        Landing["Landing & Public Portal<br/>(/, /services, /how-it-works)"]
+        CustPortal["Customer Portal<br/>(/app - Workers, Bookings, Messages, Map)"]
+        WorkPortal["Worker Portal<br/>(/worker - Jobs, Wallet, Smart ID, Welfare)"]
+        AdminPortal["Super Admin Command Gateway<br/>(/admin - 13 Control Modules)"]
+        i18n["i18next Multilingual Engine<br/>(13 Indian Languages + TTS Voiceover)"]
+    end
+
+    subgraph Security ["Security & Gatekeeper Layer"]
+        JWT["JWT Bearer Tokens (7-day / 12-hour)"]
+        RBAC["Role-Based Access Control (RBAC Middleware)"]
+        Bcrypt["Bcrypt Password Hashing (Salt 10-12)"]
+        MFA["TOTP Two-Factor Challenge (/admin/auth/verify-mfa)"]
+        OTP["EmailJS / SMTP 6-Digit OTP Engine"]
+    end
+
+    subgraph API ["Backend Application Layer (Node.js + Express + TypeScript)"]
+        Router["Express REST API Router (/api)"]
+        AuthCtrl["Auth Controllers (Customer, Worker, Super Admin)"]
+        WorkerCtrl["Worker & Geolocation Controller"]
+        BookingCtrl["Booking & State Machine Controller"]
+        FairWage["Statutory Fair Wage Engine (0% Commission)"]
+        PaymentCtrl["Razorpay Test / UPI Escrow Controller"]
+        WelfareCtrl["Welfare & Insurance Controller"]
+        EmergencyCtrl["SOS Emergency Dispatch & Blood Network"]
+        AdminCtrl["Super Admin Intelligence & KYC Controller"]
+        CoverageEngine["Service Area & Pincode Coverage Engine"]
+        TTSCtrl["Google Cloud TTS Synthesizer"]
+    end
+
+    subgraph Intelligence ["AI & Optimization Layer (FastAPI Microservice / Node Fallback)"]
+        FastAPI["FastAPI Microservice (Port 8000)"]
+        GradBoost["Scikit-Learn GradientBoosting Demand Forecaster"]
+        MatchEngine["Multi-Objective Worker Match & Ranking Engine"]
+        SkillGap["Future Skill-Gap & Trade Deficit Analyzer"]
+        SurgeDetect["Statistical Surge & Z-Score Anomaly Detector"]
+        ExchangeSolver["Inter-Society Workforce Exchange Solver"]
+    end
+
+    subgraph Data ["Persistence Layer (MongoDB Atlas)"]
+        M_User[("users")]
+        M_Worker[("workers (2dsphere index)")]
+        M_Booking[("bookings (2dsphere index)")]
+        M_Admin[("admins")]
+        M_Society[("societies (2dsphere index)")]
+        M_Federation[("federations")]
+        M_Payment[("payments")]
+        M_Invoice[("invoices")]
+        M_Review[("reviews")]
+        M_Welfare[("welfarebenefits")]
+        M_Insurance[("insurancepolicies")]
+        M_Exchange[("workforceexchanges")]
+        M_Complaint[("complaints")]
+        M_Security[("securityevents")]
+        M_Audit[("adminauditlogs")]
+        M_Otp[("otps")]
+    end
+
+    C --> Landing & CustPortal
+    W --> WorkPortal
+    SA --> AdminPortal
+    CustPortal & WorkPortal & AdminPortal --> i18n
+    Landing & CustPortal & WorkPortal & AdminPortal --> Security
+    Security --> Router
+    Router --> AuthCtrl & WorkerCtrl & BookingCtrl & FairWage & PaymentCtrl & WelfareCtrl & EmergencyCtrl & AdminCtrl & CoverageEngine & TTSCtrl
+    WorkerCtrl & EmergencyCtrl & AdminCtrl <--> FastAPI
+    FastAPI --> GradBoost & MatchEngine & SkillGap & SurgeDetect & ExchangeSolver
+    AuthCtrl --> M_User & M_Admin & M_Otp
+    WorkerCtrl --> M_Worker & M_Society
+    BookingCtrl --> M_Booking & M_Worker & M_Invoice
+    PaymentCtrl --> M_Payment & M_Booking & M_Worker
+    WelfareCtrl --> M_Welfare & M_Insurance & M_Complaint
+    AdminCtrl --> M_Worker & M_Booking & M_Review & M_Exchange & M_Security & M_Audit

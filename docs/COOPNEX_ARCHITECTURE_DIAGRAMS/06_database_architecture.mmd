@@ -1,0 +1,102 @@
+erDiagram
+    USERS ||--o{ BOOKINGS : "places"
+    USERS ||--o| WORKERS : "owns_profile"
+    FEDERATIONS ||--o{ SOCIETIES : "governs"
+    SOCIETIES ||--o{ WORKERS : "registers"
+    WORKERS ||--o{ BOOKINGS : "executes"
+    BOOKINGS ||--|| PAYMENTS : "settles"
+    BOOKINGS ||--|| INVOICES : "generates"
+    BOOKINGS ||--o| REVIEWS : "evaluated_by"
+    WORKERS ||--o{ WELFARE_BENEFITS : "receives"
+    WORKERS ||--o{ INSURANCE_POLICIES : "covered_by"
+    SOCIETIES ||--o{ WORKFORCE_EXCHANGES : "source_or_target"
+    ADMINS ||--o{ ADMIN_AUDIT_LOGS : "logs_actions"
+    ADMINS ||--o{ SECURITY_EVENTS : "triggers_monitoring"
+    BOOKINGS ||--o{ COMPLAINTS : "disputes"
+
+    USERS {
+        ObjectId _id PK
+        string email UK
+        string phone
+        string passwordHash
+        string role "CUSTOMER | WORKER | SUPER_ADMIN"
+        string employeeId UK
+        string bloodGroup
+        string district
+        string pincode
+        boolean emailVerified
+        boolean phoneVerified
+        string status "ACTIVE | SUSPENDED"
+    }
+
+    WORKERS {
+        ObjectId _id PK
+        ObjectId userId FK
+        string workerIdNumber UK
+        string employeeId UK
+        string name
+        ObjectId societyId FK
+        string district
+        GeoJSON location "2dsphere [lon, lat]"
+        number serviceRadiusKm
+        array skills "indexes: skills, isAvailable"
+        number verificationLevel "1 to 5"
+        string verificationStatus "PENDING | VERIFIED | REJECTED"
+        boolean isAvailable
+        boolean emergencyReady
+        number rating "1.0 - 5.0"
+        number walletBalance
+        number totalEarnings
+        array kycDocuments
+    }
+
+    BOOKINGS {
+        ObjectId _id PK
+        string bookingNumber UK
+        ObjectId customerId FK
+        ObjectId workerId FK
+        ObjectId societyId FK
+        string serviceCategory
+        string bookingType "STANDARD | EMERGENCY"
+        GeoJSON serviceLocation "2dsphere [lon, lat]"
+        string status "REQUESTED | ASSIGNED | IN_PROGRESS | COMPLETED | CANCELLED"
+        array statusTimeline
+        number aiMatchScore
+        object fairWageBreakdown
+        string paymentStatus "PENDING | PAID"
+    }
+
+    PAYMENTS {
+        ObjectId _id PK
+        string transactionId UK
+        ObjectId bookingId FK
+        ObjectId customerId FK
+        ObjectId workerId FK
+        ObjectId societyId FK
+        number amount
+        string status "INITIATED | SUCCESS | FAILED"
+        string paymentMethod "UPI | RuPay | NetBanking"
+        number workerEarningAmount
+        number coopFundAmount
+    }
+
+    INVOICES {
+        ObjectId _id PK
+        string invoiceNumber UK
+        ObjectId bookingId FK
+        object customerDetails
+        object workerDetails
+        object itemizedBreakdown
+        date issuedAt
+    }
+
+    SOCIETIES {
+        ObjectId _id PK
+        ObjectId federationId FK
+        string name
+        string registrationNumber UK
+        string district
+        GeoJSON officeLocation "2dsphere [lon, lat]"
+        number activeWorkersCount
+        number welfareReserveAmount
+    }

@@ -1,0 +1,37 @@
+sequenceDiagram
+    autonumber
+    actor Customer as Citizen / Customer
+    participant UI as React Frontend (/app)
+    participant Auth as Auth Middleware (JWT)
+    participant API as Express API (/api/bookings)
+    participant AI as AI Match Engine (FastAPI)
+    participant DB as MongoDB Atlas (bookings/workers)
+    participant Pay as Razorpay / UPI Simulator
+
+    Customer->>UI: Enter Pincode (e.g. 520010) & Select Trade (e.g. Electrician)
+    UI->>API: GET /api/workers/nearby?service=Electrician&lat=16.5062&lon=80.6480
+    API->>DB: Worker.find({ skills: /Electrician/i, isAvailable: true, location: { $near: ... } })
+    DB-->>API: List of 20 candidate workers in 10km radius
+    API->>AI: POST /api/ai/match (Multi-objective scoring)
+    AI-->>API: Ranked list with match scores & why-this-worker reasons
+    API-->>UI: Return ranked workers with ETAs & fair wage floor rates
+    Customer->>UI: Select Worker & Request Service
+    UI->>API: POST /api/bookings (JWT authenticated)
+    API->>API: Calculate Fair Wage Breakdown (Base + Skill + Exp + Travel + 12% Coop)
+    API->>DB: Booking.create(status: "ASSIGNED", bookingNumber: "BK-...")
+    DB-->>API: Booking record saved
+    API-->>UI: 201 Created (Booking details & AI score)
+    Customer->>UI: Inspect Live ETA & Start In-App Chat
+    Note over Customer,UI: Real-time coordination with Artisan
+    Customer->>UI: Share 4-Digit Doorstep Safety OTP upon arrival
+    UI->>API: PATCH /api/bookings/:id/status ("IN_PROGRESS")
+    Customer->>UI: Inspect completed service & Click Pay
+    UI->>API: POST /api/payments/create-order
+    API-->>UI: Return order ID & amount breakdown
+    Customer->>Pay: Confirm UPI / NetBanking payment
+    Pay-->>UI: Payment success callback
+    UI->>API: POST /api/payments/verify
+    API->>DB: Update Payment: SUCCESS, Booking: COMPLETED
+    API->>DB: Update Worker: $inc walletBalance & jobsCompletedCount
+    API->>DB: Create official itemized Invoice (INV-...)
+    UI-->>Customer: Display Tax Invoice & Prompt 5-Star Review with Media Proof

@@ -1,0 +1,33 @@
+sequenceDiagram
+    autonumber
+    actor Worker as Certified Cooperative Worker
+    participant UI as Worker Portal (/worker)
+    participant API as Express API (/api)
+    participant DB as MongoDB Atlas
+
+    Worker->>UI: Enter Employee ID (COOP-EMP-0001) & Password
+    UI->>API: POST /api/auth/worker/login
+    API->>DB: User.findOne({ employeeId, role: "WORKER" })
+    API->>API: bcrypt.compare(password, passwordHash)
+    API-->>UI: Return JWT Worker Token & Profile details
+    UI-->>Worker: Display Dashboard (Today's Earnings, Shift Status, Active Jobs)
+    Worker->>UI: Toggle Duty Availability (Field Ready)
+    UI->>API: PATCH /api/workers/me/availability
+    API->>DB: Worker.updateOne({ isAvailable: true })
+    Worker->>UI: View Assigned Job Notification (BK-...)
+    UI->>API: GET /api/bookings/my
+    API->>DB: Booking.find({ workerId, status: "ASSIGNED" })
+    DB-->>API: Return assigned jobs
+    Worker->>UI: Click "Accept Shift & Start Route"
+    UI->>API: PATCH /api/bookings/:id/status ("ON_THE_WAY")
+    API->>DB: Update Booking timeline
+    Worker->>UI: Arrive at Doorstep & Request Customer OTP
+    Worker->>UI: Enter 4-Digit Verification OTP
+    UI->>API: PATCH /api/bookings/:id/status ("IN_PROGRESS")
+    Worker->>UI: Execute Technical Repairs & Complete Job
+    Worker->>UI: Request Customer Completion Sign-off
+    API->>DB: Disburse 100% fair wage directly into Worker.walletBalance
+    Worker->>UI: Open Wallet & Click "Instant Bank DBT Withdrawal"
+    UI->>API: Deduct walletBalance & record transaction
+    UI-->>Worker: Instant confirmation: Funds credited to Bank Account via DBT
+    Worker->>UI: Inspect 3D Smart ID Card & View Welfare Accruals (PMSBY Cover)
