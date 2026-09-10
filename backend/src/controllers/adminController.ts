@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { User } from "../models/User";
 import { Worker } from "../models/Worker";
 import { Booking } from "../models/Booking";
 import { Review } from "../models/Review";
@@ -224,7 +225,7 @@ export const getKycSubmissions = async (_req: Request, res: Response): Promise<v
         { verificationStatus: { $in: ["PENDING", "UNDER_REVIEW"] } }
       ]
     })
-      .select("name gender phone email avatarUrl skills experienceYears societyName verificationLevel verificationStatus kycDocuments certificates createdAt")
+      .select("name gender phone email avatarUrl skills experienceYears societyName verificationLevel verificationStatus kycDocuments certificates createdAt employeeId workerIdNumber")
       .sort({ updatedAt: -1 })
       .limit(50);
 
@@ -271,6 +272,10 @@ export const reviewKycSubmission = async (req: AuthenticatedRequest, res: Respon
         notes: "Aadhaar, PAN, and Police Clearance successfully cleared with zero fraud triggers."
       });
       await worker.save();
+
+      if (worker.userId) {
+        await User.findByIdAndUpdate(worker.userId, { status: "ACTIVE" });
+      }
 
       res.json({
         success: true,

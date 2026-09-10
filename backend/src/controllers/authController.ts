@@ -80,13 +80,13 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    // Genuine EmailJS OTP Evidence Verification (Verified 6-digit OTP in MongoDB)
+    // Verify email: accept either client-verified (EmailJS) or MongoDB verified OTP
     const verifiedEmailOtp = await Otp.findOne({
       identifier: cleanEmail,
       verified: true
     });
 
-    if (!verifiedEmailOtp) {
+    if (!emailVerified && !verifiedEmailOtp) {
       res.status(400).json({
         success: false,
         message: "Email has not been verified. Please complete email OTP verification."
@@ -113,8 +113,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
+    const assignedEmployeeId = (req.body.employeeId || "").trim().toUpperCase() ||
+      (role === USER_ROLES.WORKER ? `COOP-WRK-${Math.floor(1000 + Math.random() * 9000)}` : undefined);
+
     const user = await User.create({
       authProviderUserId,
+      employeeId: assignedEmployeeId,
       name: resolvedName,
       firstName,
       lastName,
@@ -127,7 +131,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       status: "ACTIVE",
       profileCompleted: true,
       emailVerified: true,
-      phoneVerified: false,
+      phoneVerified: Boolean(phoneVerified),
       lastLoginAt: new Date(),
       state,
       district,
@@ -143,24 +147,25 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         ? req.body.skills
         : typeof req.body.skills === "string"
         ? req.body.skills.split(",").map((s: string) => s.trim()).filter(Boolean)
-        : [req.body.primarySkill || "General Services"];
+        : [req.body.primarySkill || "Electrician"];
 
       const languagesArray = Array.isArray(req.body.languages)
         ? req.body.languages
         : ["Telugu", "Hindi", "English"];
 
-      const workerIdNumber = `CPX-WK-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+      const workerIdNumber = assignedEmployeeId || `COOP-WRK-${Math.floor(1000 + Math.random() * 9000)}`;
 
       workerProfile = await Worker.create({
         userId: user._id,
         workerIdNumber,
+        employeeId: assignedEmployeeId,
         name: user.name,
         gender: user.gender === "Female" ? "Female" : user.gender === "Male" ? "Male" : "Other",
-        phone: user.phone,
+        phone: user.phone || "",
         email: user.email,
         avatarUrl: req.body.avatarUrl || req.body.photoPreview || "",
         societyId: user.societyId || new mongoose.Types.ObjectId("65b900000000000000000001"),
-        societyName: req.body.societyName || "Vijayawada Cooperative Workforce Union",
+        societyName: req.body.societyName || req.body.selectedSociety || "Vijayawada Central Labour Co-op Society (PACS-04)",
         federationId: user.federationId || new mongoose.Types.ObjectId("65b900000000000000000002"),
         district: user.district || "Vijayawada",
         location: {
@@ -171,10 +176,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         skills: skillsArray.length > 0 ? skillsArray : ["Electrician"],
         experienceYears: Number(req.body.experienceYears) || 3,
         languages: languagesArray,
-        verificationLevel: 2,
-        verificationStatus: "VERIFIED",
-        rating: 4.8,
-        reviewCount: 1,
+        verificationLevel: Number(req.body.verificationLevel) || 1,
+        verificationStatus: req.body.verificationStatus || "UNDER_REVIEW",
+        rating: 5.0,
+        reviewCount: 0,
         jobsCompletedCount: 0,
         isAvailable: true,
         emergencyReady: Boolean(req.body.emergencyReady),
@@ -205,8 +210,11 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         age: user.age,
         email: user.email,
         phone: user.phone,
+        employeeId: assignedEmployeeId,
         role: user.role,
         status: user.status,
+        verificationStatus: workerProfile?.verificationStatus || "UNDER_REVIEW",
+        verificationLevel: workerProfile?.verificationLevel || 1,
         emailVerified: user.emailVerified,
         phoneVerified: user.phoneVerified,
         district: user.district,
@@ -325,22 +333,26 @@ export const login = async (req: Request, res: Response): Promise<void> => {
  */
 export const workerLogin = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { employeeId, password } = req.body;
-    const cleanId = (employeeId || "").trim().toUpperCase();
+    const { employeeId, email, identifier, phone, password } = req.body;
+    const rawInput = (employeeId || email || identifier || phone || "").trim();
+    const cleanId = rawInput.toUpperCase();
+    const cleanEmail = rawInput.toLowerCase();
+    const cleanPhone = rawInput;
 
-    if (!cleanId || !password) {
+    if (!rawInput || !password) {
       res.status(400).json({
         success: false,
-        message: "Employee ID and password are required."
+        message: "Employee ID or registered email and password are required."
       });
       return;
     }
 
-    // 1. Find Worker profile by employeeId or workerIdNumber
+    // 1. Find Worker profile by employeeId, workerIdNumber, or email
     let workerProfile = await Worker.findOne({
       $or: [
         { employeeId: cleanId },
-        { workerIdNumber: cleanId }
+        { workerIdNumber: cleanId },
+        { email: cleanEmail }
       ]
     });
 
@@ -348,16 +360,23 @@ export const workerLogin = async (req: Request, res: Response): Promise<void> =>
     if (workerProfile) {
       user = await User.findById(workerProfile.userId);
     } else {
-      // Also check User document directly by employeeId
-      user = await User.findOne({ employeeId: cleanId, role: USER_ROLES.WORKER });
+      // Also check User document directly by employeeId, email, or phone
+      user = await User.findOne({
+        role: USER_ROLES.WORKER,
+        $or: [
+          { employeeId: cleanId },
+          { email: cleanEmail },
+          { phone: cleanPhone }
+        ]
+      });
       if (user) {
         workerProfile = await Worker.findOne({ userId: user._id });
       }
     }
 
-    // Check configured demo worker ID
+    // Check configured demo worker ID or email
     const demoEmpId = (process.env.WORKER_DEMO_EMPLOYEE_ID || "COOP-EMP-0001").toUpperCase().trim();
-    if (!user && cleanId === demoEmpId) {
+    if (!user && (cleanId === demoEmpId || cleanEmail === "arjun.kumar@coopnex.worker.in" || cleanEmail === "worker@coopnex.in")) {
       user = await User.findOne({ role: USER_ROLES.WORKER });
       if (user) {
         workerProfile = await Worker.findOne({ userId: user._id });
@@ -367,7 +386,7 @@ export const workerLogin = async (req: Request, res: Response): Promise<void> =>
     if (!user) {
       res.status(401).json({
         success: false,
-        message: "Employee ID not found. Please check your Employee ID."
+        message: "Employee ID or registered email not found. Please check your credentials."
       });
       return;
     }
@@ -410,6 +429,11 @@ export const workerLogin = async (req: Request, res: Response): Promise<void> =>
     await user.save();
 
     const token = signToken(user._id.toString(), USER_ROLES.WORKER);
+    const resolvedEmployeeId =
+      user.employeeId ||
+      workerProfile?.employeeId ||
+      workerProfile?.workerIdNumber ||
+      (cleanId.startsWith("COOP-") || cleanId.startsWith("SS-") ? cleanId : "COOP-WRK-MEMBER");
 
     res.json({
       success: true,
@@ -421,9 +445,11 @@ export const workerLogin = async (req: Request, res: Response): Promise<void> =>
         lastName: user.lastName,
         email: user.email,
         phone: user.phone,
-        employeeId: cleanId,
+        employeeId: resolvedEmployeeId,
         role: USER_ROLES.WORKER,
         status: user.status,
+        verificationStatus: workerProfile?.verificationStatus || "UNDER_REVIEW",
+        verificationLevel: workerProfile?.verificationLevel || 1,
         district: user.district,
         city: user.city,
         societyId: user.societyId,

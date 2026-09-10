@@ -5,13 +5,13 @@ import { Admin, SecurityEvent, AdminAuditLog } from "../models/Admin";
 import { AuthenticatedRequest } from "../middleware/auth";
 import crypto from "crypto";
 
-const JWT_SECRET = process.env.JWT_SECRET || "sahakari_seva_super_secure_jwt_secret_2026_sih";
+const getJwtSecret = () => process.env.JWT_SECRET || "super_secret_coopnex_production_jwt_key_2026";
 const MFA_SECRET_SIGNER = process.env.MFA_SECRET || "sahakari_mfa_challenge_secret_key_2026";
 
 const signAdminToken = (adminId: string, mongoId: string) => {
   return jwt.sign(
     { userId: mongoId, adminId, role: "SUPER_ADMIN" },
-    JWT_SECRET,
+    getJwtSecret(),
     { expiresIn: "12h" }
   );
 };

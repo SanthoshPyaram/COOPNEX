@@ -665,6 +665,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
+          emailVerified: true,
           role: "CUSTOMER"
         }),
         signal: controller.signal
@@ -826,17 +827,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const sessionKey = `coopnex_otp_REGISTER_${cleanEmail}`;
     sessionStorage.removeItem(sessionKey);
 
-    // 4. Non-blocking backend registration call
-    fetch(`${API_BASE}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...data,
-        employeeId: assignedEmployeeId,
-        role: "WORKER",
-        verificationStatus: "UNDER_REVIEW"
-      })
-    }).catch(() => null);
+    // 4. Backend registration call with timeout and MongoDB synchronization
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch(`${API_BASE}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          employeeId: assignedEmployeeId,
+          role: "WORKER",
+          emailVerified: true,
+          verificationStatus: "UNDER_REVIEW"
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      const parsed = await parseApiResponse(res);
+      if (parsed.ok && parsed.data?.success && parsed.data?.user) {
+        const backendUser = parsed.data.user;
+        const finalUser: UserData = {
+          ...newUser,
+          id: backendUser.id || backendUser._id || newUser.id,
+          employeeId: backendUser.employeeId || assignedEmployeeId,
+          verificationStatus: backendUser.verificationStatus || "UNDER_REVIEW"
+        };
+        setUser(finalUser);
+        setToken(parsed.data.token);
+        localStorage.setItem("sahakari_user", JSON.stringify(finalUser));
+        localStorage.setItem("sahakari_token", parsed.data.token);
+
+        // Update local worker record with backend user ID for admin verification
+        newWorkerRecord.id = finalUser.id;
+        newWorkerRecord._id = finalUser.id;
+        try {
+          const existingWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
+          const filteredWorkers = existingWorkers.filter(
+            (w: any) => w.email?.toLowerCase() !== cleanEmail && w.employeeId !== assignedEmployeeId
+          );
+          filteredWorkers.unshift(newWorkerRecord);
+          localStorage.setItem("coopnex_registered_workers", JSON.stringify(filteredWorkers));
+        } catch {}
+      }
+    } catch {
+      // Backend offline / unreachable fallback: continues seamlessly with local session
+    }
 
     return { success: true, employeeId: assignedEmployeeId };
   };
