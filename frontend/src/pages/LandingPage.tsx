@@ -1517,7 +1517,7 @@ export const LandingPage: React.FC = () => {
         </p>
         <div className="flex flex-wrap justify-center gap-3 pt-2">
           <Link
-            to="/app"
+            to="/services"
             className="btn-primary !min-h-[46px] !px-8 text-sm font-bold shadow-lg"
           >
             <span>{t("cta.bookBtn") || "Book Verified Service"}</span>

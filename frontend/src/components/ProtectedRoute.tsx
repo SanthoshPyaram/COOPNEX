@@ -13,10 +13,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
   const location = useLocation();
 
   if (!isAuthenticated) {
-    if (location.pathname.startsWith("/admin") || allowedRoles?.includes("SUPER_ADMIN")) {
+    if (location.pathname.startsWith("/admin")) {
       return <Navigate to="/admin/login" state={{ from: location }} replace />;
     }
-    if (location.pathname.startsWith("/worker") || allowedRoles?.includes("WORKER")) {
+    if (location.pathname.startsWith("/worker")) {
       return <Navigate to="/worker/login" state={{ from: location }} replace />;
     }
     return <Navigate to="/login" state={{ from: location }} replace />;

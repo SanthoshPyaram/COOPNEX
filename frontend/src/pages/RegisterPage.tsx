@@ -15,23 +15,27 @@ import {
   ShieldCheck,
   CheckCircle2,
   AlertCircle,
-  Briefcase,
   Eye,
   EyeOff,
   RotateCcw,
   Check,
-  Info
+  Info,
+  Sparkles,
+  Shield
 } from "lucide-react";
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const initialRole = searchParams.get("role") === "worker" ? "WORKER" : "CUSTOMER";
+
+  // Redirect worker inquiries directly to dedicated artisan onboarding
+  useEffect(() => {
+    if (searchParams.get("role") === "worker") {
+      navigate("/join-worker", { replace: true });
+    }
+  }, [searchParams, navigate]);
 
   const { registerCustomer, sendOtp, verifyOtp } = useAuth();
-
-  // Role Selection
-  const [selectedRole, setSelectedRole] = useState<"CUSTOMER" | "WORKER">(initialRole);
 
   // Personal Details
   const [firstName, setFirstName] = useState("");
@@ -253,20 +257,6 @@ export const RegisterPage: React.FC = () => {
 
     setIsSubmitting(true);
 
-    // If worker role selected, forward to worker onboarding
-    if (selectedRole === "WORKER") {
-      const query = new URLSearchParams({
-        name: `${firstName.trim()} ${lastName.trim()}`,
-        email: email.trim().toLowerCase(),
-        gender,
-        age,
-        authProviderUserId: authProviderUserId || "",
-        emailVerified: "true"
-      }).toString();
-      navigate(`/join-worker?${query}`);
-      return;
-    }
-
     const payload = {
       name: `${firstName.trim()} ${lastName.trim()}`,
       firstName: firstName.trim(),
@@ -311,7 +301,12 @@ export const RegisterPage: React.FC = () => {
         <LanguageDropdown variant="pill" />
       </div>
 
-      <div className="max-w-2xl mx-auto w-full space-y-6 relative z-10">
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="max-w-2xl mx-auto w-full space-y-6 relative z-10"
+      >
         {/* Brand Header */}
         <div className="text-center space-y-2">
           <Link to="/" className="inline-flex items-center gap-2.5">
@@ -320,19 +315,22 @@ export const RegisterPage: React.FC = () => {
           <div className="flex items-center justify-center gap-2">
             <span className="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 px-3 py-1 rounded-full text-xs font-bold text-blue-700 dark:text-blue-300">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Cooperative Workforce Network</span>
+              <span>National Cooperative Workforce Network</span>
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-            Create your COOPNEX Account
+            Create your Customer Account
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-            Join a trusted community with genuine Email &amp; Phone OTP verification
+            Direct access to verified cooperative artisans with authentic Email &amp; Phone OTP protection
           </p>
         </div>
 
-        {/* Form Container */}
-        <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl p-6 sm:p-8">
+        {/* Form Container with Ambient Glow and Glassmorphism */}
+        <div className="relative bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-2xl shadow-blue-950/10 p-6 sm:p-8 overflow-hidden">
+          {/* Ambient soft glow background decorations */}
+          <div className="absolute -top-20 -right-20 w-56 h-56 bg-blue-500/10 dark:bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-20 -left-20 w-56 h-56 bg-emerald-500/10 dark:bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
           {accountCreatedUser ? (
             /* SUCCESS STATE */
             <div className="space-y-6 text-center py-4">
@@ -375,55 +373,59 @@ export const RegisterPage: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => navigate(selectedRole === "WORKER" ? "/worker" : "/app")}
+                onClick={() => navigate("/app")}
                 className="w-full max-w-md mx-auto bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white font-black py-3 px-5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>PROCEED TO COOPNEX DASHBOARD</span>
+                <span>PROCEED TO CUSTOMER DASHBOARD</span>
                 <ArrowRight className="w-4 h-4 text-amber-300" />
               </button>
             </div>
           ) : (
             /* MAIN REGISTRATION FORM */
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Role Switcher */}
-              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl max-w-md mx-auto">
-                <button
-                  type="button"
-                  onClick={() => setSelectedRole("CUSTOMER")}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    selectedRole === "CUSTOMER"
-                      ? "bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-sm"
-                      : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
-                  }`}
-                >
-                  <User className="w-4 h-4 text-blue-600" />
-                  <span>BOOK SERVICES</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedRole("WORKER")}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    selectedRole === "WORKER"
-                      ? "bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm"
-                      : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
-                  }`}
-                >
-                  <Briefcase className="w-4 h-4 text-amber-500" />
-                  <span>JOIN AS A WORKER</span>
-                </button>
-              </div>
-
-              {selectedRole === "WORKER" && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl flex items-center gap-3 text-xs text-blue-900">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0 text-[#2563EB]">
-                    <Briefcase className="w-5 h-5" />
+              {/* Customer Account Header Card (Worker switch removed) */}
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-blue-50/90 dark:from-blue-950/40 dark:via-indigo-950/20 dark:to-blue-950/40 border border-blue-200/70 dark:border-blue-800/50 rounded-2xl shadow-xs"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/25 shrink-0">
+                    <User className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="font-bold block">Artisan &amp; Worker Onboarding</span>
-                    <span>Verified cooperative workers receive identity verification, trade assessment, and fair wage protection.</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Customer Registration</span>
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">Direct Citizen Access</span>
+                    </div>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">Book verified local artisans with transparent cooperative pricing</span>
                   </div>
                 </div>
-              )}
+                <Link
+                  to="/join-worker"
+                  className="group inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 bg-white/90 dark:bg-slate-800/90 px-3 py-1.5 rounded-xl border border-blue-200/60 dark:border-blue-700/60 shadow-xs hover:shadow-sm transition-all self-start sm:self-auto shrink-0"
+                >
+                  <span>Are you an artisan?</span>
+                  <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              </motion.div>
+
+              {/* Cooperative Trust Guarantees Strip */}
+              <div className="grid grid-cols-3 gap-2 py-1 text-center">
+                <div className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60 flex flex-col items-center">
+                  <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400 mb-0.5" />
+                  <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">Police &amp; Trade Verified</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60 flex flex-col items-center">
+                  <Sparkles className="w-4 h-4 text-amber-500 mb-0.5" />
+                  <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">Fair Standard Wages</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60 flex flex-col items-center">
+                  <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mb-0.5" />
+                  <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">Zero Commission</span>
+                </div>
+              </div>
 
               {/* Global Error Banner */}
               {formError && (
@@ -811,27 +813,29 @@ export const RegisterPage: React.FC = () => {
               {/* FINAL REGISTRATION SUBMISSION BUTTON */}
               {/* ======================================================== */}
               <div className="pt-3">
-                <button
+                <motion.button
                   type="submit"
+                  whileHover={isFormValid && !isSubmitting ? { scale: 1.01 } : {}}
+                  whileTap={isFormValid && !isSubmitting ? { scale: 0.99 } : {}}
                   disabled={!isFormValid || isSubmitting}
                   className={`w-full py-3.5 px-5 rounded-xl font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
                     isFormValid
-                      ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white shadow-blue-500/20"
+                      ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-600/25 ring-2 ring-blue-500/20"
                       : "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300/40 dark:border-slate-700/40"
                   }`}
                 >
                   {isSubmitting ? (
                     <span className="flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Creating COOPNEX Account...</span>
+                      <span>Creating Customer Account...</span>
                     </span>
                   ) : (
                     <>
-                      <span>CREATE ACCOUNT</span>
+                      <span>CREATE CUSTOMER ACCOUNT</span>
                       <ArrowRight className={`w-4 h-4 ${isFormValid ? "text-amber-300" : "text-slate-400"}`} />
                     </>
                   )}
-                </button>
+                </motion.button>
 
                 {/* Helpful Validation Hint */}
                 {!isFormValid && (
@@ -853,7 +857,7 @@ export const RegisterPage: React.FC = () => {
             Sign in here
           </Link>
         </div>
-      </div>
+      </motion.div>
     </AnimatedCoopBackground>
   );
 };
