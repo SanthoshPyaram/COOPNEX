@@ -1,5 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "../../context/AuthContext";
 import { Booking } from "../../types";
 import { HumanVisual } from "../HumanVisual";
 import {
@@ -37,6 +38,7 @@ export const WorkerDashboardTab: React.FC<WorkerDashboardTabProps> = ({
   onSelectJobForDetails
 }) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   // Find immediate next job (ASSIGNED or ACCEPTED or IN_PROGRESS)
   const nextJob = activeJobs.find(
@@ -57,14 +59,14 @@ export const WorkerDashboardTab: React.FC<WorkerDashboardTabProps> = ({
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            {t("worker_dash.greeting", "Good morning")}, Arjun 👋
+            {t("worker_dash.greeting", "Good morning")}, {user?.name || "Specialist"} 👋
           </h1>
           <p className="text-xs text-slate-500 flex flex-wrap items-center gap-2">
-            <span className="font-bold text-blue-600">Verified Electrician</span>
+            <span className="font-bold text-blue-600">{user?.workerProfile?.trade || "Verified Artisan"}</span>
             <span>&bull;</span>
-            <span className="font-mono text-slate-400">Employee ID: COOP-EMP-0001</span>
+            <span className="font-mono text-slate-400">Employee ID: {user?.employeeId || "COOP-WRK"}</span>
             <span>&bull;</span>
-            <span className="text-slate-600">Vijayawada Central Labour Co-op</span>
+            <span className="text-slate-600">{user?.district || "Vijayawada"} Cooperative Labour Union</span>
           </p>
         </div>
 
@@ -137,42 +139,42 @@ export const WorkerDashboardTab: React.FC<WorkerDashboardTabProps> = ({
       {/* 3. 6 COMPACT STATISTICS CARDS IN ONE RESPONSIVE GRID */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
-          <span className="text-[11px] font-bold text-slate-500 block">Today's Jobs</span>
+          <span className="text-[11px] font-bold text-slate-500 block">{t("cards.todaysJobs")}</span>
           <div className="text-xl font-black text-slate-900 mt-0.5">2</div>
-          <span className="text-[10px] text-blue-600 font-bold">1 In Progress</span>
+          <span className="text-[10px] text-blue-600 font-bold">1 {t("status.in_progress")}</span>
         </div>
 
         <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
-          <span className="text-[11px] font-bold text-slate-500 block">Pending Jobs</span>
+          <span className="text-[11px] font-bold text-slate-500 block">{t("cards.pendingJobs")}</span>
           <div className="text-xl font-black text-amber-600 mt-0.5">1</div>
-          <span className="text-[10px] text-amber-700 font-bold">Action needed</span>
+          <span className="text-[10px] text-amber-700 font-bold">{t("cards.actionNeeded")}</span>
         </div>
 
         <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
-          <span className="text-[11px] font-bold text-slate-500 block">Completed</span>
+          <span className="text-[11px] font-bold text-slate-500 block">{t("status.completed")}</span>
           <div className="text-xl font-black text-emerald-600 mt-0.5">184</div>
-          <span className="text-[10px] text-emerald-700 font-bold">100% verified</span>
+          <span className="text-[10px] text-emerald-700 font-bold">{t("cards.verified100")}</span>
         </div>
 
         <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
-          <span className="text-[11px] font-bold text-slate-500 block">Today's Pay</span>
+          <span className="text-[11px] font-bold text-slate-500 block">{t("cards.todaysPay")}</span>
           <div className="text-xl font-black text-slate-900 mt-0.5">₹650</div>
-          <span className="text-[10px] text-slate-400">+₹720 pending</span>
+          <span className="text-[10px] text-slate-400">+₹720 {t("status.pending")}</span>
         </div>
 
         <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
-          <span className="text-[11px] font-bold text-slate-500 block">Monthly Pay</span>
+          <span className="text-[11px] font-bold text-slate-500 block">{t("cards.monthlyPay")}</span>
           <div className="text-xl font-black text-[#2563EB] mt-0.5">₹24,800</div>
           <span className="text-[10px] text-emerald-600 font-bold">↑ 14% vs Aug</span>
         </div>
 
         <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
-          <span className="text-[11px] font-bold text-slate-500 block">Citizen Rating</span>
+          <span className="text-[11px] font-bold text-slate-500 block">{t("cards.citizenRating")}</span>
           <div className="text-xl font-black text-slate-900 mt-0.5 flex items-center gap-1">
             <span>4.95</span>
             <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
           </div>
-          <span className="text-[10px] text-slate-400">142 reviews</span>
+          <span className="text-[10px] text-slate-400">142 {t("cards.reviews")}</span>
         </div>
       </div>
 
@@ -185,10 +187,10 @@ export const WorkerDashboardTab: React.FC<WorkerDashboardTabProps> = ({
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
                 <span className="text-xs font-black uppercase tracking-wider text-rose-600">
-                  NEXT IMMEDIATE JOB
+                  {t("cards.nextJob")}
                 </span>
                 <span className="text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full">
-                  Emergency Priority
+                  {t("cards.emergencyPriority")}
                 </span>
               </div>
               <span className="text-xs font-mono font-bold text-slate-400">
@@ -203,7 +205,7 @@ export const WorkerDashboardTab: React.FC<WorkerDashboardTabProps> = ({
                 </h3>
                 <div className="space-y-1 text-xs text-slate-600">
                   <p className="font-bold text-slate-800">
-                    Customer: {nextJob?.customerName || "Smt. Priya Sharma (K. Venkat Rao)"}
+                    {t("cards.customerLabel")} {nextJob?.customerName || "Smt. Priya Sharma (K. Venkat Rao)"}
                   </p>
                   <p className="flex items-center gap-1.5 text-slate-500">
                     <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
@@ -212,10 +214,10 @@ export const WorkerDashboardTab: React.FC<WorkerDashboardTabProps> = ({
                   <div className="flex items-center gap-3 text-[11px] font-medium text-slate-500 pt-1">
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3 text-blue-600" />
-                      <span>Today &bull; 4:30 PM</span>
+                      <span>{t("common.today")} &bull; 4:30 PM</span>
                     </span>
                     <span>&bull;</span>
-                    <span className="text-emerald-700 font-bold">2.4 km away</span>
+                    <span className="text-emerald-700 font-bold">2.4 km {t("cards.away")}</span>
                   </div>
                 </div>
               </div>
@@ -235,13 +237,13 @@ export const WorkerDashboardTab: React.FC<WorkerDashboardTabProps> = ({
           <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                Net Worker Earnings
+                {t("cards.netWorkerEarnings")}
               </span>
               <span className="text-xl font-black text-emerald-600">
                 ₹{nextJob?.fairWageBreakdown?.workerEarning || 650}
               </span>
               <span className="text-[10px] text-slate-400 block">
-                0% commission &bull; Direct Escrow DBT
+                {t("cards.zeroCommEscrow")}
               </span>
             </div>
 

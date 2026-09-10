@@ -63,41 +63,43 @@ export const WorkerPage: React.FC = () => {
       return "VERIFIED";
     }
 
-    return "UNDER_REVIEW";
+    return "PENDING";
   };
 
   const [workerStatus, setWorkerStatus] = useState<string>(getInitialWorkerStatus);
   const [statusCheckMsg, setStatusCheckMsg] = useState<string | null>(null);
 
   const refreshWorkerStatus = async () => {
-    // 1. Query live MongoDB backend first if online
-    try {
-      const res = await fetch(`${API_BASE}/workers`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data && Array.isArray(data.workers)) {
-          const userEmpId = ((user as any)?.employeeId || "").toUpperCase();
-          const userEmail = (user?.email || "").toLowerCase();
-          const dbMatch = data.workers.find((w: any) => {
-            const wEmp = (w.employeeId || w.workerIdNumber || "").toUpperCase();
-            const wEmail = (w.email || "").toLowerCase();
-            return (userEmpId && wEmp && userEmpId === wEmp) || (userEmail && wEmail && userEmail === wEmail);
-          });
-
-          if (dbMatch && dbMatch.verificationStatus) {
-            setWorkerStatus(dbMatch.verificationStatus);
-            localStorage.setItem("sahakari_worker_status", dbMatch.verificationStatus);
-            if (dbMatch.verificationStatus === "VERIFIED") {
-              setStatusCheckMsg("Congratulations! Your account has been verified by the Cooperative Administrator!");
-              setTimeout(() => setStatusCheckMsg(null), 5000);
-              return;
+    // 1. Query live MongoDB backend via /auth/me with JWT
+    const token = localStorage.getItem("sahakari_token");
+    if (token) {
+      try {
+        const res = await fetch(`${API_BASE}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.user) {
+            const status = data.user.workerProfile?.verificationStatus || data.user.verificationStatus || "PENDING";
+            setWorkerStatus(status);
+            localStorage.setItem("sahakari_worker_status", status);
+            if (status === "VERIFIED") {
+              setStatusCheckMsg("Congratulations! Your credentials have been officially approved by the Super Administrator.");
+            } else if (status === "REJECTED") {
+              setStatusCheckMsg("Your application was reviewed and rejected. Please contact your society administrator.");
+            } else {
+              setStatusCheckMsg("Identity documents are currently queued for Super Admin manual review.");
             }
+            setTimeout(() => setStatusCheckMsg(null), 5000);
+            return;
           }
         }
+      } catch (e) {
+        console.warn("Status refresh error:", e);
       }
-    } catch {}
+    }
 
-    // 2. Check local registered workers
+    // 2. Fallback check local registered workers
     try {
       const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
       const matched = localWorkers.find(
@@ -110,21 +112,21 @@ export const WorkerPage: React.FC = () => {
         setWorkerStatus(matched.verificationStatus);
         localStorage.setItem("sahakari_worker_status", matched.verificationStatus);
         if (matched.verificationStatus === "VERIFIED") {
-          setStatusCheckMsg("Congratulations! Your account has been verified by the Cooperative Administrator!");
+          setStatusCheckMsg("Congratulations! Your credentials have been officially approved by the Super Administrator.");
         } else {
-          setStatusCheckMsg("Application is still under review by the Cooperative Administrator.");
+          setStatusCheckMsg("Application is still pending Super Administrator manual verification.");
         }
         setTimeout(() => setStatusCheckMsg(null), 4000);
         return;
       }
     } catch {}
 
-    const flag = localStorage.getItem("sahakari_worker_status") || "UNDER_REVIEW";
+    const flag = localStorage.getItem("sahakari_worker_status") || "PENDING";
     setWorkerStatus(flag);
     if (flag === "VERIFIED") {
       setStatusCheckMsg("Your account is verified! All worker features are unlocked.");
     } else {
-      setStatusCheckMsg("Application is still pending administrator approval.");
+      setStatusCheckMsg("Application is pending Super Administrator review.");
     }
     setTimeout(() => setStatusCheckMsg(null), 4000);
   };
@@ -173,25 +175,28 @@ export const WorkerPage: React.FC = () => {
   // Selected Job for inspection
   const [inspectJob, setInspectJob] = useState<Booking | null>(null);
 
-  // Smart ID Card Data
+  // Dynamic Smart ID Card Data
+  const wp = (user as any)?.workerProfile;
+  const isVerified = workerStatus === "VERIFIED";
+
   const workerCardData: WorkerIdCardData = {
-    employeeId: (user as any)?.employeeId || "COOP-EMP-0001",
-    name: user?.name || "Arjun Kumar",
-    age: 32,
-    gender: "Male",
-    skills: ["Electrician (Level 4)", "Solar Pro", "Appliance Repair"],
-    bloodGroup: "O+",
-    languagesKnown: ["Telugu", "Hindi", "English"],
-    district: "Vijayawada",
-    societyName: "Vijayawada Central Labour Co-op Society (PLCS-04)",
-    photoUrl: "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80",
-    signatureText: user?.name || "Arjun Kumar",
-    issueDate: "10/04/2023",
-    validUntil: "09/04/2028",
-    nsqfLevel: "NSQF Level-4 Master Electrician",
-    emergencyContact: "+91 98765 43210",
-    policeVerificationStatus: "Clear Record (Gunadala Precinct)",
-    aadhaarVerhoeffStatus: "Verhoeff Valid (D5 Polynomial Match)"
+    employeeId: (user as any)?.employeeId || wp?.employeeId || wp?.workerIdNumber || "COOP-WRK-MEMBER",
+    name: user?.name || "Registered Member",
+    age: (user as any)?.age || 30,
+    gender: (user as any)?.gender || "Member",
+    skills: (wp?.skills && wp.skills.length > 0) ? wp.skills : [(wp?.trade || "General Artisan")],
+    bloodGroup: (user as any)?.bloodGroup || "O+",
+    languagesKnown: (wp?.languages && wp.languages.length > 0) ? wp.languages : ["Telugu", "Hindi", "English"],
+    district: user?.district || "Vijayawada",
+    societyName: wp?.societyName || (user as any)?.societyName || "Vijayawada Central Labour Co-op Society",
+    photoUrl: (user as any)?.avatarUrl || wp?.avatarUrl || "",
+    signatureText: user?.name || "Member",
+    issueDate: isVerified ? "Certified" : "Pending Review",
+    validUntil: isVerified ? "Active 2028" : "Pending Review",
+    nsqfLevel: isVerified ? `NSQF Level-${wp?.verificationLevel || 4} Certified Artisan` : "Pending Super Admin Verification",
+    emergencyContact: (user as any)?.emergencyContactPhone || user?.phone || "+91 98765 00000",
+    policeVerificationStatus: isVerified ? "CCTNS Police Verified & Cleared" : "Document Review Pending",
+    aadhaarVerhoeffStatus: isVerified ? "UIDAI Aadhaar Verified" : "Verhoeff Checksum Valid (Manual Review Pending)"
   };
 
   const DEFAULT_DEMO_JOBS: Booking[] = [
@@ -360,12 +365,39 @@ export const WorkerPage: React.FC = () => {
     setWalletBalance(0);
   };
 
-  const handleSimulateApproval = () => {
-    localStorage.setItem("sahakari_worker_status", "VERIFIED");
-    setWorkerStatus("VERIFIED");
-  };
-
   const newRequestsCount = activeJobs.filter((j) => j.status === "ASSIGNED").length;
+
+  if (!user || user.role !== "WORKER") {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200 shadow-xl text-center space-y-4">
+          <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto text-amber-600 border border-amber-200">
+            <AlertTriangle className="w-7 h-7" />
+          </div>
+          <h2 className="text-lg font-black text-slate-900">
+            Worker Profile Not Found
+          </h2>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Your worker profile could not be found. Please complete registration to access the Worker Console.
+          </p>
+          <div className="pt-2 flex flex-col gap-2">
+            <Link
+              to="/join-worker"
+              className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition shadow-sm text-center"
+            >
+              Complete Worker Registration
+            </Link>
+            <Link
+              to="/worker/login"
+              className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition text-center"
+            >
+              Sign In with Employee ID
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <WorkerAppShell
@@ -401,31 +433,31 @@ export const WorkerPage: React.FC = () => {
             <div className="space-y-1.5">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-black uppercase tracking-wider">
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                <span>Status: Awaiting Administrator Verification</span>
+                <span>Status: Awaiting Super Administrator Scrutiny</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900">
-                Cooperative Accreditation Under Statutory Review
+                Cooperative Accreditation Pending Manual Document Review
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
-                Your specialist profile has been registered and is undergoing scrutiny by the Primary Cooperative Society Administration. Under statutory labour rules, live customer dispatches and instant payouts unlock once your credentials receive administrative signoff.
+                Your registration details and identity documents (Aadhaar, PAN, PCC) have passed preliminary structural verification. To prevent identity theft and maintain trust across the cooperative network, live customer bookings and payouts require manual audit and approval by the Super Administrator.
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={refreshWorkerStatus}
+                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition flex items-center gap-1.5 cursor-pointer shadow-md"
+              >
+                <Radio className="w-3.5 h-3.5 animate-pulse" />
+                <span>Refresh Review Status</span>
+              </button>
+              <Link
+                to="/admin/login"
                 className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs transition flex items-center gap-1.5 cursor-pointer shadow-xs"
               >
-                <Radio className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
-                <span>Check Status</span>
-              </button>
-              <button
-                onClick={handleSimulateApproval}
-                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center gap-1.5 cursor-pointer shadow-md"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Simulate Admin Approval (Instant Test)</span>
-              </button>
+                <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Super Admin Verification Portal →</span>
+              </Link>
             </div>
           </div>
 

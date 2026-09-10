@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { WorkerSmartIdCard } from "../components/WorkerSmartIdCard";
 import { LanguageDropdown } from "../components/LanguageDropdown";
+import { validateAadhaarVerhoeff, validatePanFormat, evaluatePreliminaryValidation } from "../utils/identityValidation";
 
 const ONBOARDING_LANGUAGES = [
   "Telugu",
@@ -69,41 +70,70 @@ export const WorkerOnboardingPage: React.FC = () => {
   const [name, setName] = useState(searchParams.get("name") || "");
   const [phone, setPhone] = useState(searchParams.get("phone") || "");
   const [email, setEmail] = useState(searchParams.get("email") || "");
-  const [gender, setGender] = useState(searchParams.get("gender") || "Male");
-  const [age, setAge] = useState(searchParams.get("age") || "32");
-  const [district, setDistrict] = useState("Vijayawada");
+  const [gender, setGender] = useState(searchParams.get("gender") || "");
+  const [age, setAge] = useState(searchParams.get("age") || "");
+  const [district, setDistrict] = useState("");
   const [address, setAddress] = useState("");
 
   // Blood Group & Multi-Language Selection for Smart ID
   const paramLangs = searchParams.get("languages")
     ? searchParams.get("languages")!.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
-  const [bloodGroup, setBloodGroup] = useState(searchParams.get("bloodGroup") || "O+");
-  const [languagesKnown, setLanguagesKnown] = useState<string[]>(
-    paramLangs.length > 0 ? paramLangs : ["Telugu", "Hindi", "English"]
-  );
+  const [bloodGroup, setBloodGroup] = useState(searchParams.get("bloodGroup") || "");
+  const [languagesKnown, setLanguagesKnown] = useState<string[]>(paramLangs);
 
-  // Photo & Digital Signature for Official Smart ID Card
-  const [photoPreview, setPhotoPreview] = useState<string>(
-    gender === "Female"
-      ? "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80"
-      : "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80"
-  );
+  // Photo & Digital Signature for Official Smart ID Card (Starts Empty - No Default Photo)
+  const [photoPreview, setPhotoPreview] = useState<string>("");
   const [photoFile, setPhotoFile] = useState<{ name: string; size: string } | null>(null);
-  const [signatureText, setSignatureText] = useState(searchParams.get("name") || "Rajesh Kumar");
+  const [signatureText, setSignatureText] = useState(searchParams.get("name") || "");
 
   const toggleLanguage = (lang: string) => {
     setLanguagesKnown((prev) =>
-      prev.includes(lang) ? (prev.length > 1 ? prev.filter((l) => l !== lang) : prev) : [...prev, lang]
+      prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang]
     );
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      const url = URL.createObjectURL(file);
-      setPhotoPreview(url);
-      setPhotoFile({ name: file.name, size: `${(file.size / 1024).toFixed(0)} KB` });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const rawBase64 = reader.result as string;
+        // Optimize and compress image using HTML5 Canvas for fast network sync and clean DB storage
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 500;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, w, h);
+            const compressed = canvas.toDataURL("image/jpeg", 0.85);
+            setPhotoPreview(compressed);
+          } else {
+            setPhotoPreview(rawBase64);
+          }
+          setPhotoFile({ name: file.name, size: `${(file.size / 1024).toFixed(0)} KB` });
+        };
+        img.onerror = () => {
+          setPhotoPreview(rawBase64);
+          setPhotoFile({ name: file.name, size: `${(file.size / 1024).toFixed(0)} KB` });
+        };
+        img.src = rawBase64;
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -131,46 +161,66 @@ export const WorkerOnboardingPage: React.FC = () => {
   }, [emailOtpSent, emailCountdown, emailOtpVerified]);
 
   // Step 2: Trade & Skills
-  const [primarySkill, setPrimarySkill] = useState("Electrician");
-  const [experienceYears, setExperienceYears] = useState("5");
-  const [secondarySkills, setSecondarySkills] = useState("Inverter Setup, MCB Wiring");
+  const [primarySkill, setPrimarySkill] = useState("");
+  const [experienceYears, setExperienceYears] = useState("");
+  const [secondarySkills, setSecondarySkills] = useState("");
   const [hasOwnTools, setHasOwnTools] = useState(true);
 
   // Step 3: Identity, 5 KYC Documents & Pre-Check
   const [aadhaarNumber, setAadhaarNumber] = useState("");
   const [panNumber, setPanNumber] = useState("");
   const [pccNumber, setPccNumber] = useState("");
-  const [skillCertName, setSkillCertName] = useState("NCVT / ITI Electrician Certificate");
+  const [skillCertName, setSkillCertName] = useState("");
   const [bankAccount, setBankAccount] = useState("");
   const [bankIfsc, setBankIfsc] = useState("");
 
-  // Step 3: Real Interactive File Uploads
-  const [aadhaarFile, setAadhaarFile] = useState<{ name: string; size: string } | null>({ name: "aadhaar_card_scanned.pdf", size: "1.4 MB" });
-  const [panFile, setPanFile] = useState<{ name: string; size: string } | null>({ name: "pan_card_front.jpg", size: "640 KB" });
-  const [pccFile, setPccFile] = useState<{ name: string; size: string } | null>(null);
-  const [skillFile, setSkillFile] = useState<{ name: string; size: string } | null>(null);
-  const [bankFile, setBankFile] = useState<{ name: string; size: string } | null>(null);
+  // Step 3: Real Interactive File Uploads (Starts null - no default files)
+  interface UploadedDoc {
+    name: string;
+    size: string;
+    base64?: string;
+  }
+  const [aadhaarFile, setAadhaarFile] = useState<UploadedDoc | null>(null);
+  const [panFile, setPanFile] = useState<UploadedDoc | null>(null);
+  const [pccFile, setPccFile] = useState<UploadedDoc | null>(null);
+  const [skillFile, setSkillFile] = useState<UploadedDoc | null>(null);
+  const [bankFile, setBankFile] = useState<UploadedDoc | null>(null);
   const [showFakeDocModal, setShowFakeDocModal] = useState(false);
   
   // Pre-check verification state
   const [preCheckRan, setPreCheckRan] = useState(false);
   const [preCheckScanning, setPreCheckScanning] = useState(false);
+  const [preCheckResult, setPreCheckResult] = useState<{
+    status: "PRELIMINARY_PASSED" | "DOCUMENTS_MISSING" | "CHECKSUM_FAILED";
+    summaryText: string;
+    aadhaarValid: boolean;
+    panValid: boolean;
+  } | null>(null);
 
   const handleFileUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
-    setter: (val: { name: string; size: string } | null) => void
+    setter: (val: UploadedDoc | null) => void
   ) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const sizeStr = file.size > 1024 * 1024
         ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
         : `${(file.size / 1024).toFixed(0)} KB`;
-      setter({ name: file.name, size: sizeStr });
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        setter({
+          name: file.name,
+          size: sizeStr,
+          base64: reader.result as string
+        });
+      };
+      reader.readAsDataURL(file);
     }
   };
 
   // Step 4: Society
-  const [selectedSociety, setSelectedSociety] = useState("Vijayawada Central Labour Co-op Society (PACS-04)");
+  const [selectedSociety, setSelectedSociety] = useState("");
 
   // Step 5: Compact & Code of Conduct
   const [agreedToCode, setAgreedToCode] = useState(false);
@@ -236,22 +286,54 @@ export const WorkerOnboardingPage: React.FC = () => {
     }
   };
 
-  // Run Algorithmic Pre-Check
+  // Run Algorithmic Pre-Check with Authentic UIDAI Verhoeff Checksum & NSDL PAN Validation
   const handleRunPreCheck = () => {
-    if (!aadhaarNumber || aadhaarNumber.length < 12) {
-      setError("Please enter a 12-digit Aadhaar number before running pre-check.");
+    if (!aadhaarNumber || aadhaarNumber.replace(/\s+/g, "").length !== 12) {
+      setError("Please enter a valid 12-digit Aadhaar number before running the pre-check.");
       return;
     }
-    if (!panNumber || panNumber.length < 10) {
-      setError("Please enter a valid 10-character PAN number before running pre-check.");
+    if (!panNumber || panNumber.trim().length !== 10) {
+      setError("Please enter a valid 10-character PAN number before running the pre-check.");
       return;
     }
+
+    const cleanAadhaar = aadhaarNumber.replace(/\s+/g, "");
+    const cleanPan = panNumber.toUpperCase().trim();
+
+    const aadhaarCheck = validateAadhaarVerhoeff(cleanAadhaar);
+    if (!aadhaarCheck.valid) {
+      setError(`Aadhaar Validation Failed: ${aadhaarCheck.message}`);
+      setPreCheckRan(false);
+      setPreCheckResult(null);
+      return;
+    }
+
+    const panCheck = validatePanFormat(cleanPan);
+    if (!panCheck.valid) {
+      setError(`PAN Validation Failed: ${panCheck.message}`);
+      setPreCheckRan(false);
+      setPreCheckResult(null);
+      return;
+    }
+
     setError(null);
     setPreCheckScanning(true);
     setTimeout(() => {
       setPreCheckScanning(false);
+      const evalRes = evaluatePreliminaryValidation({
+        aadhaarChecksumValid: aadhaarCheck.valid,
+        panFormatValid: panCheck.valid,
+        hasAadhaarDoc: Boolean(aadhaarFile),
+        hasPanDoc: Boolean(panFile)
+      });
+      setPreCheckResult({
+        status: evalRes.status,
+        summaryText: evalRes.summaryText,
+        aadhaarValid: aadhaarCheck.valid,
+        panValid: panCheck.valid
+      });
       setPreCheckRan(true);
-    }, 1200);
+    }, 800);
   };
 
   const handleNext = () => {
@@ -281,16 +363,37 @@ export const WorkerOnboardingPage: React.FC = () => {
       }
     }
     if (step === 3) {
-      if (!aadhaarNumber || aadhaarNumber.length < 12) {
+      const cleanAadhaar = aadhaarNumber.replace(/\s+/g, "");
+      const cleanPan = panNumber.toUpperCase().trim();
+
+      if (!cleanAadhaar || cleanAadhaar.length !== 12) {
         setError("Please enter a valid 12-digit Aadhaar number.");
         return;
       }
-      if (!panNumber || panNumber.length < 10) {
+      const aCheck = validateAadhaarVerhoeff(cleanAadhaar);
+      if (!aCheck.valid) {
+        setError(`Invalid Aadhaar: ${aCheck.message}`);
+        return;
+      }
+      if (!cleanPan || cleanPan.length !== 10) {
         setError("Please enter a valid 10-character PAN number.");
         return;
       }
-      if (!preCheckRan) {
-        setError("Please click 'Run Algorithmic Fraud Pre-Check' to test your credentials before continuing.");
+      const pCheck = validatePanFormat(cleanPan);
+      if (!pCheck.valid) {
+        setError(`Invalid PAN: ${pCheck.message}`);
+        return;
+      }
+      if (!aadhaarFile) {
+        setError("Please upload your Aadhaar document to continue.");
+        return;
+      }
+      if (!panFile) {
+        setError("Please upload your PAN document to continue.");
+        return;
+      }
+      if (!preCheckRan || !preCheckResult || preCheckResult.status === "CHECKSUM_FAILED") {
+        setError("Please run the Algorithmic Pre-Check to structurally validate your identity documents.");
         return;
       }
     }
@@ -312,28 +415,60 @@ export const WorkerOnboardingPage: React.FC = () => {
     setIsSubmitting(true);
     setError(null);
 
-    const mockTracking = `SS-AP-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-    setTrackingId(mockTracking);
+    const cleanAadhaar = aadhaarNumber.replace(/\s+/g, "");
+    const cleanPan = panNumber.toUpperCase().trim();
 
     try {
-      await registerWorker({
+      const res = await registerWorker({
         name,
+        firstName: name.split(" ")[0],
+        lastName: name.split(" ").slice(1).join(" "),
         email: email.trim().toLowerCase(),
         phone: phone.trim() || undefined,
         password,
+        gender: gender || "Other",
+        age: age ? Number(age) : 28,
+        district: district || "Vijayawada",
+        address: address.trim(),
+        pincode: "520001",
+        bloodGroup: bloodGroup || "O+",
+        languages: languagesKnown.length > 0 ? languagesKnown : ["Telugu", "Hindi", "English"],
+        avatarUrl: photoPreview || "",
+        photoPreview: photoPreview || "",
+        signatureText: signatureText || name,
+        societyName: selectedSociety || "Vijayawada Central Labour Co-op Society (PACS-04)",
+        selectedSociety: selectedSociety || "Vijayawada Central Labour Co-op Society (PACS-04)",
+        primarySkill: primarySkill || "Electrician",
+        skills: [primarySkill || "Electrician", ...(secondarySkills ? secondarySkills.split(",").map(s => s.trim()).filter(Boolean) : [])],
+        experienceYears: Number(experienceYears) || 3,
+        aadhaarNumber: cleanAadhaar,
+        aadhaarFileBase64: aadhaarFile?.base64 || "",
+        aadhaarOriginalFilename: aadhaarFile?.name || "aadhaar_card.pdf",
+        panNumber: cleanPan,
+        panFileBase64: panFile?.base64 || "",
+        panOriginalFilename: panFile?.name || "pan_card.pdf",
+        pccNumber: pccNumber.trim(),
+        pccFileBase64: pccFile?.base64 || "",
+        pccOriginalFilename: pccFile?.name || "police_clearance.pdf",
+        bankAccount: bankAccount || "",
+        bankIfsc: bankIfsc || "",
         emailVerified: true,
         phoneVerified: false,
-        district,
-        skills: [primarySkill, ...(secondarySkills ? secondarySkills.split(",").map(s => s.trim()).filter(Boolean) : [])],
-        primarySkill,
-        experienceYears: Number(experienceYears),
-        aadhaarNumber,
-        status: "UNDER_REVIEW"
+        verificationStatus: "PENDING",
+        status: "PENDING_APPROVAL"
       });
 
+      if (res && res.success === false) {
+        setError(res.message || "Registration failed. Please check your information and try again.");
+        return;
+      }
+
+      if (res && res.employeeId) {
+        setTrackingId(res.employeeId);
+      }
       setSubmitted(true);
-    } catch (err) {
-      setError("Registration failed. Please verify your connection.");
+    } catch (err: any) {
+      setError(err?.message || "Registration failed. Please verify your connection.");
     } finally {
       setIsSubmitting(false);
     }
@@ -353,14 +488,9 @@ export const WorkerOnboardingPage: React.FC = () => {
           
           <div className="flex justify-center my-2">
             <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-orange-50 border border-orange-200/80 shadow-xs">
-              <img
-                src={gender === "Female"
-                  ? "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&q=80"
-                  : "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=100&q=80"
-                }
-                alt="Cooperative Member"
-                className="w-8 h-8 rounded-full object-cover ring-2 ring-[#FF6B00]"
-              />
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-500 to-orange-600 text-white flex items-center justify-center ring-2 ring-[#FF6B00]">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
               <div className="text-left">
                 <span className="block text-[11px] font-black text-slate-800 leading-tight">National Cooperative Federation</span>
                 <span className="block text-[10px] text-amber-700 font-medium">Certified Artisan Direct Membership</span>
@@ -449,7 +579,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                 <WorkerSmartIdCard
                   data={{
                     employeeId: trackingId || `SS-AP-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-                    name: name || "Rajesh Kumar",
+                    name: name || "Registered Artisan",
                     age: age || "32",
                     gender: gender,
                     skills: [primarySkill, ...(secondarySkills ? secondarySkills.split(",").map(s => s.trim()).filter(Boolean) : [])],
@@ -458,7 +588,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                     district: district || "Vijayawada",
                     societyName: selectedSociety || "Vijayawada Central Labour Co-op Society",
                     photoUrl: photoPreview,
-                    signatureText: signatureText || name || "Rajesh Kumar",
+                    signatureText: signatureText || name || "Authorized Artisan",
                     issueDate: new Date().toLocaleDateString("en-GB"),
                     validUntil: new Date(Date.now() + 365 * 3 * 24 * 3600 * 1000).toLocaleDateString("en-GB"),
                     nsqfLevel: "NSQF Level-4 Master",
@@ -563,6 +693,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                         onChange={(e) => setGender(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                       >
+                        <option value="">Select Gender</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
                         <option value="Other">Other</option>
@@ -799,6 +930,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                         type="number"
                         min={18}
                         max={70}
+                        placeholder="e.g. 28"
                         value={age}
                         onChange={(e) => setAge(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
@@ -813,6 +945,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                         onChange={(e) => setDistrict(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                       >
+                        <option value="">Select District</option>
                         <option value="Vijayawada">Vijayawada (NTR District)</option>
                         <option value="Guntur">Guntur District</option>
                         <option value="Visakhapatnam">Visakhapatnam</option>
@@ -837,11 +970,17 @@ export const WorkerOnboardingPage: React.FC = () => {
                       {/* Photo Upload & Preview */}
                       <div className="flex items-center gap-3">
                         <div className="relative">
-                          <img
-                            src={photoPreview}
-                            alt="Worker Avatar"
-                            className="w-14 h-14 rounded-2xl object-cover border-2 border-blue-500 shadow-xs"
-                          />
+                          {photoPreview ? (
+                            <img
+                              src={photoPreview}
+                              alt="Uploaded Worker Avatar"
+                              className="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-500 shadow-xs"
+                            />
+                          ) : (
+                            <div className="w-14 h-14 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex flex-col items-center justify-center text-slate-400">
+                              <User className="w-6 h-6" />
+                            </div>
+                          )}
                           <label
                             htmlFor="worker-photo-upload"
                             className="absolute -bottom-1 -right-1 bg-blue-600 text-white p-1 rounded-full cursor-pointer hover:bg-blue-700 transition shadow-xs"
@@ -860,13 +999,13 @@ export const WorkerOnboardingPage: React.FC = () => {
                         <div className="text-xs">
                           <span className="font-bold text-slate-800 block">ID Card Photograph</span>
                           <span className="text-[10px] text-slate-500 block">
-                            {photoFile ? `${photoFile.name} (${photoFile.size})` : "Passport size photograph"}
+                            {photoFile ? `${photoFile.name} (${photoFile.size})` : "Upload passport photo (JPG/PNG)"}
                           </span>
                           <label
                             htmlFor="worker-photo-upload"
                             className="text-[11px] font-bold text-blue-600 hover:underline cursor-pointer inline-block mt-0.5"
                           >
-                            Upload from Device →
+                            {photoPreview ? "Change Photo →" : "Upload from Device →"}
                           </label>
                         </div>
                       </div>
@@ -882,6 +1021,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                           onChange={(e) => setBloodGroup(e.target.value)}
                           className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-600"
                         >
+                          <option value="">Select Blood Group</option>
                           {ONBOARDING_BLOOD_GROUPS.map((bg) => (
                             <option key={bg} value={bg}>
                               {bg} (Cooperative Roster Verified)
@@ -962,6 +1102,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                         onChange={(e) => setPrimarySkill(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                       >
+                        <option value="">Select Primary Trade</option>
                         <option value="Electrician">Electrician (Residential & Commercial)</option>
                         <option value="Plumber">Plumber (Sanitary & Pipefitting)</option>
                         <option value="Carpenter">Carpenter (Furniture & Woodwork)</option>
@@ -984,6 +1125,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                         onChange={(e) => setExperienceYears(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                       >
+                        <option value="">Select Experience Level</option>
                         <option value="1">Under 2 years (Apprentice)</option>
                         <option value="3">2 - 4 years (Skilled)</option>
                         <option value="5">5 - 8 years (Senior Craftsman)</option>
@@ -1405,18 +1547,54 @@ export const WorkerOnboardingPage: React.FC = () => {
                       </button>
                     </div>
 
-                    {preCheckRan && (
-                      <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs text-emerald-900 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                          <div>
-                            <span className="font-bold block">Algorithmic Pre-Check Passed: 5/5 Documents Authentic</span>
-                            <span className="text-[11px] text-emerald-700">Tamper Risk: 0% (Low Risk). Ready for Society Onboarding.</span>
+                    {preCheckRan && preCheckResult && (
+                      <div className={`p-4 rounded-xl border space-y-2.5 text-xs ${
+                        preCheckResult.status === "PRELIMINARY_PASSED"
+                          ? "bg-blue-50/80 border-blue-300 text-blue-950"
+                          : preCheckResult.status === "DOCUMENTS_MISSING"
+                          ? "bg-amber-50/80 border-amber-300 text-amber-950"
+                          : "bg-rose-50/80 border-rose-300 text-rose-950"
+                      }`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2.5">
+                            <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-black block text-sm">
+                                {preCheckResult.status === "PRELIMINARY_PASSED"
+                                  ? "Preliminary Structural Check Passed"
+                                  : preCheckResult.status === "DOCUMENTS_MISSING"
+                                  ? "Structural Check Passed — Scans Recommended"
+                                  : "Credential Structural Check Failed"}
+                              </span>
+                              <span className="text-[11px] opacity-80 leading-normal block mt-0.5">
+                                {preCheckResult.summaryText}
+                              </span>
+                            </div>
                           </div>
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-black shrink-0 uppercase tracking-wider ${
+                            preCheckResult.status === "PRELIMINARY_PASSED"
+                              ? "bg-blue-600 text-white"
+                              : preCheckResult.status === "DOCUMENTS_MISSING"
+                              ? "bg-amber-600 text-white"
+                              : "bg-rose-600 text-white"
+                          }`}>
+                            MANUAL REVIEW PENDING
+                          </span>
                         </div>
-                        <span className="bg-emerald-600 text-white font-mono font-bold text-[10px] px-2 py-0.5 rounded-full">
-                          SCORE: 0% RISK
-                        </span>
+
+                        <div className="p-3 bg-white/80 rounded-xl text-[11px] space-y-1.5 border border-blue-100">
+                          <div className="flex items-center gap-2 text-slate-800 font-semibold">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>UIDAI Verhoeff Checksum: <strong className="text-emerald-700">Valid D5 Polynomial Parity</strong></span>
+                          </div>
+                          <div className="flex items-center gap-2 text-slate-800 font-semibold">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>NSDL PAN Format: <strong className="text-emerald-700">Valid Format (5A-4N-1A)</strong></span>
+                          </div>
+                          <p className="text-[10px] text-slate-600 mt-2 border-t border-slate-200/80 pt-2 leading-relaxed">
+                            ℹ️ <strong>Truth in Verification:</strong> Algorithmic validation confirms structural correctness only. In accordance with UIDAI and cooperative governance standards, <em>identity authenticity is not certified until original documents are scrutinized by the Super Administrator</em>.
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1561,7 +1739,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                           type="text"
                           value={signatureText}
                           onChange={(e) => setSignatureText(e.target.value)}
-                          placeholder="e.g. Rajesh Kumar"
+                          placeholder="e.g. Authorized Artisan"
                           className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-medium focus:ring-2 focus:ring-blue-600"
                         />
                       </div>
@@ -1569,7 +1747,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                         <div>
                           <span className="text-[9px] text-slate-400 uppercase font-mono block">Signature Preview:</span>
                           <span className="font-serif italic text-base font-bold text-blue-950 tracking-wider">
-                            {signatureText || name || "Rajesh Kumar"}
+                            {signatureText || name || "Authorized Artisan"}
                           </span>
                         </div>
                         <span className="text-[9px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-bold">
@@ -1601,7 +1779,16 @@ export const WorkerOnboardingPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleNext}
-                    className="btn-primary !min-h-[42px] text-xs !py-2 !px-7"
+                    disabled={
+                      step === 3 && (
+                        !aadhaarFile ||
+                        !panFile ||
+                        !preCheckRan ||
+                        !preCheckResult ||
+                        preCheckResult.status === "CHECKSUM_FAILED"
+                      )
+                    }
+                    className="btn-primary !min-h-[42px] text-xs !py-2 !px-7 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span>Continue</span>
                     <ArrowRight className="w-3.5 h-3.5" />

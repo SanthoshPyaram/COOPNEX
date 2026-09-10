@@ -122,10 +122,10 @@ export const ForgotEmployeeIdModal: React.FC<ForgotEmployeeIdModalProps> = ({
         foundWorker = localWorkers.find((w: any) => w.email?.toLowerCase() === cleanEmail);
       } catch {}
 
-      if (!foundWorker && (cleanEmail.includes("arjun") || cleanEmail.includes("worker"))) {
+      if (!foundWorker && (cleanEmail === "arjun.kumar@coopnex.worker.in" || cleanEmail === "worker@coopnex.in")) {
         foundWorker = {
           employeeId: "COOP-EMP-0001",
-          name: "Arjun Kumar",
+          name: "Arjun Kumar (Demo Worker)",
           trade: "Electrician",
           status: "VERIFIED",
           district: "Vijayawada"

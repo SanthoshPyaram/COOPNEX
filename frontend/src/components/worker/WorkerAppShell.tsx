@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { CoopnexLogo } from "../brand/CoopnexLogo";
 import { LanguageDropdown } from "../LanguageDropdown";
 import { HumanVisual } from "../HumanVisual";
+import { AvatarPlaceholder } from "../common/AvatarPlaceholder";
 import {
   LayoutDashboard,
   Briefcase,
@@ -26,6 +27,7 @@ import {
   Phone,
   Power,
   ShieldCheck,
+  Clock,
   ChevronDown
 } from "lucide-react";
 
@@ -70,8 +72,12 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  const employeeId = (user as any)?.employeeId || "COOP-EMP-0001";
-  const workerName = user?.name || "Arjun Kumar";
+  const employeeId = (user as any)?.employeeId || (user as any)?.workerProfile?.employeeId || (user as any)?.workerProfile?.workerIdNumber || "COOP-WRK-MEMBER";
+  const workerName = user?.name || "COOPNEX Member";
+  const verificationStatus = (user as any)?.verificationStatus || (user as any)?.workerProfile?.verificationStatus || "PENDING";
+  const verificationLevel = (user as any)?.verificationLevel || (user as any)?.workerProfile?.level || 1;
+  const isVerified = verificationStatus === "VERIFIED" || verificationStatus === "APPROVED";
+  const workerAvatarUrl = (user as any)?.avatarUrl || (user as any)?.profileImage || (user as any)?.workerProfile?.avatarUrl || (user as any)?.workerProfile?.profileImage;
 
   // Close notifications popover on click outside
   useEffect(() => {
@@ -280,7 +286,12 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
               onClick={() => onTabChange("profile")}
               className="flex items-center gap-2 p-1 sm:px-2.5 sm:py-1 rounded-xl hover:bg-slate-100 transition border border-slate-200 cursor-pointer"
             >
-              <HumanVisual role="electrician" size="xs" animation="none" background="none" />
+              <AvatarPlaceholder
+                src={workerAvatarUrl}
+                name={workerName}
+                size="xs"
+                shape="circle"
+              />
               <div className="hidden md:block text-left">
                 <span className="text-xs font-bold text-slate-800 block leading-tight truncate max-w-[90px]">
                   {workerName}
@@ -302,11 +313,11 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
             {/* Worker Identity Card */}
             <div className="p-3 bg-gradient-to-br from-blue-50 via-slate-50 to-indigo-50 rounded-2xl border border-blue-100 mb-3 text-left">
               <div className="flex items-center gap-3">
-                <HumanVisual
-                  role="electrician"
+                <AvatarPlaceholder
+                  src={workerAvatarUrl}
+                  name={workerName}
                   size="sm"
-                  animation="breathe"
-                  background="subtle"
+                  shape="rounded"
                 />
                 <div className="min-w-0 flex-1">
                   <h3 className="text-xs font-extrabold text-slate-900 truncate">
@@ -315,10 +326,17 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
                   <p className="text-[10px] text-blue-600 font-mono font-bold truncate">
                     {employeeId}
                   </p>
-                  <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded mt-1">
-                    <ShieldCheck className="w-2.5 h-2.5" />
-                    Level 4 Verified
-                  </span>
+                  {isVerified ? (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded mt-1">
+                      <ShieldCheck className="w-2.5 h-2.5" />
+                      Level {verificationLevel} Verified
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded mt-1">
+                      <Clock className="w-2.5 h-2.5" />
+                      {t("auth.verificationPending", "Verification Pending")}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -386,10 +404,26 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
                 </div>
 
                 <div className="my-4 p-3 bg-blue-50 rounded-2xl border border-blue-100 flex items-center gap-3">
-                  <HumanVisual role="electrician" size="sm" animation="none" />
+                  <AvatarPlaceholder
+                    src={workerAvatarUrl}
+                    name={workerName}
+                    size="sm"
+                    shape="rounded"
+                  />
                   <div>
                     <p className="text-xs font-black text-slate-900">{workerName}</p>
                     <p className="text-[10px] font-mono text-blue-600">{employeeId}</p>
+                    {isVerified ? (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded mt-0.5">
+                        <ShieldCheck className="w-2.5 h-2.5" />
+                        Level {verificationLevel} Verified
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded mt-0.5">
+                        <Clock className="w-2.5 h-2.5" />
+                        {t("auth.verificationPending", "Verification Pending")}
+                      </span>
+                    )}
                   </div>
                 </div>
 

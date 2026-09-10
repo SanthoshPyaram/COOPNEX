@@ -5,15 +5,37 @@ import { WorkerProfile, Booking, WorkforceExchangeProposal, HeatmapZone } from "
 export const DEFAULT_PROD_API_URL = "https://coopnex-backend.onrender.com";
 
 const getApiBaseUrl = (): string => {
+  // 1. Explicit Vite environment variable (built or provided at build/deploy time)
   const envUrl = (import.meta.env.VITE_API_URL || "").trim();
   if (envUrl) {
     return envUrl.endsWith("/api") ? envUrl : `${envUrl.replace(/\/$/, "")}/api`;
   }
 
-  // In browser runtime on GitHub Pages (static host), never make API calls
-  // back to the static host origin because GitHub Pages returns 405 Method Not Allowed
-  if (typeof window !== "undefined" && window.location && window.location.hostname.includes("github.io")) {
-    return `${DEFAULT_PROD_API_URL}/api`;
+  // 2. Allow dynamic local storage override for flexible deployments / staging testing
+  if (typeof window !== "undefined" && window.localStorage) {
+    const custom = window.localStorage.getItem("coopnex_backend_url");
+    if (custom) {
+      return custom.endsWith("/api") ? custom : `${custom.replace(/\/$/, "")}/api`;
+    }
+  }
+
+  // 3. Dynamic LAN / Local IP resolution (for local development or testing across mobile devices on LAN)
+  if (typeof window !== "undefined" && window.location) {
+    const hostname = window.location.hostname;
+    const isLocalOrIp =
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname) ||
+      hostname.endsWith(".local");
+
+    if (isLocalOrIp) {
+      return `http://${hostname}:5000/api`;
+    }
+
+    // 4. In browser runtime on GitHub Pages static hosting
+    if (hostname.includes("github.io")) {
+      return `${DEFAULT_PROD_API_URL}/api`;
+    }
   }
 
   return "/api";

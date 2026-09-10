@@ -19,6 +19,8 @@ import {
   Building2,
   Lock
 } from "lucide-react";
+import { AvatarPlaceholder } from "./common/AvatarPlaceholder";
+import { useLanguage } from "../context/LanguageContext";
 
 export interface WorkerIdCardData {
   employeeId: string;
@@ -52,15 +54,11 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
   className = "",
   onDownload
 }) => {
+  const { t } = useLanguage();
   const [isFlipped, setIsFlipped] = useState(false);
   const [showScanModal, setShowScanModal] = useState(false);
 
-  const fallbackPhoto =
-    data.gender === "Female"
-      ? "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80"
-      : "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80";
-
-  const photo = data.photoUrl || fallbackPhoto;
+  const photo = data.photoUrl || "";
   const issueDate = data.issueDate || "07/09/2026";
   const validUntil = data.validUntil || "06/09/2029";
   const nsqfLevel = data.nsqfLevel || "NSQF Level-4 Master";
@@ -77,7 +75,7 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
       <div className="w-full flex items-center justify-between px-2 text-xs no-print">
         <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-bold font-mono">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>OFFICIAL COOPERATIVE SMART ID</span>
+          <span>{t("cards.officialSmartId")}</span>
         </div>
 
         <button
@@ -86,7 +84,7 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
           className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-white font-bold transition shadow-xs cursor-pointer"
         >
           <RotateCw className="w-3.5 h-3.5" />
-          <span>{isFlipped ? "Show Front Side" : "Flip to Back (QR)"}</span>
+          <span>{isFlipped ? t("cards.showFront") : t("cards.flipToBack")}</span>
         </button>
       </div>
 
@@ -119,10 +117,10 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
                 </div>
                 <div className="text-left">
                   <div className="text-[9px] uppercase tracking-widest font-black text-blue-800 dark:text-blue-300">
-                    Govt. Registered Labour Society
+                    {t("cards.govtRegistered")}
                   </div>
                   <h3 className="font-display font-black text-base leading-tight tracking-tight text-slate-900 dark:text-white">
-                    COOPNEX <span className="text-[#2563EB] dark:text-blue-400">SMART ID</span>
+                    {t("cards.smartIdTitle")}
                   </h3>
                 </div>
               </div>
@@ -132,7 +130,7 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
                   {data.employeeId}
                 </span>
                 <span className="block text-[8px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-                  UIDAI VERIFIED
+                  {t("cards.uidaiVerified")}
                 </span>
               </div>
             </div>
@@ -142,7 +140,7 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
               {/* Photo with Verified Seal */}
               <div className="relative shrink-0">
                 <div className="w-24 h-28 sm:w-28 sm:h-32 rounded-2xl overflow-hidden border-2 border-emerald-600 shadow-md bg-slate-200 dark:bg-slate-800">
-                  <img src={photo} alt={data.name} className="w-full h-full object-cover" />
+                  <AvatarPlaceholder src={data.photoUrl} name={data.name} className="w-full h-full object-cover" />
                 </div>
                 <div className="absolute -bottom-2 -right-2 w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-md border-2 border-white dark:border-slate-900">
                   <CheckCircle2 className="w-4 h-4 text-white" />
@@ -157,7 +155,7 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
                   </h4>
                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                     <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                      Age: <strong className="text-slate-900 dark:text-white">{data.age} Yrs</strong>
+                      {t("cards.age")}: <strong className="text-slate-900 dark:text-white">{data.age} {t("cards.years")}</strong>
                     </span>
                     <span className="text-slate-400">•</span>
                     <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
@@ -169,7 +167,7 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
                 {/* Blood Group Badge */}
                 <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-100 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-800/60 text-[10px] font-black text-rose-700 dark:text-rose-300 shadow-2xs">
                   <Droplet className="w-3 h-3 text-rose-600 fill-rose-600" />
-                  <span>BLOOD: {data.bloodGroup}</span>
+                  <span>{t("cards.blood")}: {data.bloodGroup}</span>
                 </div>
 
                 {/* NSQF Level */}
@@ -180,7 +178,7 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
 
                 {/* District Society */}
                 <div className="text-[10px] text-slate-600 dark:text-slate-300 line-clamp-1">
-                  <span className="font-semibold">Society:</span> {data.societyName}
+                  <span className="font-semibold">{t("cards.society")}:</span> {data.societyName}
                 </div>
               </div>
             </div>
@@ -188,7 +186,7 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
             {/* Skills Strip */}
             <div className="mt-3.5 pt-2.5 border-t border-slate-200 dark:border-slate-800 text-left space-y-1">
               <span className="text-[9px] uppercase font-bold text-slate-500 dark:text-slate-400 font-mono block">
-                Certified Trade &amp; Skills:
+                {t("cards.certifiedSkills")}:
               </span>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {data.skills.map((skill, sIdx) => (
@@ -206,7 +204,7 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
             {data.languagesKnown && data.languagesKnown.length > 0 && (
               <div className="mt-2 text-left space-y-0.5">
                 <span className="text-[9px] uppercase font-bold text-slate-500 dark:text-slate-400 font-mono block">
-                  Languages Known:
+                  {t("cards.languagesKnown")}:
                 </span>
                 <div className="flex items-center gap-1 flex-wrap">
                   {data.languagesKnown.map((lang, lIdx) => (
@@ -226,7 +224,7 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
               {/* Worker Digital Signature */}
               <div className="text-left">
                 <span className="text-[8px] uppercase font-bold text-slate-400 dark:text-slate-500 block">
-                  Worker Digital Signature
+                  {t("cards.digitalSignature")}
                 </span>
                 <div className="font-serif italic font-black text-sm text-blue-900 dark:text-blue-300 tracking-wider">
                   {data.signatureText || data.name}
@@ -235,16 +233,16 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
 
               {/* Issue & Validity */}
               <div className="text-center font-mono text-[8px] text-slate-500 dark:text-slate-400">
-                <span>Valid: {issueDate} - {validUntil}</span>
+                <span>{t("cards.validThru")}: {validUntil}</span>
               </div>
 
               {/* Authorized Registrar Seal */}
               <div className="text-right">
                 <span className="text-[8px] uppercase font-bold text-slate-400 dark:text-slate-500 block">
-                  Registrar Co-op Seal
+                  {t("cards.authorizedSignatory")}
                 </span>
                 <span className="text-[10px] font-mono font-black text-emerald-700 dark:text-emerald-400">
-                  [REGISTERED]
+                  [{t("status.verified").toUpperCase()}]
                 </span>
               </div>
             </div>
@@ -335,7 +333,7 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
             {/* Back Instructions */}
             <div className="text-center space-y-1">
               <span className="text-[10px] font-mono font-bold text-amber-300 block">
-                ⚡ SCAN QR CODE TO VERIFY ACTIVE STATUS &amp; POLICE CLEARANCE
+                ⚡ {t("cards.scanQrVerify")}
               </span>
               <p className="text-[9px] text-slate-400 max-w-xs mx-auto leading-tight">
                 This cooperative identity card is statutory property of the registered District Federation. Any tampering is punishable under IPC Sec 468/471.
@@ -344,7 +342,7 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
 
             {/* Emergency Helpline */}
             <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[9px] text-slate-400 font-mono">
-              <span>SOS Helpline: 1800-425-COOP</span>
+              <span>{t("cards.emergencyContact")}: 1800-425-COOP</span>
               <span className="text-emerald-400">Insured: ₹2,00,000</span>
             </div>
           </div>
@@ -456,7 +454,7 @@ export const WorkerSmartIdCard: React.FC<WorkerSmartIdCardProps> = ({
             <div className="p-6 space-y-3.5 text-xs text-left">
               {/* Profile Bar */}
               <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                <img src={photo} alt={data.name} className="w-12 h-12 rounded-xl object-cover border border-emerald-500" />
+                <AvatarPlaceholder src={data.photoUrl} name={data.name} className="w-12 h-12 rounded-xl object-cover border border-emerald-500 shrink-0" />
                 <div>
                   <h4 className="font-bold text-sm">{data.name}</h4>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">

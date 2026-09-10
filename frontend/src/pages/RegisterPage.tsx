@@ -6,9 +6,12 @@ import { useAuth } from "../context/AuthContext";
 import { checkLocalPincode } from "../data/indiaLocations";
 import { AnimatedCoopBackground } from "../components/animations/AnimatedCoopBackground";
 import { LanguageDropdown } from "../components/LanguageDropdown";
+import { useTranslation } from "react-i18next";
+import { API_BASE } from "../services/api";
 import {
   User,
   Mail,
+  Phone,
   Lock,
   MapPin,
   ArrowRight,
@@ -35,13 +38,22 @@ export const RegisterPage: React.FC = () => {
     }
   }, [searchParams, navigate]);
 
+  const { t } = useTranslation();
   const { registerCustomer, sendOtp, verifyOtp } = useAuth();
 
   // Personal Details
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [gender, setGender] = useState("Prefer not to say");
-  const [age, setAge] = useState<string>("28");
+  const [gender, setGender] = useState("");
+  const [age, setAge] = useState<string>("");
+
+  // Phone Field & Pre-Check State
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [emailDuplicateError, setEmailDuplicateError] = useState<string | null>(null);
+  const [phoneDuplicateError, setPhoneDuplicateError] = useState<string | null>(null);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [isCheckingPhone, setIsCheckingPhone] = useState(false);
 
   // Email Field & Verification State
   const [email, setEmail] = useState("");
@@ -57,13 +69,36 @@ export const RegisterPage: React.FC = () => {
   const [authProviderUserId, setAuthProviderUserId] = useState<string | undefined>(undefined);
   const emailOtpInputs = useRef<(HTMLInputElement | null)[]>([]);
 
+  const handlePhoneBlur = async () => {
+    const cleanDigits = phone.replace(/\D/g, "");
+    if (!cleanDigits) return;
+    if (cleanDigits.length < 10) {
+      setPhoneError(t("auth.phoneInvalid", "Please provide a valid 10-digit mobile number."));
+      return;
+    }
+    setPhoneError(null);
+    try {
+      setIsCheckingPhone(true);
+      const res = await fetch(`${API_BASE}/auth/check-phone?phone=${encodeURIComponent(cleanDigits.slice(-10))}`);
+      const data = await res.json();
+      setIsCheckingPhone(false);
+      if (data.exists) {
+        setPhoneDuplicateError(t("auth.phoneAlreadyRegistered", "Phone number already registered. Please use another number."));
+      } else {
+        setPhoneDuplicateError(null);
+      }
+    } catch {
+      setIsCheckingPhone(false);
+    }
+  };
+
   // Password & Location
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [pincode, setPincode] = useState("520001");
-  const [detectedLocation, setDetectedLocation] = useState("Vijayawada, Andhra Pradesh");
+  const [pincode, setPincode] = useState("");
+  const [detectedLocation, setDetectedLocation] = useState("");
 
   // Submission State
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -123,6 +158,7 @@ export const RegisterPage: React.FC = () => {
   const handleSendEmailOtp = async () => {
     setEmailErrorMsg(null);
     setEmailStatusMsg(null);
+    setEmailDuplicateError(null);
 
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes("@")) {
@@ -131,6 +167,20 @@ export const RegisterPage: React.FC = () => {
     }
 
     setIsSendingEmailOtp(true);
+
+    try {
+      setIsCheckingEmail(true);
+      const chk = await fetch(`${API_BASE}/auth/check-email?email=${encodeURIComponent(cleanEmail)}`);
+      const chkData = await chk.json();
+      setIsCheckingEmail(false);
+      if (chkData.exists) {
+        setIsSendingEmailOtp(false);
+        setEmailDuplicateError(t("auth.emailAlreadyExists", "Email already exists. Please use another email."));
+        return;
+      }
+    } catch {
+      setIsCheckingEmail(false);
+    }
 
     try {
       // Dispatch real cryptographically secure OTP via EmailJS universal template
@@ -240,6 +290,22 @@ export const RegisterPage: React.FC = () => {
       return;
     }
 
+    const cleanPhoneDigits = phone.replace(/\D/g, "");
+    if (!cleanPhoneDigits || cleanPhoneDigits.length < 10) {
+      setFormError(t("auth.phoneRequired", "Phone number is required. Please provide a valid 10-digit mobile number."));
+      return;
+    }
+
+    if (phoneDuplicateError) {
+      setFormError(phoneDuplicateError);
+      return;
+    }
+
+    if (emailDuplicateError) {
+      setFormError(emailDuplicateError);
+      return;
+    }
+
     if (!emailVerified) {
       setFormError("Please verify your email address using the 'Verify' button before creating an account.");
       return;
@@ -263,6 +329,7 @@ export const RegisterPage: React.FC = () => {
       lastName: lastName.trim(),
       gender,
       age: numAge,
+      phone: cleanPhoneDigits.slice(-10),
       email: email.trim().toLowerCase(),
       password,
       role: "CUSTOMER",
@@ -287,6 +354,9 @@ export const RegisterPage: React.FC = () => {
   const isFormValid =
     firstName.trim().length > 0 &&
     lastName.trim().length > 0 &&
+    phone.replace(/\D/g, "").length >= 10 &&
+    !phoneDuplicateError &&
+    !emailDuplicateError &&
     emailVerified &&
     password.length >= 8 &&
     password === confirmPassword;
@@ -476,6 +546,7 @@ export const RegisterPage: React.FC = () => {
                     onChange={(e) => setGender(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"
                   >
+                    <option value="">Select Gender</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                     <option value="Other">Other</option>
@@ -491,9 +562,10 @@ export const RegisterPage: React.FC = () => {
                     min="18"
                     max="90"
                     required
+                    placeholder="Enter age (e.g. 28)"
                     value={age}
                     onChange={(e) => setAge(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"
                   />
                 </div>
               </div>
@@ -612,6 +684,12 @@ export const RegisterPage: React.FC = () => {
                     <span>{emailErrorMsg}</span>
                   </div>
                 )}
+                {emailDuplicateError && (
+                  <div className="text-xs text-rose-600 dark:text-rose-400 flex items-center gap-1.5 font-medium">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{emailDuplicateError}</span>
+                  </div>
+                )}
 
                 {/* Inline 6-Digit Email OTP Box */}
                 <AnimatePresence>
@@ -637,7 +715,7 @@ export const RegisterPage: React.FC = () => {
                             disabled={isSendingEmailOtp}
                             className="text-[11px] text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
                           >
-                            Resend OTP
+                            Resend code
                           </button>
                         )}
                       </div>
@@ -652,19 +730,21 @@ export const RegisterPage: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* 6 Digit Input Boxes */}
-                      <div className="flex justify-center gap-2">
-                        {emailOtp.map((digit, idx) => (
+                      {/* 6 Individual Digit Boxes */}
+                      <div className="flex items-center justify-between gap-1 sm:gap-2">
+                        {emailOtp.map((digit, index) => (
                           <input
-                            key={idx}
-                            ref={(el) => (emailOtpInputs.current[idx] = el)}
+                            key={index}
+                            ref={(el) => {
+                              emailOtpInputs.current[index] = el;
+                            }}
                             type="text"
                             inputMode="numeric"
                             maxLength={1}
                             value={digit}
-                            onChange={(e) => handleEmailOtpDigitChange(idx, e.target.value)}
-                            onKeyDown={(e) => handleEmailOtpKeyDown(idx, e)}
-                            onPaste={idx === 0 ? handleEmailOtpPaste : undefined}
+                            onChange={(e) => handleEmailOtpDigitChange(index, e.target.value)}
+                            onKeyDown={(e) => handleEmailOtpKeyDown(index, e)}
+                            onPaste={handleEmailOtpPaste}
                             className="w-10 h-12 text-center text-lg font-black rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"
                           />
                         ))}
@@ -692,6 +772,56 @@ export const RegisterPage: React.FC = () => {
                     </motion.div>
                   )}
                 </AnimatePresence>
+              </div>
+
+              {/* Phone Number Input with 10-Digit Requirement & Duplicate Pre-Check */}
+              <div className="space-y-1 p-3 bg-slate-50/80 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Phone Number (10 Digits) *
+                  </label>
+                  {isCheckingPhone && (
+                    <span className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold animate-pulse">
+                      Checking availability...
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input
+                    type="tel"
+                    required
+                    maxLength={10}
+                    placeholder="e.g. 9876543210"
+                    value={phone}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      setPhone(clean);
+                      setPhoneError(null);
+                      setPhoneDuplicateError(null);
+                    }}
+                    onBlur={handlePhoneBlur}
+                    className={`w-full bg-white dark:bg-slate-800 border ${
+                      phoneDuplicateError || phoneError
+                        ? "border-rose-500 bg-rose-50/30 text-rose-900 dark:text-rose-200"
+                        : phone.length === 10 && !phoneDuplicateError
+                        ? "border-emerald-500 bg-emerald-50/30 text-emerald-900 dark:text-emerald-200"
+                        : "border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white"
+                    } rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition`}
+                  />
+                </div>
+                {phoneError && (
+                  <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1 mt-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{phoneError}</span>
+                  </p>
+                )}
+                {phoneDuplicateError && (
+                  <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1 mt-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{phoneDuplicateError}</span>
+                  </p>
+                )}
               </div>
 
               {/* Password & Confirm Password */}
@@ -793,9 +923,10 @@ export const RegisterPage: React.FC = () => {
                       type="text"
                       required
                       maxLength={6}
+                      placeholder="Enter 6-digit PIN (e.g. 520001)"
                       value={pincode}
                       onChange={(e) => handlePincodeChange(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"
                     />
                   </div>
                 </div>
@@ -804,7 +935,7 @@ export const RegisterPage: React.FC = () => {
                     Detected Coverage Region
                   </label>
                   <div className="w-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 dark:text-slate-300 truncate">
-                    {detectedLocation}
+                    {detectedLocation || <span className="text-slate-400 italic">Auto-detected upon entering PIN code</span>}
                   </div>
                 </div>
               </div>

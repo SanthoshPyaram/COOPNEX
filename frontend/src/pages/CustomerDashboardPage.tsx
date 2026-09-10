@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../context/LanguageContext";
 import { api } from "../services/api";
 import { WorkerProfile, Booking } from "../types";
 import { CustomerNavbar } from "../components/CustomerNavbar";
@@ -64,6 +65,7 @@ interface ServiceCategoryMeta {
 export const CustomerDashboardPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
 
   const activeTab = searchParams.get("tab") || "dashboard";
@@ -919,7 +921,7 @@ export const CustomerDashboardPage: React.FC = () => {
                             className="text-[#2563EB] hover:text-[#1D4ED8] font-bold flex items-center gap-1.5 hover:underline cursor-pointer"
                           >
                             <Sparkles className="w-3.5 h-3.5 text-[#F59E0B]" />
-                            <span>Why This Specialist?</span>
+                            <span>{t("cards.whyWorker")}</span>
                           </button>
 
                           <div className="flex items-center gap-2">
@@ -928,7 +930,7 @@ export const CustomerDashboardPage: React.FC = () => {
                               onClick={() => setProfileModalWorker(worker)}
                               className="px-3.5 py-1.5 rounded-full border border-slate-300 hover:bg-blue-50 hover:text-[#2563EB] text-slate-700 font-bold transition cursor-pointer"
                             >
-                              View Full Profile
+                              {t("cards.viewProfile")}
                             </button>
 
                             <button
@@ -936,7 +938,7 @@ export const CustomerDashboardPage: React.FC = () => {
                               onClick={() => setBookingModalWorker(worker)}
                               className="px-4 py-1.5 rounded-full bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white font-bold transition shadow-xs flex items-center gap-1 cursor-pointer"
                             >
-                              <span>Book Now</span>
+                              <span>{t("cards.bookArtisan")}</span>
                               <ArrowRight className="w-3.5 h-3.5" />
                             </button>
                           </div>
@@ -1093,7 +1095,7 @@ export const CustomerDashboardPage: React.FC = () => {
                               : "bg-blue-100 text-blue-800"
                           }`}
                         >
-                          {b.status}
+                          {t(`status.${b.status.toLowerCase()}`, b.status)}
                         </span>
 
                         {b.status !== "COMPLETED" && b.status !== "CANCELLED" && (
@@ -1121,7 +1123,7 @@ export const CustomerDashboardPage: React.FC = () => {
                         </span>
                       </div>
                       <div className="sm:text-right">
-                        <span className="text-slate-400 block font-medium">Fair Wage Total</span>
+                        <span className="text-slate-400 block font-medium">{t("cards.totalInvoice")}</span>
                         <strong className="text-slate-900 font-black text-sm block mt-0.5">
                           ₹{b.pricing?.customerTotalINR || (b as any).fairWageBreakdown?.customerPaid || 350}
                         </strong>
@@ -1134,7 +1136,7 @@ export const CustomerDashboardPage: React.FC = () => {
                       <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl text-xs text-blue-900 flex items-start gap-2.5">
                         <Radio className="w-4 h-4 text-blue-600 shrink-0 mt-0.5 animate-pulse" />
                         <div>
-                          <strong>Live Tracking Status:</strong>
+                          <strong>{t("cards.trackLive")}:</strong>
                           <p className="text-[11px] text-blue-800 mt-0.5">
                             Specialist status is verified under Vijayawada Cooperative Network. Live GPS beacon updates directly when the specialist initiates transit to your door.
                           </p>
@@ -1145,7 +1147,7 @@ export const CustomerDashboardPage: React.FC = () => {
                     {/* Actions Bar */}
                     <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
                       <span className="text-slate-400 text-[11px]">
-                        Created: {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "Today"}
+                        Created: {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : t("common.today")}
                       </span>
 
                       <div className="flex items-center gap-2">
@@ -1154,7 +1156,7 @@ export const CustomerDashboardPage: React.FC = () => {
                             onClick={() => handleCancelBooking(b._id)}
                             className="px-3.5 py-1.5 rounded-full border border-rose-200 text-rose-700 hover:bg-rose-50 font-bold transition cursor-pointer"
                           >
-                            Cancel Order
+                            {t("common.cancel")}
                           </button>
                         )}
 
@@ -1163,7 +1165,7 @@ export const CustomerDashboardPage: React.FC = () => {
                             onClick={() => setReviewBooking(b)}
                             className="px-4 py-1.5 rounded-full bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white font-bold transition shadow-xs cursor-pointer"
                           >
-                            Rate &amp; Review Specialist
+                            {t("cards.rateReview")}
                           </button>
                         )}
                       </div>

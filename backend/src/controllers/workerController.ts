@@ -32,6 +32,10 @@ export const getWorkers = async (req: Request, res: Response): Promise<void> => 
       filter.emergencyReady = emergencyReady === "true";
     }
 
+    if (req.query.includeUnverified !== "true") {
+      filter.verificationStatus = "VERIFIED";
+    }
+
     let workers = await Worker.find(filter).sort({ rating: -1, verificationLevel: -1 }).limit(50);
 
     // Resolve location info if pincode or district provided
@@ -152,6 +156,7 @@ export const getNearbyWorkers = async (req: Request, res: Response): Promise<voi
       candidateWorkers = await Worker.find({
         skills: { $in: [new RegExp(String(service), "i")] },
         isAvailable: true,
+        verificationStatus: "VERIFIED",
         location: {
           $near: {
             $geometry: {
@@ -166,7 +171,8 @@ export const getNearbyWorkers = async (req: Request, res: Response): Promise<voi
       // Resilient fallback: fetch active workers for this trade and filter via spherical distance
       const allForTrade = await Worker.find({
         skills: { $in: [new RegExp(String(service), "i")] },
-        isAvailable: true
+        isAvailable: true,
+        verificationStatus: "VERIFIED"
       }).limit(30);
 
       candidateWorkers = allForTrade.filter(w => {
@@ -179,7 +185,8 @@ export const getNearbyWorkers = async (req: Request, res: Response): Promise<voi
     if (candidateWorkers.length === 0) {
       // Broaden search if radius is tight
       candidateWorkers = await Worker.find({
-        skills: { $in: [new RegExp(String(service), "i")] }
+        skills: { $in: [new RegExp(String(service), "i")] },
+        verificationStatus: "VERIFIED"
       }).limit(10);
     }
 

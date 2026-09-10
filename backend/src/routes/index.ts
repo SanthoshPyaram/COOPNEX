@@ -11,6 +11,8 @@ import * as welfareCtrl from "../controllers/welfareController";
 import * as notificationCtrl from "../controllers/notificationController";
 import * as locationCtrl from "../controllers/locationController";
 import * as ttsCtrl from "../controllers/ttsController";
+import * as docCtrl from "../controllers/documentController";
+import * as translationCtrl from "../controllers/translationController";
 import { AiService } from "../services/aiService";
 import { authenticateJwt } from "../middleware/auth";
 import { requireRoles } from "../middleware/rbac";
@@ -23,6 +25,10 @@ apiRouter.get("/location/check-pincode", locationCtrl.checkPincode);
 apiRouter.get("/location/states", locationCtrl.getStates);
 
 // --- AUTHENTICATION & REAL-TIME OTP ---
+apiRouter.post("/auth/check-email", authCtrl.checkEmail);
+apiRouter.get("/auth/check-email", authCtrl.checkEmail);
+apiRouter.post("/auth/check-phone", authCtrl.checkPhone);
+apiRouter.get("/auth/check-phone", authCtrl.checkPhone);
 apiRouter.post("/auth/register", authCtrl.register);
 apiRouter.post("/auth/login", authCtrl.login);
 apiRouter.post("/auth/worker/login", authCtrl.workerLogin);
@@ -136,4 +142,14 @@ apiRouter.get("/ai/surge", async (req, res) => {
 // --- MULTILINGUAL VOICE & TEXT-TO-SPEECH (TTS) ---
 apiRouter.post("/tts", ttsCtrl.synthesizeSpeech);
 apiRouter.get("/tts/voices", ttsCtrl.getVoiceConfig);
+
+// --- STATUTORY IDENTITY DOCUMENTS & AVATARS ---
+apiRouter.post("/documents/upload", authenticateJwt, docCtrl.uploadDocument);
+apiRouter.get("/documents/:id", authenticateJwt, docCtrl.getDocument);
+apiRouter.get("/documents/avatar/:id", docCtrl.getAvatar);
+
+// --- AI4BHARAT (A14BHARAT) OPEN-SOURCE TRANSLATION ---
+apiRouter.post("/translate", translationCtrl.translateText);
+apiRouter.get("/translate/languages", translationCtrl.getSupportedLanguages);
+
 

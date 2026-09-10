@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { FairWageBreakdown } from "../types";
 import { HelpCircle, ChevronDown, ChevronUp, ShieldCheck, HeartHandshake, CheckCircle2 } from "lucide-react";
+import { useLanguage } from "../context/LanguageContext";
 
 interface FairWageProps {
   breakdown: FairWageBreakdown;
@@ -8,6 +9,7 @@ interface FairWageProps {
 }
 
 export const FairWageBreakdownCard: React.FC<FairWageProps> = ({ breakdown, compact = false }) => {
+  const { t } = useLanguage();
   const [showExplanation, setShowExplanation] = useState(false);
 
   const takeHomePct = Math.round((breakdown.workerEarning / (breakdown.customerPaid || 1)) * 100);
@@ -23,13 +25,13 @@ export const FairWageBreakdownCard: React.FC<FairWageProps> = ({ breakdown, comp
           </div>
           <div>
             <h4 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
-              Cooperative Fair Wage Engine
+              {t("cards.fairWageTitle")}
               <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.2 rounded border border-emerald-300">
-                100% Transparent
+                {t("cards.transparent100")}
               </span>
             </h4>
             <p className="text-[11px] text-slate-500">
-              Zero private aggregator commission. Direct worker livelihood protection.
+              {t("cards.zeroAggregator")}
             </p>
           </div>
         </div>
@@ -38,7 +40,7 @@ export const FairWageBreakdownCard: React.FC<FairWageProps> = ({ breakdown, comp
           onClick={() => setShowExplanation(!showExplanation)}
           className="text-xs text-blue-700 hover:text-blue-900 font-medium flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-blue-200 transition cursor-pointer"
         >
-          <span>Fair Wage Insight</span>
+          <span>{t("cards.fairWageInsight")}</span>
           {showExplanation ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </button>
       </div>
@@ -46,27 +48,27 @@ export const FairWageBreakdownCard: React.FC<FairWageProps> = ({ breakdown, comp
       {/* Main KPI Strip */}
       <div className="grid grid-cols-3 gap-2 my-3.5 bg-white p-3 rounded-xl border border-slate-200/80 shadow-xs">
         <div className="text-center border-r border-slate-100 pr-1">
-          <div className="text-[10px] uppercase font-bold text-slate-500">Customer Paid</div>
+          <div className="text-[10px] uppercase font-bold text-slate-500">{t("cards.customerPaid")}</div>
           <div className="text-base sm:text-lg font-black text-slate-900">
             ₹{breakdown.customerPaid}
           </div>
-          <div className="text-[9px] text-slate-400">Total Invoice</div>
+          <div className="text-[9px] text-slate-400">{t("cards.totalInvoice")}</div>
         </div>
 
         <div className="text-center border-r border-slate-100 px-1 bg-emerald-50/50 rounded-lg py-0.5">
-          <div className="text-[10px] uppercase font-bold text-emerald-800">Worker Earnings</div>
+          <div className="text-[10px] uppercase font-bold text-emerald-800">{t("cards.workerEarnings")}</div>
           <div className="text-base sm:text-lg font-black text-emerald-700">
             ₹{breakdown.workerEarning}
           </div>
-          <div className="text-[9px] text-emerald-600 font-semibold">{takeHomePct}% Direct Payout</div>
+          <div className="text-[9px] text-emerald-600 font-semibold">{takeHomePct}% {t("cards.directPayout")}</div>
         </div>
 
         <div className="text-center pl-1">
-          <div className="text-[10px] uppercase font-bold text-blue-800">Co-op Welfare Fund</div>
+          <div className="text-[10px] uppercase font-bold text-blue-800">{t("cards.coopWelfareFund")}</div>
           <div className="text-base sm:text-lg font-black text-blue-700">
             ₹{breakdown.cooperativeContribution}
           </div>
-          <div className="text-[9px] text-blue-600 font-semibold">{coopPct}% Member Safety</div>
+          <div className="text-[9px] text-blue-600 font-semibold">{coopPct}% {t("cards.memberSafety")}</div>
         </div>
       </div>
 
@@ -76,7 +78,7 @@ export const FairWageBreakdownCard: React.FC<FairWageProps> = ({ breakdown, comp
           <div className="flex justify-between text-slate-600 py-0.5">
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-              Base Worker Wage (Cooperative Standard Floor)
+              {t("cards.baseWorkerWage")}
             </span>
             <span className="font-semibold text-slate-800">₹{breakdown.baseWorkerWage}</span>
           </div>
@@ -85,7 +87,7 @@ export const FairWageBreakdownCard: React.FC<FairWageProps> = ({ breakdown, comp
             <div className="flex justify-between text-slate-600 py-0.5">
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                Skill Certification Premium (NSDC Verified)
+                {t("cards.skillPremium")}
               </span>
               <span className="font-semibold text-amber-700">+₹{breakdown.skillPremium}</span>
             </div>
@@ -95,7 +97,7 @@ export const FairWageBreakdownCard: React.FC<FairWageProps> = ({ breakdown, comp
             <div className="flex justify-between text-slate-600 py-0.5">
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                Experience Longevity Premium
+                {t("cards.experiencePremium")}
               </span>
               <span className="font-semibold text-blue-700">+₹{breakdown.experiencePremium}</span>
             </div>

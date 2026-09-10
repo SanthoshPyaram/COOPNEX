@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import { User } from "../models/User";
 import { Worker } from "../models/Worker";
 import { Booking } from "../models/Booking";
@@ -222,10 +223,10 @@ export const getKycSubmissions = async (_req: Request, res: Response): Promise<v
     const workers = await Worker.find({
       $or: [
         { "kycDocuments.0": { $exists: true } },
-        { verificationStatus: { $in: ["PENDING", "UNDER_REVIEW"] } }
+        { verificationStatus: { $in: ["PENDING", "UNDER_REVIEW", "REJECTED"] } }
       ]
     })
-      .select("name gender phone email avatarUrl skills experienceYears societyName verificationLevel verificationStatus kycDocuments certificates createdAt employeeId workerIdNumber")
+      .select("name gender phone email avatarUrl skills experienceYears societyName verificationLevel verificationStatus preliminaryRiskScore approvedBy approvedAt rejectionReason auditHistory kycDocuments certificates createdAt employeeId workerIdNumber")
       .sort({ updatedAt: -1 })
       .limit(50);
 
@@ -250,15 +251,22 @@ export const reviewKycSubmission = async (req: AuthenticatedRequest, res: Respon
       return;
     }
 
+    const adminId = req.user?._id;
+
     if (action === "APPROVE") {
       worker.verificationStatus = "VERIFIED";
       worker.verificationLevel = Math.min(5, Math.max(worker.verificationLevel, newLevel));
+      worker.isAvailable = true;
+      worker.approvedBy = adminId;
+      worker.approvedAt = new Date();
+      worker.rejectionReason = "";
 
       // Mark all or targeted documents verified
       worker.kycDocuments.forEach((doc) => {
         if (!documentType || doc.documentType === documentType) {
           doc.verificationStatus = "VERIFIED";
           doc.verifiedAt = new Date();
+          doc.verifiedBy = adminId;
           doc.fraudRiskScore = Math.min(doc.fraudRiskScore, 5); // Cleared
         }
       });
@@ -266,11 +274,21 @@ export const reviewKycSubmission = async (req: AuthenticatedRequest, res: Respon
       // Update timeline
       worker.verificationTimeline.push({
         level: worker.verificationLevel,
-        title: `KYC Documents Verified by Registrar Admin`,
+        title: `KYC Documents Verified by Super Admin`,
         verified: true,
         verifiedAt: new Date(),
-        notes: "Aadhaar, PAN, and Police Clearance successfully cleared with zero fraud triggers."
+        notes: "Aadhaar, PAN, and identity documents manually inspected and approved by Super Admin."
       });
+
+      // Append audit history
+      if (!worker.auditHistory) worker.auditHistory = [];
+      worker.auditHistory.push({
+        action: "WORKER_APPROVED",
+        performedBy: adminId || new mongoose.Types.ObjectId("65b900000000000000000001"),
+        timestamp: new Date(),
+        details: `Approved by Super Admin with Level ${worker.verificationLevel} cooperative badge.`
+      });
+
       await worker.save();
 
       if (worker.userId) {
@@ -285,32 +303,61 @@ export const reviewKycSubmission = async (req: AuthenticatedRequest, res: Respon
     } else if (action === "BLACKLIST") {
       worker.verificationStatus = "REJECTED";
       worker.isAvailable = false;
+      const reason = rejectionReason || "Critical fraud: Tampered or forged credentials detected. Blacklisted under IPC Section 468/471.";
+      worker.rejectionReason = reason;
 
       worker.kycDocuments.forEach((doc) => {
         if (!documentType || doc.documentType === documentType) {
           doc.verificationStatus = "REJECTED";
           doc.fraudRiskScore = 95;
           doc.fraudFlags.push("CRITICAL_FRAUD: TAMPERED_DOCUMENT_BLACKLISTED");
-          doc.aiVerificationNotes = rejectionReason || "Document metadata altered. Forged UIDAI or NSDL credentials detected. Flagged under IPC Section 468/471.";
+          doc.aiVerificationNotes = reason;
+          doc.rejectionReason = reason;
         }
+      });
+
+      if (!worker.auditHistory) worker.auditHistory = [];
+      worker.auditHistory.push({
+        action: "WORKER_BLACKLISTED",
+        performedBy: adminId || new mongoose.Types.ObjectId("65b900000000000000000001"),
+        timestamp: new Date(),
+        details: reason
       });
 
       await worker.save();
 
+      if (worker.userId) {
+        await User.findByIdAndUpdate(worker.userId, { status: "SUSPENDED" });
+      }
+
       res.json({
         success: true,
-        message: `Fraud alert enforced: Worker ${worker.name} has been blacklisted and reported to District Cyber Cell.`,
+        message: `Fraud alert enforced: Worker ${worker.name} has been blacklisted.`,
         worker
       });
     } else {
       // General REJECT with re-upload request
       worker.verificationStatus = "REJECTED";
+      worker.isAvailable = false;
+      const reason = rejectionReason || "Document illegible or failed quality scan. Please re-upload clear scan.";
+      worker.rejectionReason = reason;
+
       worker.kycDocuments.forEach((doc) => {
         if (!documentType || doc.documentType === documentType) {
           doc.verificationStatus = "REJECTED";
-          doc.aiVerificationNotes = rejectionReason || "Document illegible or failed quality scan. Please re-upload clear scan.";
+          doc.aiVerificationNotes = reason;
+          doc.rejectionReason = reason;
         }
       });
+
+      if (!worker.auditHistory) worker.auditHistory = [];
+      worker.auditHistory.push({
+        action: "WORKER_REJECTED",
+        performedBy: adminId || new mongoose.Types.ObjectId("65b900000000000000000001"),
+        timestamp: new Date(),
+        details: reason
+      });
+
       await worker.save();
 
       res.json({

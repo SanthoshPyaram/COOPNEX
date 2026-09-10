@@ -4,12 +4,27 @@ export interface IKYCDocument {
   documentType: "AADHAAR" | "PAN" | "POLICE_CLEARANCE" | "TRADE_CERTIFICATE" | "BANK_PROOF";
   documentNumber: string;
   fileUrl: string;
+  storageReference?: string;
+  originalFilename?: string;
+  fileSize?: number;
+  mimeType?: string;
+  checksumValid?: boolean;
+  formatValid?: boolean;
   verificationStatus: "PENDING" | "VERIFIED" | "SUSPECTED_FAKE" | "REJECTED";
   fraudRiskScore: number; // 0 - 100
   fraudFlags: string[];
   aiVerificationNotes: string;
   submittedAt: Date;
   verifiedAt?: Date;
+  verifiedBy?: mongoose.Types.ObjectId | string;
+  rejectionReason?: string;
+}
+
+export interface IWorkerAuditEntry {
+  action: string;
+  performedBy: mongoose.Types.ObjectId | string;
+  timestamp: Date;
+  details?: string;
 }
 
 export interface IWorker extends Document {
@@ -21,6 +36,7 @@ export interface IWorker extends Document {
   phone?: string;
   email: string;
   avatarUrl: string;
+  profileImage?: string;
   societyId: mongoose.Types.ObjectId;
   societyName: string;
   federationId: mongoose.Types.ObjectId;
@@ -35,6 +51,11 @@ export interface IWorker extends Document {
   languages: string[];
   verificationLevel: number; // 1 to 5
   verificationStatus: "PENDING" | "UNDER_REVIEW" | "VERIFIED" | "REJECTED";
+  preliminaryRiskScore?: number;
+  approvedBy?: mongoose.Types.ObjectId | string;
+  approvedAt?: Date;
+  rejectionReason?: string;
+  auditHistory?: IWorkerAuditEntry[];
   kycDocuments: IKYCDocument[];
   verificationTimeline: {
     level: number;
@@ -86,6 +107,7 @@ const WorkerSchema = new Schema<IWorker>(
     phone: { type: String, required: false, default: "" },
     email: { type: String, required: true },
     avatarUrl: { type: String, default: "" },
+    profileImage: { type: String, default: "" },
     societyId: { type: Schema.Types.ObjectId, ref: "Society", required: true, index: true },
     societyName: { type: String, required: true },
     federationId: { type: Schema.Types.ObjectId, ref: "Federation", required: true },
@@ -102,20 +124,40 @@ const WorkerSchema = new Schema<IWorker>(
     verificationStatus: {
       type: String,
       enum: ["PENDING", "UNDER_REVIEW", "VERIFIED", "REJECTED"],
-      default: "VERIFIED",
+      default: "PENDING",
       index: true
     },
+    preliminaryRiskScore: { type: Number, default: 0 },
+    approvedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    approvedAt: { type: Date },
+    rejectionReason: { type: String, default: "" },
+    auditHistory: [
+      {
+        action: { type: String, required: true },
+        performedBy: { type: Schema.Types.ObjectId, ref: "User" },
+        timestamp: { type: Date, default: Date.now },
+        details: { type: String }
+      }
+    ],
     kycDocuments: [
       {
         documentType: { type: String, enum: ["AADHAAR", "PAN", "POLICE_CLEARANCE", "TRADE_CERTIFICATE", "BANK_PROOF"] },
         documentNumber: { type: String },
         fileUrl: { type: String },
+        storageReference: { type: String },
+        originalFilename: { type: String },
+        fileSize: { type: Number },
+        mimeType: { type: String },
+        checksumValid: { type: Boolean, default: false },
+        formatValid: { type: Boolean, default: false },
         verificationStatus: { type: String, enum: ["PENDING", "VERIFIED", "SUSPECTED_FAKE", "REJECTED"], default: "PENDING" },
         fraudRiskScore: { type: Number, default: 0 },
         fraudFlags: { type: [String], default: [] },
         aiVerificationNotes: { type: String, default: "" },
         submittedAt: { type: Date, default: Date.now },
-        verifiedAt: { type: Date }
+        verifiedAt: { type: Date },
+        verifiedBy: { type: Schema.Types.ObjectId, ref: "User" },
+        rejectionReason: { type: String }
       }
     ],
     verificationTimeline: [
@@ -137,21 +179,21 @@ const WorkerSchema = new Schema<IWorker>(
       }
     ],
     rating: { type: Number, default: 4.8, min: 1, max: 5 },
-    reviewCount: { type: Number, default: 35 },
-    jobsCompletedCount: { type: Number, default: 120 },
-    isAvailable: { type: Boolean, default: true, index: true },
-    emergencyReady: { type: Boolean, default: true, index: true },
+    reviewCount: { type: Number, default: 0 },
+    jobsCompletedCount: { type: Number, default: 0 },
+    isAvailable: { type: Boolean, default: false, index: true },
+    emergencyReady: { type: Boolean, default: false, index: true },
     activeJobsToday: { type: Number, default: 0 },
     baseHourlyRate: { type: Number, default: 350 },
-    walletBalance: { type: Number, default: 4850 },
-    totalEarnings: { type: Number, default: 58900 },
+    walletBalance: { type: Number, default: 0 },
+    totalEarnings: { type: Number, default: 0 },
     insuranceInfo: {
-      policyNumber: { type: String, default: "AIC-COOP-882193" },
+      policyNumber: { type: String, default: "" },
       provider: { type: String, default: "Cooperative General Insurance Federation" },
       planType: { type: String, default: "Pradhan Mantri Suraksha Bima Yojana (PMSBY) + Co-op Group Accidental" },
       coverageAmount: { type: Number, default: 500000 },
-      isActive: { type: Boolean, default: true },
-      validUntil: { type: String, default: "2027-03-24" }
+      isActive: { type: Boolean, default: false },
+      validUntil: { type: String, default: "" }
     },
     welfareBenefits: [
       {

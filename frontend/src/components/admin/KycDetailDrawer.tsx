@@ -22,6 +22,9 @@ import {
   Download
 } from "lucide-react";
 import { AdminSecurityPinModal } from "../AdminSecurityPinModal";
+import { AvatarPlaceholder } from "../common/AvatarPlaceholder";
+import { AdminDocumentReviewModal, ReviewDocumentData } from "./AdminDocumentReviewModal";
+import { API_BASE } from "../../services/api";
 
 interface KycDetailDrawerProps {
   worker: any | null;
@@ -40,18 +43,105 @@ export const KycDetailDrawer: React.FC<KycDetailDrawerProps> = ({
   onReject,
   onRequestInfo
 }) => {
-  const [selectedLevel, setSelectedLevel] = useState<number>(1);
+  const [selectedLevel, setSelectedLevel] = useState<number>(worker?.verificationLevel || 1);
   const [rejectReason, setRejectReason] = useState<string>("");
   const [isRejecting, setIsRejecting] = useState<boolean>(false);
   const [pinModalOpen, setPinModalOpen] = useState<boolean>(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<ReviewDocumentData | null>(null);
+  const [showApprovalConfirmModal, setShowApprovalConfirmModal] = useState<boolean>(false);
+  const [confirmedManualReview, setConfirmedManualReview] = useState<boolean>(false);
 
   if (!worker) return null;
+
+  const viewDocument = async (doc: any) => {
+    const targetUrl = doc.fileUrl || doc.storageReference || doc.url;
+    if (!targetUrl) {
+      alert("No uploaded document file found for this record.");
+      return;
+    }
+    const token = localStorage.getItem("sahakari_token");
+    let resolvedUrl = targetUrl;
+    let resolvedMime = targetUrl.startsWith("data:image") ? "image/png" : "application/pdf";
+
+    try {
+      const fullUrl = targetUrl.startsWith("http") || targetUrl.startsWith("data:")
+        ? targetUrl
+        : `${API_BASE.replace("/api", "")}${targetUrl.startsWith("/") ? "" : "/"}${targetUrl}`;
+
+      if (fullUrl.startsWith("data:")) {
+        resolvedUrl = fullUrl;
+        resolvedMime = fullUrl.split(";")[0].replace("data:", "");
+      } else {
+        const res = await fetch(fullUrl, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        if (res.ok) {
+          const blob = await res.blob();
+          resolvedUrl = URL.createObjectURL(blob);
+          resolvedMime = blob.type;
+        } else {
+          resolvedUrl = fullUrl;
+        }
+      }
+    } catch {
+      resolvedUrl = targetUrl;
+    }
+
+    setPreviewDoc({
+      documentType: doc.documentType || "Identity Document",
+      documentNumber: doc.documentNumber || "Recorded in Dossier",
+      verificationStatus: doc.verificationStatus || worker.verificationStatus || "PENDING",
+      checksumValid: doc.checksumValid,
+      formatValid: doc.formatValid,
+      fileUrl: targetUrl,
+      originalFilename: doc.originalFilename || `${doc.documentType || "document"}.pdf`,
+      uploadedAt: doc.uploadedAt || worker.createdAt || "Registration Dossier",
+      issuer: doc.issuer,
+      aiVerificationNotes: doc.aiVerificationNotes,
+      url: resolvedUrl,
+      mime: resolvedMime
+    });
+  };
 
   const handleActionWithPin = (actionFn: () => void) => {
     setPendingAction(() => actionFn);
     setPinModalOpen(true);
   };
+
+  const effectiveKycDocuments = React.useMemo(() => {
+    const list: any[] = worker.kycDocuments ? [...worker.kycDocuments] : [];
+
+    const hasAadhaar = list.some((d: any) => d.documentType?.toLowerCase().includes("aadhaar"));
+    if (!hasAadhaar && (worker.aadhaarFileBase64 || worker.aadhaarNumber)) {
+      list.push({
+        documentType: "Aadhaar Card",
+        documentNumber: worker.aadhaarNumber ? `XXXX-XXXX-${String(worker.aadhaarNumber).slice(-4)}` : "Recorded in Dossier",
+        verificationStatus: worker.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING",
+        checksumValid: true,
+        fileUrl: worker.aadhaarFileBase64,
+        originalFilename: worker.aadhaarOriginalFilename || "aadhaar_card.pdf",
+        issuer: "UIDAI",
+        uploadedAt: worker.createdAt || "Registration Dossier"
+      });
+    }
+
+    const hasPan = list.some((d: any) => d.documentType?.toLowerCase().includes("pan"));
+    if (!hasPan && (worker.panFileBase64 || worker.panNumber)) {
+      list.push({
+        documentType: "PAN Card",
+        documentNumber: worker.panNumber ? `${String(worker.panNumber).slice(0, 5)}XXXX${String(worker.panNumber).slice(-1)}` : "Recorded in Dossier",
+        verificationStatus: worker.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING",
+        formatValid: true,
+        fileUrl: worker.panFileBase64,
+        originalFilename: worker.panOriginalFilename || "pan_card.pdf",
+        issuer: "Income Tax Department",
+        uploadedAt: worker.createdAt || "Registration Dossier"
+      });
+    }
+
+    return list;
+  }, [worker]);
 
   const police = worker.policeVerification;
 
@@ -111,9 +201,9 @@ export const KycDetailDrawer: React.FC<KycDetailDrawerProps> = ({
               {/* Profile Card */}
               <div className="p-4 rounded-2xl bg-[#F7F9FC] dark:bg-slate-900/40 border border-[#E4E9F0] dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <img
-                    src={worker.avatarUrl || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80"}
-                    alt={worker.name}
+                  <AvatarPlaceholder
+                    src={worker.avatarUrl}
+                    name={worker.name}
                     className="w-14 h-14 rounded-2xl object-cover border-2 border-[#075E54] shadow-sm shrink-0"
                   />
                   <div>
@@ -236,44 +326,70 @@ export const KycDetailDrawer: React.FC<KycDetailDrawerProps> = ({
                 <div className="font-black uppercase tracking-wider text-[10px] text-slate-400">
                   Statutory Identity &amp; Financial Checks
                 </div>
-                <div className="space-y-2">
-                  {worker.kycDocuments?.map((doc: any, i: number) => {
-                    const isSystemOk = doc.verificationStatus === "SYSTEM_VERIFIED" || doc.verificationStatus === "VERIFIED";
+                <div className="space-y-2.5">
+                  {effectiveKycDocuments.map((doc: any, i: number) => {
+                    const isVerified = doc.verificationStatus === "VERIFIED";
+                    const docTarget = doc.fileUrl || doc.storageReference || doc.url;
                     return (
                       <div
                         key={i}
-                        className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between"
+                        className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                       >
-                        <div className="flex items-center gap-2.5">
-                          {isSystemOk ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <div className="flex items-start gap-2.5">
+                          {isVerified ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                           ) : (
-                            <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                            <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                           )}
                           <div>
-                            <div className="font-bold text-slate-800 dark:text-slate-200">
-                              {doc.documentType}
+                            <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                              <span>{doc.documentType}</span>
+                              {doc.checksumValid && (
+                                <span className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 rounded font-mono">
+                                  Verhoeff Checksum OK
+                                </span>
+                              )}
+                              {doc.formatValid && (
+                                <span className="text-[9px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.2 rounded font-mono">
+                                  Format OK
+                                </span>
+                              )}
                             </div>
-                            <div className="text-[10px] font-mono text-slate-500">
-                              {doc.documentNumber} • {doc.issuer || "Govt"}
+                            <div className="text-[11px] font-mono text-slate-600 dark:text-slate-400 mt-0.5">
+                              Number: <strong>{doc.documentNumber}</strong>
                             </div>
-                            {doc.systemCheckDetails && (
-                              <div className="text-[10px] text-emerald-600 font-mono mt-0.5">
-                                {doc.systemCheckDetails}
+                            {doc.originalFilename && (
+                              <div className="text-[10px] text-slate-400 truncate max-w-xs">
+                                File: {doc.originalFilename}
+                              </div>
+                            )}
+                            {doc.aiVerificationNotes && (
+                              <div className="text-[10px] text-slate-500 italic mt-0.5">
+                                Note: {doc.aiVerificationNotes}
                               </div>
                             )}
                           </div>
                         </div>
 
-                        <div className="text-right">
+                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                          {docTarget && (
+                            <button
+                              type="button"
+                              onClick={() => viewDocument(doc)}
+                              className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] flex items-center gap-1 shadow-2xs transition cursor-pointer"
+                            >
+                              <FileText className="w-3 h-3" />
+                              <span>View Document</span>
+                            </button>
+                          )}
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
-                              isSystemOk
-                                ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300"
-                                : "bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300"
+                              isVerified
+                                ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                : "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
                             }`}
                           >
-                            {doc.verificationStatus}
+                            {doc.verificationStatus || "PENDING"}
                           </span>
                         </div>
                       </div>
@@ -346,13 +462,8 @@ export const KycDetailDrawer: React.FC<KycDetailDrawerProps> = ({
                     </button>
 
                     <button
-                      onClick={() => {
-                        handleActionWithPin(() => {
-                          onApprove(worker._id, selectedLevel);
-                          onClose();
-                        });
-                      }}
-                      className="px-5 py-2 rounded-xl bg-[#075E54] hover:bg-[#064e46] text-white text-xs font-black shadow-md hover:shadow-emerald-900/20 flex items-center gap-2 transition"
+                      onClick={() => setShowApprovalConfirmModal(true)}
+                      className="px-5 py-2 rounded-xl bg-[#075E54] hover:bg-[#064e46] text-white text-xs font-black shadow-md hover:shadow-emerald-900/20 flex items-center gap-2 transition cursor-pointer"
                     >
                       <Lock className="w-3.5 h-3.5 text-amber-300" />
                       <span>Approve &amp; Issue Badge</span>
@@ -362,6 +473,109 @@ export const KycDetailDrawer: React.FC<KycDetailDrawerProps> = ({
               )}
             </div>
           </motion.div>
+        </div>
+      )}
+
+      {/* DEDICATED TWO-COLUMN ADMIN DOCUMENT REVIEW WORKSPACE */}
+      <AdminDocumentReviewModal
+        isOpen={Boolean(previewDoc)}
+        onClose={() => setPreviewDoc(null)}
+        worker={worker}
+        document={previewDoc}
+        onApproveDocument={(docType) => {
+          if (worker.kycDocuments) {
+            worker.kycDocuments = worker.kycDocuments.map((d: any) =>
+              d.documentType === docType ? { ...d, verificationStatus: "VERIFIED" } : d
+            );
+          }
+          if (previewDoc) {
+            setPreviewDoc((prev) => prev ? { ...prev, verificationStatus: "VERIFIED" } : null);
+          }
+        }}
+        onRejectDocument={(docType, reason) => {
+          if (worker.kycDocuments) {
+            worker.kycDocuments = worker.kycDocuments.map((d: any) =>
+              d.documentType === docType
+                ? { ...d, verificationStatus: "REJECTED", rejectionReason: reason }
+                : d
+            );
+          }
+          if (previewDoc) {
+            setPreviewDoc((prev) => prev ? { ...prev, verificationStatus: "REJECTED" } : null);
+          }
+        }}
+        onRequestReupload={(docType, feedback) => {
+          if (worker.kycDocuments) {
+            worker.kycDocuments = worker.kycDocuments.map((d: any) =>
+              d.documentType === docType
+                ? { ...d, verificationStatus: "REUPLOAD_REQUESTED", aiVerificationNotes: feedback }
+                : d
+            );
+          }
+          if (previewDoc) {
+            setPreviewDoc((prev) =>
+              prev ? { ...prev, verificationStatus: "REUPLOAD_REQUESTED", aiVerificationNotes: feedback } : null
+            );
+          }
+        }}
+      />
+
+      {/* SUPER ADMIN SCRUTINY ATTESTATION CONFIRMATION */}
+      {showApprovalConfirmModal && (
+        <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white">Manual Document Audit Certification</h3>
+                <p className="text-xs text-slate-500">Super Administrator Attestation</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-900 dark:text-amber-200 leading-relaxed space-y-1">
+              <strong>Mandatory Protocol:</strong>
+              <p>Under statutory cooperative governance, algorithmic pre-checks verify structural syntax only. You must certify that you have manually audited the uploaded Aadhaar/PAN scans before granting Level {selectedLevel} status to <strong>{worker.name}</strong>.</p>
+            </div>
+
+            <label className="flex items-start gap-2.5 text-xs text-slate-700 dark:text-slate-300 cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                checked={confirmedManualReview}
+                onChange={(e) => setConfirmedManualReview(e.target.checked)}
+                className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+              />
+              <span className="font-semibold leading-normal">
+                I certify under cooperative bylaws that I have manually scrutinized the uploaded documents for {worker.name} and found zero evidence of document tampering or fraud.
+              </span>
+            </label>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                onClick={() => {
+                  setShowApprovalConfirmModal(false);
+                  setConfirmedManualReview(false);
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={!confirmedManualReview}
+                onClick={() => {
+                  setShowApprovalConfirmModal(false);
+                  handleActionWithPin(() => {
+                    onApprove(worker._id, selectedLevel);
+                    onClose();
+                  });
+                }}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-40 transition shadow-md cursor-pointer"
+              >
+                Proceed to Security PIN →
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

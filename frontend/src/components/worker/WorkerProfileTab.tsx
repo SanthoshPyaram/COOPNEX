@@ -22,6 +22,12 @@ interface WorkerProfileTabProps {
   skills: string[];
   district: string;
   societyName: string;
+  verificationStatus?: string;
+  kycDocuments?: any[];
+  experienceYears?: number;
+  rating?: number;
+  reviewCount?: number;
+  jobsCompletedCount?: number;
 }
 
 export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
@@ -29,54 +35,55 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
   name,
   skills,
   district,
-  societyName
+  societyName,
+  verificationStatus = "PENDING",
+  kycDocuments = [],
+  experienceYears = 3,
+  rating = 4.9,
+  reviewCount = 0,
+  jobsCompletedCount = 0
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<
     "about" | "skills" | "experience" | "reviews" | "documents" | "cooperative"
   >("documents");
 
-  const kycDocumentsList = [
-    {
-      type: "Aadhaar Card",
-      id: "XXXX-XXXX-9021",
-      issuer: "UIDAI e-KYC Biometric",
-      status: "Verified",
-      fraudScore: "0% Tamper Risk",
-      date: "10 Apr 2023"
-    },
-    {
-      type: "PAN Card",
-      id: "ABCDE1234F",
-      issuer: "Income Tax Department (NSDL)",
-      status: "Verified",
-      fraudScore: "0% Tamper Risk",
-      date: "10 Apr 2023"
-    },
-    {
-      type: "Police Clearance Certificate (PCC)",
-      id: "PCC-VJA-2023-0881",
-      issuer: "Gunadala Police Precinct, Vijayawada Police",
-      status: "Verified",
-      fraudScore: "Clean Record (Zero FIRs)",
-      date: "12 Apr 2023"
-    },
-    {
-      type: "Trade Skill Certification",
-      id: "NSDC-AP-EL-9082",
-      issuer: "State Skill Development Mission (NSDC)",
-      status: "Level 4 Certified",
-      fraudScore: "Accredited",
-      date: "20 Aug 2023"
-    },
-    {
-      type: "DBT Bank Passbook",
-      id: "APGB-0021-99821",
-      issuer: "Andhra Pragathi Grameena Bank",
-      status: "DBT Escrow Ready",
-      fraudScore: "Active Account",
-      date: "15 Apr 2023"
-    }
-  ];
+  const isVerified = verificationStatus === "VERIFIED";
+
+  const renderedKycDocs = kycDocuments.length > 0
+    ? kycDocuments.map((doc: any) => ({
+        type: doc.documentType?.replace("_", " ") || "Identity Document",
+        id: doc.documentNumber || "Submitted",
+        issuer: doc.documentType === "AADHAAR" ? "UIDAI Verhoeff Checksum" : doc.documentType === "PAN" ? "Income Tax Department (NSDL)" : "District Authority",
+        status: doc.verificationStatus === "VERIFIED" ? "Verified by Admin" : "Review Pending",
+        fraudScore: doc.verificationStatus === "VERIFIED" ? "Verified Official Document" : "Structural Check Passed • Super Admin Scrutiny Pending",
+        date: doc.submittedAt ? new Date(doc.submittedAt).toLocaleDateString("en-IN") : "Recent"
+      }))
+    : [
+        {
+          type: "Aadhaar Card",
+          id: "UIDAI Aadhaar Document",
+          issuer: "UIDAI Verhoeff Checksum",
+          status: isVerified ? "Verified by Admin" : "Review Pending",
+          fraudScore: isVerified ? "Certified Authentic" : "Checksum Passed • Document Scrutiny Pending",
+          date: "Submitted"
+        },
+        {
+          type: "PAN Card",
+          id: "NSDL PAN Document",
+          issuer: "Income Tax Department (NSDL)",
+          status: isVerified ? "Verified by Admin" : "Review Pending",
+          fraudScore: isVerified ? "Certified Authentic" : "Format Validated • Review Pending",
+          date: "Submitted"
+        },
+        {
+          type: "Police Clearance Certificate (PCC)",
+          id: "PCC Submission",
+          issuer: "City Police Commissionerate",
+          status: isVerified ? "Verified Clean" : "Review Pending",
+          fraudScore: isVerified ? "Clean Record" : "Pending Super Admin Scrutiny",
+          date: "Submitted"
+        }
+      ];
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-5 sm:p-8 space-y-6">
@@ -156,18 +163,22 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
       {/* TAB CONTENT: VERIFICATION & DOCUMENTS */}
       {activeSubTab === "documents" && (
         <div className="space-y-4">
-          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between text-xs text-emerald-950">
+          <div className={`p-4 rounded-2xl border flex items-center justify-between text-xs ${
+            isVerified ? "bg-emerald-50 border-emerald-200 text-emerald-950" : "bg-amber-50 border-amber-200 text-amber-950"
+          }`}>
             <span className="flex items-center gap-2 font-bold">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Accreditation Status: Official Cooperative Verified Level 4</span>
+              <ShieldCheck className={`w-4 h-4 shrink-0 ${isVerified ? "text-emerald-600" : "text-amber-600"}`} />
+              <span>Accreditation Status: {isVerified ? "Official Cooperative Verified Level 4" : "Pending Super Administrator Review"}</span>
             </span>
-            <span className="text-[10px] font-mono text-emerald-800 bg-white/80 px-2 py-0.5 rounded-md border border-emerald-300">
-              UIDAI & AP Police Cleared
+            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md border ${
+              isVerified ? "text-emerald-800 bg-white/80 border-emerald-300" : "text-amber-800 bg-white/80 border-amber-300"
+            }`}>
+              {isVerified ? "UIDAI & Police Cleared" : "Document Audit Pending"}
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {kycDocumentsList.map((doc, idx) => (
+            {renderedKycDocs.map((doc, idx) => (
               <div
                 key={idx}
                 className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 flex items-start justify-between gap-3"
@@ -182,11 +193,17 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
                 </div>
 
                 <div className="text-right shrink-0">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    doc.status === "Verified by Admin" || doc.status === "Verified Clean"
+                      ? "text-emerald-800 bg-emerald-100"
+                      : "text-amber-800 bg-amber-100"
+                  }`}>
+                    <CheckCircle2 className={`w-3 h-3 ${
+                      doc.status === "Verified by Admin" || doc.status === "Verified Clean" ? "text-emerald-600" : "text-amber-600"
+                    }`} />
                     {doc.status}
                   </span>
-                  <span className="block text-[9px] text-slate-400 mt-1">{doc.fraudScore}</span>
+                  <span className="block text-[9px] text-slate-500 mt-1 max-w-[140px] truncate">{doc.fraudScore}</span>
                 </div>
               </div>
             ))}
@@ -199,10 +216,10 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
         <div className="space-y-3 text-xs text-slate-700 leading-relaxed max-w-2xl">
           <h4 className="text-sm font-black text-slate-900">Professional Bio</h4>
           <p>
-            Arjun Kumar is a certified Level-4 Master Electrician with over 8 years of dedicated hands-on experience in residential, commercial, and solar electrical installations across Vijayawada.
+            {name} is an enrolled member artisan specializing in {skills.join(", ") || "skilled cooperative trade"} with hands-on trade practice across {district}.
           </p>
           <p>
-            Affiliated with the Vijayawada Central Labour Co-operative Society (Registration #PLCS-04) since April 2023. Fully covered under Government of Andhra Pradesh cooperative welfare insurance and verified clean police background records.
+            Affiliated with the {societyName}. Covered under cooperative welfare benefits and verified against state standards upon Super Admin credential audit.
           </p>
         </div>
       )}

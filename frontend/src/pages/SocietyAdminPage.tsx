@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { api, API_BASE } from "../services/api";
 import { WorkerProfile, Booking } from "../types";
 import { VerificationBadge } from "../components/VerificationBadge";
+import { AvatarPlaceholder } from "../components/common/AvatarPlaceholder";
 import {
   Users,
   CheckCircle2,
@@ -36,7 +37,7 @@ export const SocietyAdminPage: React.FC = () => {
         name: lw.name,
         phone: lw.phone || "+91 98765 43210",
         email: lw.email,
-        avatarUrl: lw.avatarUrl || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80",
+        avatarUrl: lw.avatarUrl || "",
         district: lw.district || "Vijayawada",
         pincode: lw.pincode || "520001",
         trade: lw.trade || lw.primarySkill || "Electrician",
@@ -282,12 +283,9 @@ export const SocietyAdminPage: React.FC = () => {
                   className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4 text-xs"
                 >
                   <div className="flex items-center gap-3">
-                    <img
-                      src={
-                        w.avatarUrl ||
-                        "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80"
-                      }
-                      alt={w.name}
+                    <AvatarPlaceholder
+                      src={w.avatarUrl}
+                      name={w.name}
                       className="w-12 h-12 rounded-xl object-cover border border-slate-300"
                     />
                     <div>

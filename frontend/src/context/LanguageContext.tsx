@@ -5,10 +5,11 @@ import { ttsService } from "../services/tts";
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: string) => string;
+  t: (key: string, fallback?: string) => string;
 }
 
-const defaultT = (key: string): string => {
+const defaultT = (key: string, fallback?: string): string => {
+  if (fallback) return fallback;
   if (translations && translations.en && translations.en[key]) {
     return translations.en[key];
   }
@@ -65,7 +66,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const t = (key: string): string => {
+  const t = (key: string, fallback?: string): string => {
     const safeLang = (translations && (language in translations)) ? language : "en";
     const dict = (translations && translations[safeLang]) || (translations && translations.en) || {};
     const resolved = dict[key] || key.split('.').reduce((o: any, i) => o?.[i], dict);
@@ -75,7 +76,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const enResolved = enDict[key] || key.split('.').reduce((o: any, i) => o?.[i], enDict);
     if (enResolved && typeof enResolved === "string") return enResolved;
 
-    return defaultT(key);
+    return defaultT(key, fallback);
   };
 
   return (

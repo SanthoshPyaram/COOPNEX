@@ -14,6 +14,7 @@ import { PaymentFlow3D } from "../components/admin/3d/PaymentFlow3D";
 import { AiDemand3D } from "../components/admin/3d/AiDemand3D";
 import { EmergencyDispatch3D } from "../components/admin/3d/EmergencyDispatch3D";
 import { AdminAiIntelligenceDashboard } from "../components/admin/AdminAiIntelligenceDashboard";
+import { AvatarPlaceholder } from "../components/common/AvatarPlaceholder";
 import { API_BASE } from "../services/api";
 
 import {
@@ -525,7 +526,7 @@ const loadCombinedWorkforce = () => {
       name: w.name,
       phone: w.phone || "+91 98765 43210",
       email: w.email,
-      avatarUrl: w.avatarUrl || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80",
+      avatarUrl: w.avatarUrl || "",
       gender: w.gender || "Male",
       age: w.age || 32,
       skills: Array.isArray(w.skills) && w.skills.length > 0 ? w.skills : [w.trade || "Electrician"],
@@ -583,7 +584,10 @@ export const SuperAdminPage: React.FC = () => {
     try {
       let dbWorkersMapped: any[] = [];
       try {
-        const res = await fetch(`${API_BASE}/admin/kyc-submissions`);
+        const token = localStorage.getItem("sahakari_token");
+        const res = await fetch(`${API_BASE}/admin/kyc-submissions`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
         if (res.ok) {
           const json = await res.json();
           if (json.success && Array.isArray(json.submissions)) {
@@ -592,7 +596,7 @@ export const SuperAdminPage: React.FC = () => {
               name: sub.name,
               phone: sub.phone || "+91 98765 43210",
               email: sub.email,
-              avatarUrl: sub.avatarUrl || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80",
+              avatarUrl: sub.avatarUrl || "",
               gender: sub.gender || "Male",
               age: sub.age || 32,
               skills: Array.isArray(sub.skills) && sub.skills.length > 0 ? sub.skills : ["Specialist"],
@@ -600,9 +604,9 @@ export const SuperAdminPage: React.FC = () => {
               societyName: sub.societyName || "Vijayawada Central Labour Co-op (PLCS-04)",
               district: sub.district || "Vijayawada",
               verificationLevel: sub.verificationLevel || 1,
-              verificationStatus: sub.verificationStatus || "UNDER_REVIEW",
-              riskScore: "LOW",
-              riskNum: 1,
+              verificationStatus: sub.verificationStatus || "PENDING",
+              riskScore: (sub.preliminaryRiskScore ?? 0) > 30 ? "HIGH" : (sub.preliminaryRiskScore ?? 0) > 10 ? "MEDIUM" : "LOW",
+              riskNum: sub.preliminaryRiskScore ?? (sub.verificationStatus === "VERIFIED" ? 0 : 25),
               experienceYears: sub.experienceYears || 3,
               totalJobs: sub.jobsCompletedCount || 0,
               rating: sub.rating || 5.0,
@@ -611,9 +615,9 @@ export const SuperAdminPage: React.FC = () => {
               createdAt: sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : "Just now",
               employeeId: sub.employeeId || sub.workerIdNumber || "COOP-WRK-MEMBER",
               kycDocuments: sub.kycDocuments && sub.kycDocuments.length > 0 ? sub.kycDocuments : [
-                { documentType: "Police Clearance Certificate (PCC)", documentNumber: "PCC-PRE-CHECK", verificationStatus: sub.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING_AUDIT", issuer: "Local Police" },
-                { documentType: "Aadhaar Card", documentNumber: "XXXX-XXXX-8921", verificationStatus: "SYSTEM_VERIFIED", issuer: "UIDAI", systemCheckDetails: "UIDAI Verhoeff Checksum Valid" },
-                { documentType: "PAN Card", documentNumber: "ABCDE1234F", verificationStatus: "SYSTEM_VERIFIED", issuer: "NSDL", systemCheckDetails: "NSDL Active Match 100%" }
+                { documentType: "Police Clearance Certificate (PCC)", documentNumber: "PCC-PRE-CHECK", verificationStatus: sub.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING", issuer: "Local Police" },
+                { documentType: "Aadhaar Card", documentNumber: "XXXX-XXXX-8921", verificationStatus: "PENDING", issuer: "UIDAI", systemCheckDetails: "UIDAI Verhoeff Checksum Valid" },
+                { documentType: "PAN Card", documentNumber: "ABCDE1234F", verificationStatus: "PENDING", issuer: "NSDL", systemCheckDetails: "NSDL Active Match 100%" }
               ],
               policeVerification: {
                 certificateNumber: "PCC-PASSED",
@@ -640,7 +644,7 @@ export const SuperAdminPage: React.FC = () => {
         name: w.name,
         phone: w.phone || "+91 98765 43210",
         email: w.email,
-        avatarUrl: w.avatarUrl || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80",
+        avatarUrl: w.avatarUrl || "",
         gender: w.gender || "Male",
         age: w.age || 32,
         skills: Array.isArray(w.skills) && w.skills.length > 0 ? w.skills : [w.trade || "Electrician"],
@@ -842,7 +846,7 @@ export const SuperAdminPage: React.FC = () => {
     }
   };
 
-  const pendingCount = workforceData.filter((k) => k.verificationStatus === "UNDER_REVIEW").length;
+  const pendingCount = workforceData.filter((k) => k.verificationStatus === "PENDING" || k.verificationStatus === "UNDER_REVIEW").length;
   const criticalFraudCount = workforceData.filter((k) => k.riskScore === "CRITICAL").length;
 
   // Workforce / KYC Table Columns Definition
@@ -853,9 +857,9 @@ export const SuperAdminPage: React.FC = () => {
       sortable: true,
       render: (w) => (
         <div className="flex items-center gap-2.5">
-          <img
+          <AvatarPlaceholder
             src={w.avatarUrl}
-            alt={w.name}
+            name={w.name}
             className="w-9 h-9 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0 shadow-xs"
           />
           <div className="min-w-0">
@@ -943,18 +947,18 @@ export const SuperAdminPage: React.FC = () => {
       sortable: true,
       render: (w) => {
         const isVerified = w.verificationStatus === "VERIFIED";
-        const isUnder = w.verificationStatus === "UNDER_REVIEW";
+        const isPending = w.verificationStatus === "PENDING" || w.verificationStatus === "UNDER_REVIEW";
         return (
           <span
             className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
               isVerified
                 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                : isUnder
+                : isPending
                 ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
                 : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
             }`}
           >
-            {w.verificationStatus}
+            {w.verificationStatus || "PENDING"}
           </span>
         );
       }
@@ -1167,9 +1171,11 @@ export const SuperAdminPage: React.FC = () => {
                   key: "verificationStatus",
                   label: "Status",
                   options: [
-                    { label: "Verified", value: "VERIFIED" },
+                    { label: "Pending Scrutiny", value: "PENDING" },
                     { label: "Under Review", value: "UNDER_REVIEW" },
-                    { label: "Suspected Fake", value: "SUSPECTED_FAKE" }
+                    { label: "Verified", value: "VERIFIED" },
+                    { label: "Suspected Fake", value: "SUSPECTED_FAKE" },
+                    { label: "Rejected", value: "REJECTED" }
                   ]
                 }
               ]}
@@ -1204,6 +1210,7 @@ export const SuperAdminPage: React.FC = () => {
                   key: "verificationStatus",
                   label: "Status",
                   options: [
+                    { label: "Pending Scrutiny", value: "PENDING" },
                     { label: "Under Review", value: "UNDER_REVIEW" },
                     { label: "Verified", value: "VERIFIED" },
                     { label: "Suspected Fake", value: "SUSPECTED_FAKE" },
