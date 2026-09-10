@@ -57,3 +57,7 @@ yarn-error.log*
 # Nested duplicate clones / temporary scratch
 COOPNEX/
 scratch/
+
+# Test artifacts
+playwright-report/
+test-results/

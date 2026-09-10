@@ -123,37 +123,41 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
   };
 
   const effectiveKycDocuments = React.useMemo(() => {
-    const list: any[] = worker.kycDocuments ? [...worker.kycDocuments] : [];
+    const sampleDocPdf = "data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsOfCjEgMCBvYmoKPDwKL1RpdGxlIChTdGF0dXRvcnkgRG9jdW1lbnQgRG9zc2llcikKL0F1dGhvciAoQ09PUE5FWCkKPj4KZW5kb2JqCg==";
+    const rawList: any[] = worker.kycDocuments ? [...worker.kycDocuments] : [];
 
-    const hasAadhaar = list.some((d: any) => d.documentType?.toLowerCase().includes("aadhaar"));
+    const hasAadhaar = rawList.some((d: any) => d.documentType?.toLowerCase().includes("aadhaar"));
     if (!hasAadhaar && (worker.aadhaarFileBase64 || worker.aadhaarNumber)) {
-      list.push({
+      rawList.push({
         documentType: "Aadhaar Card",
         documentNumber: worker.aadhaarNumber ? `XXXX-XXXX-${String(worker.aadhaarNumber).slice(-4)}` : "Recorded in Dossier",
         verificationStatus: worker.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING",
         checksumValid: true,
-        fileUrl: worker.aadhaarFileBase64,
+        fileUrl: worker.aadhaarFileBase64 || sampleDocPdf,
         originalFilename: worker.aadhaarOriginalFilename || "aadhaar_card.pdf",
         issuer: "UIDAI",
         uploadedAt: worker.createdAt || "Registration Dossier"
       });
     }
 
-    const hasPan = list.some((d: any) => d.documentType?.toLowerCase().includes("pan"));
+    const hasPan = rawList.some((d: any) => d.documentType?.toLowerCase().includes("pan"));
     if (!hasPan && (worker.panFileBase64 || worker.panNumber)) {
-      list.push({
+      rawList.push({
         documentType: "PAN Card",
         documentNumber: worker.panNumber ? `${String(worker.panNumber).slice(0, 5)}XXXX${String(worker.panNumber).slice(-1)}` : "Recorded in Dossier",
         verificationStatus: worker.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING",
         formatValid: true,
-        fileUrl: worker.panFileBase64,
+        fileUrl: worker.panFileBase64 || sampleDocPdf,
         originalFilename: worker.panOriginalFilename || "pan_card.pdf",
         issuer: "Income Tax Department",
         uploadedAt: worker.createdAt || "Registration Dossier"
       });
     }
 
-    return list;
+    return rawList.map((d: any) => ({
+      ...d,
+      fileUrl: d.fileUrl || d.storageReference || d.url || sampleDocPdf
+    }));
   }, [worker]);
 
   // Mock comprehensive data if not in worker object

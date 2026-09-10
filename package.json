@@ -22,6 +22,8 @@
     "geospatial"
   ],
   "author": "SIH 2026 Team - Sahakari Seva",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
 }
-
