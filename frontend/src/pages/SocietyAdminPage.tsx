@@ -416,21 +416,23 @@ export const SocietyAdminPage: React.FC = () => {
       </div>
 
       {/* COMPREHENSIVE WORKER PROFILE & AUDIT SLIDE-IN DRAWER */}
-      <WorkerDetailDrawer
-        worker={selectedWorkerForDrawer}
-        isOpen={Boolean(selectedWorkerForDrawer)}
-        onClose={() => setSelectedWorkerForDrawer(null)}
-        onApprove={(workerId, level) => {
-          handleApproveVerification(workerId, level);
-          setSelectedWorkerForDrawer(null);
-        }}
-        onReject={(workerId, reason) => {
-          setActionSuccess(`Worker rejected: ${reason}`);
-          setTimeout(() => setActionSuccess(null), 2500);
-          setSelectedWorkerForDrawer(null);
-        }}
-        initialTab="kyc"
-      />
+      {selectedWorkerForDrawer && (
+        <WorkerDetailDrawer
+          worker={selectedWorkerForDrawer}
+          isOpen={Boolean(selectedWorkerForDrawer)}
+          onClose={() => setSelectedWorkerForDrawer(null)}
+          onApprove={(workerId, level) => {
+            handleApproveVerification(workerId, level);
+            setSelectedWorkerForDrawer(null);
+          }}
+          onReject={(workerId, reason) => {
+            setActionSuccess(`Worker rejected: ${reason}`);
+            setTimeout(() => setActionSuccess(null), 2500);
+            setSelectedWorkerForDrawer(null);
+          }}
+          initialTab="kyc"
+        />
+      )}
     </div>
   );
 };

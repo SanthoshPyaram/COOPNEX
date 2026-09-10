@@ -108,6 +108,7 @@ export const KycDetailDrawer: React.FC<KycDetailDrawerProps> = ({
   };
 
   const effectiveKycDocuments = React.useMemo(() => {
+    if (!worker) return [];
     const list: any[] = worker.kycDocuments ? [...worker.kycDocuments] : [];
 
     const hasAadhaar = list.some((d: any) => d.documentType?.toLowerCase().includes("aadhaar"));

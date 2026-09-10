@@ -2133,14 +2133,16 @@ export const SuperAdminPage: React.FC = () => {
       </div>
 
       {/* COMPREHENSIVE WORKER PROFILE & AUDIT SLIDE-IN DRAWER */}
-      <WorkerDetailDrawer
-        worker={selectedWorkerForDrawer}
-        isOpen={Boolean(selectedWorkerForDrawer)}
-        onClose={() => setSelectedWorkerForDrawer(null)}
-        onApprove={handleApproveWorkerKyc}
-        onReject={handleRejectWorkerKyc}
-        initialTab={activeTab === "kyc" ? "kyc" : "overview"}
-      />
+      {selectedWorkerForDrawer && (
+        <WorkerDetailDrawer
+          worker={selectedWorkerForDrawer}
+          isOpen={Boolean(selectedWorkerForDrawer)}
+          onClose={() => setSelectedWorkerForDrawer(null)}
+          onApprove={handleApproveWorkerKyc}
+          onReject={handleRejectWorkerKyc}
+          initialTab={activeTab === "kyc" ? "kyc" : "overview"}
+        />
+      )}
     </AdminShell>
   );
 };

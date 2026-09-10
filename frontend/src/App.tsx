@@ -36,6 +36,7 @@ import { DemoHubPage } from "./pages/demo/DemoHubPage";
 import { SIHDemoJourneyPage } from "./pages/demo/SIHDemoJourneyPage";
 import { SIHShowcasePage } from "./pages/demo/SIHShowcasePage";
 import { ArchitecturePage } from "./pages/demo/ArchitecturePage";
+import { ErrorBoundary } from "./components/common/ErrorBoundary";
 
 // Public Consumer Layout wrapper
 const PublicLayout: React.FC = () => {
@@ -55,7 +56,8 @@ export const App: React.FC = () => {
     <ThemeProvider>
       <LanguageProvider>
         <AuthProvider>
-          <BrowserRouter basename={import.meta.env.BASE_URL}>
+          <ErrorBoundary>
+            <BrowserRouter basename={import.meta.env.BASE_URL}>
             <Routes>
               {/* PUBLIC CONSUMER PRODUCT ROUTES (CLEAN, NO HACKATHON ARTIFACTS) */}
               <Route element={<PublicLayout />}>
@@ -141,6 +143,7 @@ export const App: React.FC = () => {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
+          </ErrorBoundary>
       </AuthProvider>
     </LanguageProvider>
     </ThemeProvider>
