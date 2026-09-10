@@ -66,13 +66,25 @@ export async function saveDocument(params: {
     buffer = rawContent;
   }
 
-  if (mimeType === "application/octet-stream") {
+  // Detect MIME type from buffer magic bytes if available
+  if (buffer.length >= 4) {
+    if (buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46) {
+      mimeType = "application/pdf";
+    } else if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
+      mimeType = "image/png";
+    } else if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+      mimeType = "image/jpeg";
+    } else if (buffer.length >= 12 && buffer.subarray(0, 4).toString() === "RIFF" && buffer.subarray(8, 12).toString() === "WEBP") {
+      mimeType = "image/webp";
+    }
+  }
+
+  if (mimeType === "application/octet-stream" || (mimeType === "application/pdf" && !buffer.subarray(0, 4).toString().startsWith("%PDF"))) {
     const extFromFilename = path.extname(originalName).replace(".", "").toLowerCase();
     if (extFromFilename === "pdf") mimeType = "application/pdf";
     else if (extFromFilename === "jpg" || extFromFilename === "jpeg") mimeType = "image/jpeg";
     else if (extFromFilename === "png") mimeType = "image/png";
     else if (extFromFilename === "webp") mimeType = "image/webp";
-    else if (extFromFilename === "svg") mimeType = "image/svg+xml";
   }
 
   // Size limit check: max 10MB
@@ -145,7 +157,8 @@ export async function saveAvatar(params: {
 
 /**
  * Finds and retrieves stored document data by documentId.
- * Checks local disk -> MongoDB StoredDocument -> Worker KYC Document Fallback Generator.
+ * Checks local disk -> MongoDB StoredDocument -> Worker KYC raw data.
+ * Strictly ignores legacy synthetic SVG cards so authentic uploads or "Original document unavailable" are returned.
  */
 export async function getDocumentData(documentId: string): Promise<{
   buffer: Buffer;
@@ -159,11 +172,16 @@ export async function getDocumentData(documentId: string): Promise<{
   if (localFile && fs.existsSync(localFile.filePath)) {
     try {
       const buffer = fs.readFileSync(localFile.filePath);
-      return {
-        buffer,
-        mimeType: localFile.mimeType,
-        filename: path.basename(localFile.filePath)
-      };
+      const isLegacySvg = localFile.mimeType === "image/svg+xml" || buffer.toString("utf8", 0, 120).includes("<svg");
+      if (!isLegacySvg) {
+        return {
+          buffer,
+          mimeType: localFile.mimeType,
+          filename: path.basename(localFile.filePath)
+        };
+      } else {
+        console.warn(`Ignoring synthetic SVG disk file for ${sanitizedId}`);
+      }
     } catch (readErr) {
       console.warn("Disk read error, falling back to DB:", readErr);
     }
@@ -182,21 +200,26 @@ export async function getDocumentData(documentId: string): Promise<{
           buffer = Buffer.from(stored.data, "base64");
         }
 
-        // Re-populate local disk cache
-        try {
-          const ext = ALLOWED_MIME_TYPES[stored.mimeType.toLowerCase()] || "bin";
-          const targetDir = stored.isAvatar ? AVATARS_DIR : DOCUMENTS_DIR;
-          const filePath = path.join(targetDir, `${sanitizedId}.${ext}`);
-          fs.writeFileSync(filePath, buffer);
-        } catch (cacheErr) {
-          // Non-fatal cache failure
-        }
+        const isLegacySvg = stored.mimeType === "image/svg+xml" || buffer.toString("utf8", 0, 120).includes("<svg");
+        if (!isLegacySvg) {
+          // Re-populate local disk cache
+          try {
+            const ext = ALLOWED_MIME_TYPES[stored.mimeType.toLowerCase()] || "bin";
+            const targetDir = stored.isAvatar ? AVATARS_DIR : DOCUMENTS_DIR;
+            const filePath = path.join(targetDir, `${sanitizedId}.${ext}`);
+            fs.writeFileSync(filePath, buffer);
+          } catch (cacheErr) {
+            // Non-fatal cache failure
+          }
 
-        return {
-          buffer,
-          mimeType: stored.mimeType || "application/octet-stream",
-          filename: stored.originalName || `${sanitizedId}.bin`
-        };
+          return {
+            buffer,
+            mimeType: stored.mimeType || "application/octet-stream",
+            filename: stored.originalName || `${sanitizedId}.bin`
+          };
+        } else {
+          console.warn(`Ignoring synthetic SVG in StoredDocument for ${sanitizedId}`);
+        }
       }
     } catch (dbErr) {
       console.warn("MongoDB StoredDocument lookup error:", dbErr);
@@ -232,11 +255,14 @@ export async function getDocumentData(documentId: string): Promise<{
             buffer = Buffer.from(rawFile, "base64");
           }
 
-          return {
-            buffer,
-            mimeType: mime,
-            filename: doc?.originalFilename || `${sanitizedId}.bin`
-          };
+          const isLegacySvg = mime.includes("svg") || buffer.toString("utf8", 0, 120).includes("<svg");
+          if (!isLegacySvg) {
+            return {
+              buffer,
+              mimeType: mime,
+              filename: doc?.originalFilename || `${sanitizedId}.bin`
+            };
+          }
         }
       }
     } catch (workerErr) {
@@ -250,6 +276,7 @@ export async function getDocumentData(documentId: string): Promise<{
 
 /**
  * Finds a stored document path on disk by documentId.
+ * Prioritizes authentic binary formats over any legacy SVG files.
  */
 export function getDocumentFilePath(documentId: string): { filePath: string; mimeType: string } | null {
   const sanitizedId = path.basename(documentId);
@@ -257,10 +284,16 @@ export function getDocumentFilePath(documentId: string): { filePath: string; mim
   for (const dir of [DOCUMENTS_DIR, AVATARS_DIR]) {
     if (!fs.existsSync(dir)) continue;
     const files = fs.readdirSync(dir);
-    const found = files.find((f) => f.startsWith(sanitizedId));
-    if (found) {
-      const fullPath = path.join(dir, found);
-      const ext = path.extname(found).replace(".", "").toLowerCase();
+    const matchingFiles = files.filter((f) => f.startsWith(sanitizedId));
+    if (matchingFiles.length === 0) continue;
+
+    // Prioritize non-svg files (png, jpg, jpeg, webp, pdf)
+    const authenticFile = matchingFiles.find((f) => !f.endsWith(".svg")) || null;
+    const chosenFile = authenticFile || matchingFiles[0];
+
+    if (chosenFile) {
+      const fullPath = path.join(dir, chosenFile);
+      const ext = path.extname(chosenFile).replace(".", "").toLowerCase();
       let mime = "application/octet-stream";
       if (ext === "pdf") mime = "application/pdf";
       else if (ext === "jpg" || ext === "jpeg") mime = "image/jpeg";

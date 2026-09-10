@@ -33,3 +33,4 @@ if (fs.existsSync(indexPath)) {
 } else {
   console.warn("[SPA Route] dist/index.html not found, skipping SPA route duplication.");
 }
+

@@ -53,37 +53,54 @@ export const KycDetailDrawer: React.FC<KycDetailDrawerProps> = ({
   const [confirmedManualReview, setConfirmedManualReview] = useState<boolean>(false);
 
   const viewDocument = async (doc: any) => {
-    const targetUrl = doc.fileUrl || doc.storageReference || doc.url;
+    let targetUrl = (doc.fileUrl || doc.storageReference || doc.url || "").trim();
     if (!targetUrl) {
       alert("No uploaded document file found for this record.");
       return;
     }
+
+    if (targetUrl.startsWith("DOC-") || targetUrl.startsWith("/DOC-")) {
+      targetUrl = `/api/documents/${targetUrl.replace(/^\//, "")}`;
+    }
+
     const token = localStorage.getItem("sahakari_token");
+    const isImageFile = /\.(jpg|jpeg|png|webp|gif)$/i.test(doc.originalFilename || targetUrl);
     let resolvedUrl = targetUrl;
-    let resolvedMime = targetUrl.startsWith("data:image") ? "image/png" : "application/pdf";
+    let resolvedMime = doc.mimeType || (isImageFile ? "image/jpeg" : (targetUrl.startsWith("data:image") ? "image/png" : "application/pdf"));
+    let isAvailable = true;
 
     try {
-      const fullUrl = targetUrl.startsWith("http") || targetUrl.startsWith("data:")
-        ? targetUrl
-        : `${API_BASE.replace("/api", "")}${targetUrl.startsWith("/") ? "" : "/"}${targetUrl}`;
-
-      if (fullUrl.startsWith("data:")) {
-        resolvedUrl = fullUrl;
-        resolvedMime = fullUrl.split(";")[0].replace("data:", "");
+      if (targetUrl.startsWith("data:") || targetUrl.startsWith("blob:")) {
+        resolvedUrl = targetUrl;
+        if (targetUrl.startsWith("data:")) {
+          resolvedMime = targetUrl.split(";")[0].replace("data:", "");
+        }
       } else {
-        const res = await fetch(fullUrl, {
+        const apiOrigin = API_BASE.replace(/\/api\/?$/, "");
+        const fullUrl = targetUrl.startsWith("http")
+          ? targetUrl
+          : `${apiOrigin}${targetUrl.startsWith("/") ? "" : "/"}${targetUrl}`;
+
+        const fetchUrl = fullUrl.startsWith("http") && token && !fullUrl.includes("token=")
+          ? `${fullUrl}${fullUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
+          : fullUrl;
+
+        const res = await fetch(fetchUrl, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
+
         if (res.ok) {
           const blob = await res.blob();
           resolvedUrl = URL.createObjectURL(blob);
-          resolvedMime = blob.type;
+          resolvedMime = blob.type || resolvedMime;
         } else {
-          resolvedUrl = fullUrl;
+          isAvailable = false;
+          resolvedUrl = "";
         }
       }
     } catch {
-      resolvedUrl = targetUrl;
+      isAvailable = false;
+      resolvedUrl = "";
     }
 
     setPreviewDoc({
@@ -93,12 +110,13 @@ export const KycDetailDrawer: React.FC<KycDetailDrawerProps> = ({
       checksumValid: doc.checksumValid,
       formatValid: doc.formatValid,
       fileUrl: targetUrl,
-      originalFilename: doc.originalFilename || `${doc.documentType || "document"}.pdf`,
+      originalFilename: doc.originalFilename || `${doc.documentType || "document"}.${resolvedMime.includes("image") ? "jpg" : "pdf"}`,
       uploadedAt: doc.uploadedAt || worker.createdAt || "Registration Dossier",
       issuer: doc.issuer,
       aiVerificationNotes: doc.aiVerificationNotes,
       url: resolvedUrl,
-      mime: resolvedMime
+      mime: resolvedMime,
+      isAvailable
     });
   };
 

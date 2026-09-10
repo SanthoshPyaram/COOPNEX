@@ -631,10 +631,10 @@ export const AdminDocumentReviewModal: React.FC<AdminDocumentReviewModalProps> =
 
                   <div>
                     <h3 className="text-sm font-black text-slate-900 dark:text-white">
-                      Document Scan Unavailable
+                      Original document unavailable
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                      The uploaded file for this statutory document ({doc.documentType}) is unavailable or was not attached during artisan registration.
+                      The authentic uploaded scan for this statutory document ({doc.documentType}) is unavailable or was not attached during artisan registration.
                     </p>
                   </div>
 
