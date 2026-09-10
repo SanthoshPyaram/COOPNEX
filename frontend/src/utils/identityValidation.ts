@@ -35,6 +35,37 @@ const pTable: number[][] = [
   [7, 0, 4, 6, 9, 1, 3, 2, 5, 8]
 ];
 
+export const invTable: number[] = [0, 4, 3, 2, 1, 5, 6, 7, 8, 9];
+
+/**
+ * Computes the authentic UIDAI Verhoeff check digit for the first 11 digits of an Aadhaar number.
+ */
+export function computeAadhaarCheckDigit(first11Digits: string): number {
+  const clean = String(first11Digits).replace(/\D/g, "").slice(0, 11);
+  const digits = clean.split("").map(Number).reverse();
+  let c = 0;
+  for (let i = 0; i < digits.length; i++) {
+    c = dTable[c][pTable[(i + 1) % 8][digits[i]]];
+  }
+  return invTable[c];
+}
+
+/**
+ * Generates or completes a mathematically valid 12-digit Aadhaar number with UIDAI Verhoeff parity.
+ */
+export function generateValidAadhaar(prefix = "54829103847"): string {
+  const clean = prefix.replace(/\D/g, "").slice(0, 11).padEnd(11, "0");
+  const checkDigit = computeAadhaarCheckDigit(clean);
+  return clean + checkDigit.toString();
+}
+
+/**
+ * Generates a structurally valid 10-character PAN string conforming to NSDL format.
+ */
+export function generateValidPan(): string {
+  return "ABCDE1234F";
+}
+
 export interface ValidationResult {
   valid: boolean;
   status: "PASS" | "FAIL";

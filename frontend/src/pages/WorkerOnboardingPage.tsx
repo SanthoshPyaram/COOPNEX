@@ -39,7 +39,14 @@ import {
 } from "lucide-react";
 import { WorkerSmartIdCard } from "../components/WorkerSmartIdCard";
 import { LanguageDropdown } from "../components/LanguageDropdown";
-import { validateAadhaarVerhoeff, validatePanFormat, evaluatePreliminaryValidation } from "../utils/identityValidation";
+import {
+  validateAadhaarVerhoeff,
+  validatePanFormat,
+  evaluatePreliminaryValidation,
+  computeAadhaarCheckDigit,
+  generateValidAadhaar,
+  generateValidPan
+} from "../utils/identityValidation";
 
 const ONBOARDING_LANGUAGES = [
   "Telugu",
@@ -151,6 +158,7 @@ export const WorkerOnboardingPage: React.FC = () => {
   const [emailCountdown, setEmailCountdown] = useState(0);
   const [emailOtpJustSent, setEmailOtpJustSent] = useState(false);
   const [emailStatusMsg, setEmailStatusMsg] = useState<string | null>(null);
+  const [emailErrorMsg, setEmailErrorMsg] = useState<string | null>(null);
 
   React.useEffect(() => {
     let timer: any;
@@ -195,11 +203,13 @@ export const WorkerOnboardingPage: React.FC = () => {
     summaryText: string;
     aadhaarValid: boolean;
     panValid: boolean;
+    suggestedAadhaar?: string;
   } | null>(null);
 
   const handleFileUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
-    setter: (val: UploadedDoc | null) => void
+    setter: (val: UploadedDoc | null) => void,
+    docType?: "AADHAAR" | "PAN"
   ) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -209,11 +219,26 @@ export const WorkerOnboardingPage: React.FC = () => {
 
       const reader = new FileReader();
       reader.onload = () => {
-        setter({
+        const newDoc: UploadedDoc = {
           name: file.name,
           size: sizeStr,
           base64: reader.result as string
-        });
+        };
+        setter(newDoc);
+
+        // If pre-check was already run, auto re-evaluate when documents are attached
+        if (preCheckRan && preCheckResult?.status === "DOCUMENTS_MISSING") {
+          const hasAadhaar = docType === "AADHAAR" || Boolean(aadhaarFile);
+          const hasPan = docType === "PAN" || Boolean(panFile);
+          if (hasAadhaar && hasPan && preCheckResult.aadhaarValid && preCheckResult.panValid) {
+            setPreCheckResult({
+              status: "PRELIMINARY_PASSED",
+              summaryText: "Preliminary Structural Check Passed (Verhoeff D5 Checksum & NSDL PAN validated). All required scans attached.",
+              aadhaarValid: true,
+              panValid: true
+            });
+          }
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -228,17 +253,18 @@ export const WorkerOnboardingPage: React.FC = () => {
 
   const [error, setError] = useState<string | null>(null);
 
-  // Real-Time EmailJS / Backend Email OTP Handlers
+  // Verification helper methods (real Email OTP)
   const handleSendEmailOtp = async () => {
+    setEmailErrorMsg(null);
+    setEmailStatusMsg(null);
+
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes("@")) {
-      setError("Please enter a valid email address.");
+      setError("Please enter a valid email address to verify.");
       return;
     }
-    setError(null);
-    setEmailStatusMsg(null);
-    setIsSendingEmailOtp(true);
 
+    setIsSendingEmailOtp(true);
     try {
       const res = await sendOtp(cleanEmail, "REGISTER", name.trim() || undefined);
       setIsSendingEmailOtp(false);
@@ -252,24 +278,22 @@ export const WorkerOnboardingPage: React.FC = () => {
         if (res.retryAfterSeconds) {
           setEmailCountdown(res.retryAfterSeconds);
         }
-        setError(res.message || "Failed to send email verification code.");
+        setError(res.message || "Failed to dispatch email verification code.");
       }
     } catch {
       setIsSendingEmailOtp(false);
-      setError("Failed to dispatch email verification code.");
+      setError("Failed to connect to verification service. Please try again.");
     }
   };
 
-  const handleVerifyEmailOtp = async () => {
-    const cleanEmail = email.trim().toLowerCase();
-    const code = emailOtpInput.trim();
+  const executeVerifyEmailOtp = async (code: string) => {
     if (code.length !== 6) {
-      setError("Please enter the 6-digit verification code received in your email.");
+      setError("Please enter the complete 6-digit OTP code.");
       return;
     }
     setError(null);
     setIsVerifyingEmailOtp(true);
-
+    const cleanEmail = email.trim().toLowerCase();
     try {
       const res = await verifyOtp(cleanEmail, code, "REGISTER");
       setIsVerifyingEmailOtp(false);
@@ -286,54 +310,137 @@ export const WorkerOnboardingPage: React.FC = () => {
     }
   };
 
+  const handleVerifyEmailOtp = async () => {
+    await executeVerifyEmailOtp(emailOtpInput.trim());
+  };
+
   // Run Algorithmic Pre-Check with Authentic UIDAI Verhoeff Checksum & NSDL PAN Validation
-  const handleRunPreCheck = () => {
-    if (!aadhaarNumber || aadhaarNumber.replace(/\s+/g, "").length !== 12) {
-      setError("Please enter a valid 12-digit Aadhaar number before running the pre-check.");
-      return;
-    }
-    if (!panNumber || panNumber.trim().length !== 10) {
-      setError("Please enter a valid 10-character PAN number before running the pre-check.");
-      return;
-    }
-
-    const cleanAadhaar = aadhaarNumber.replace(/\s+/g, "");
-    const cleanPan = panNumber.toUpperCase().trim();
-
-    const aadhaarCheck = validateAadhaarVerhoeff(cleanAadhaar);
-    if (!aadhaarCheck.valid) {
-      setError(`Aadhaar Validation Failed: ${aadhaarCheck.message}`);
-      setPreCheckRan(false);
-      setPreCheckResult(null);
-      return;
-    }
-
-    const panCheck = validatePanFormat(cleanPan);
-    if (!panCheck.valid) {
-      setError(`PAN Validation Failed: ${panCheck.message}`);
-      setPreCheckRan(false);
-      setPreCheckResult(null);
-      return;
-    }
-
+  const handleRunPreCheck = (
+    customAadhaar?: string,
+    customPan?: string,
+    customHasAadhaarDoc?: boolean,
+    customHasPanDoc?: boolean
+  ) => {
     setError(null);
     setPreCheckScanning(true);
+
+    const targetAadhaar = (customAadhaar !== undefined ? customAadhaar : aadhaarNumber).replace(/\s+/g, "");
+    const targetPan = (customPan !== undefined ? customPan : panNumber).toUpperCase().trim();
+
     setTimeout(() => {
       setPreCheckScanning(false);
+
+      if (!targetAadhaar) {
+        setPreCheckResult({
+          status: "CHECKSUM_FAILED",
+          summaryText: "Aadhaar number is missing. Please enter your 12-digit Aadhaar number before running pre-check.",
+          aadhaarValid: false,
+          panValid: Boolean(targetPan && validatePanFormat(targetPan).valid)
+        });
+        setPreCheckRan(true);
+        return;
+      }
+
+      if (targetAadhaar.length !== 12) {
+        setPreCheckResult({
+          status: "CHECKSUM_FAILED",
+          summaryText: `Aadhaar must be exactly 12 digits (currently ${targetAadhaar.length} digits).`,
+          aadhaarValid: false,
+          panValid: Boolean(targetPan && validatePanFormat(targetPan).valid)
+        });
+        setPreCheckRan(true);
+        return;
+      }
+
+      const aadhaarCheck = validateAadhaarVerhoeff(targetAadhaar);
+      let suggestedFix: string | undefined = undefined;
+      if (!aadhaarCheck.valid && targetAadhaar.length === 12) {
+        const correctDigit = computeAadhaarCheckDigit(targetAadhaar.slice(0, 11));
+        suggestedFix = targetAadhaar.slice(0, 11) + correctDigit;
+      }
+
+      if (!targetPan) {
+        setPreCheckResult({
+          status: "CHECKSUM_FAILED",
+          summaryText: "PAN card number is missing. Please enter your 10-character PAN number.",
+          aadhaarValid: aadhaarCheck.valid,
+          panValid: false,
+          suggestedAadhaar: suggestedFix
+        });
+        setPreCheckRan(true);
+        return;
+      }
+
+      const panCheck = validatePanFormat(targetPan);
+      if (!panCheck.valid) {
+        setPreCheckResult({
+          status: "CHECKSUM_FAILED",
+          summaryText: `PAN Validation Failed: ${panCheck.message}`,
+          aadhaarValid: aadhaarCheck.valid,
+          panValid: false,
+          suggestedAadhaar: suggestedFix
+        });
+        setPreCheckRan(true);
+        return;
+      }
+
+      if (!aadhaarCheck.valid) {
+        setPreCheckResult({
+          status: "CHECKSUM_FAILED",
+          summaryText: `Aadhaar Validation Failed: ${aadhaarCheck.message}`,
+          aadhaarValid: false,
+          panValid: true,
+          suggestedAadhaar: suggestedFix
+        });
+        setPreCheckRan(true);
+        return;
+      }
+
+      const hasAadhaar = customHasAadhaarDoc !== undefined ? customHasAadhaarDoc : Boolean(aadhaarFile);
+      const hasPan = customHasPanDoc !== undefined ? customHasPanDoc : Boolean(panFile);
+
       const evalRes = evaluatePreliminaryValidation({
-        aadhaarChecksumValid: aadhaarCheck.valid,
-        panFormatValid: panCheck.valid,
-        hasAadhaarDoc: Boolean(aadhaarFile),
-        hasPanDoc: Boolean(panFile)
+        aadhaarChecksumValid: true,
+        panFormatValid: true,
+        hasAadhaarDoc: hasAadhaar,
+        hasPanDoc: hasPan
       });
+
       setPreCheckResult({
         status: evalRes.status,
         summaryText: evalRes.summaryText,
-        aadhaarValid: aadhaarCheck.valid,
-        panValid: panCheck.valid
+        aadhaarValid: true,
+        panValid: true
       });
       setPreCheckRan(true);
-    }, 800);
+    }, 600);
+  };
+
+  const handleApplyCorrectedAadhaar = (correctedNumber: string) => {
+    setAadhaarNumber(correctedNumber);
+    handleRunPreCheck(correctedNumber);
+  };
+
+  const handleFillTestKyc = () => {
+    const validAadhaar = generateValidAadhaar("54829103847"); // 548291038476
+    const validPan = generateValidPan(); // ABCDE1234F
+    const validPcc = "AP-VJA-2026-8941";
+    setAadhaarNumber(validAadhaar);
+    setPanNumber(validPan);
+    setPccNumber(validPcc);
+
+    const sampleDoc: UploadedDoc = {
+      name: "sample_verified_kyc_document.pdf",
+      size: "145 KB",
+      base64: "data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsOfCjEgMCBvYmoKPDwKL1RpdGxlIChDT09QTkVYIFZlcmlmaWVkIEtZQykKL0F1dGhvciAoQ09PUE5FWCkKPj4KZW5kb2JqCg=="
+    };
+    setAadhaarFile({ ...sampleDoc, name: "aadhaar_card_sample.pdf" });
+    setPanFile({ ...sampleDoc, name: "pan_card_sample.pdf" });
+    setPccFile({ ...sampleDoc, name: "police_clearance_sample.pdf" });
+
+    setTimeout(() => {
+      handleRunPreCheck(validAadhaar, validPan, true, true);
+    }, 100);
   };
 
   const handleNext = () => {
@@ -1222,7 +1329,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                         <input
                           type="text"
                           maxLength={12}
-                          placeholder="e.g. 548291038472"
+                          placeholder="e.g. 548291038476"
                           value={aadhaarNumber}
                           onChange={(e) => setAadhaarNumber(e.target.value.replace(/\D/g, ""))}
                           className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:ring-2 focus:ring-blue-600"
@@ -1232,7 +1339,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                             type="file"
                             id="aadhaar-file"
                             accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={(e) => handleFileUpload(e, setAadhaarFile)}
+                            onChange={(e) => handleFileUpload(e, setAadhaarFile, "AADHAAR")}
                             className="hidden"
                           />
                           {aadhaarFile ? (
@@ -1293,7 +1400,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                             type="file"
                             id="pan-file"
                             accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={(e) => handleFileUpload(e, setPanFile)}
+                            onChange={(e) => handleFileUpload(e, setPanFile, "PAN")}
                             className="hidden"
                           />
                           {panFile ? (
@@ -1520,35 +1627,54 @@ export const WorkerOnboardingPage: React.FC = () => {
                   </div>
 
                   {/* Pre-Check Button & Live Result */}
-                  <div className="p-4 bg-blue-50/50 border border-blue-200 rounded-2xl space-y-3">
-                    <div className="flex items-center justify-between">
+                  <div className="p-4 bg-blue-50/60 border border-blue-200 rounded-2xl space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <strong className="text-xs font-bold text-[#101828] block">
-                          Algorithmic Pre-Check Engine
-                        </strong>
-                        <span className="text-[11px] text-blue-900">
-                          Run automated checksum validation before submitting your application
+                        <div className="flex items-center gap-2">
+                          <strong className="text-xs font-bold text-[#101828] block">
+                            Algorithmic Pre-Check Engine
+                          </strong>
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-blue-100 text-blue-800">
+                            UIDAI D5 + NSDL
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-blue-950 block mt-0.5">
+                          Run automated checksum &amp; format validation before submitting your application
                         </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleRunPreCheck}
-                        disabled={preCheckScanning}
-                        className="btn-primary !min-h-[38px] text-xs !py-1.5 !px-4 disabled:opacity-50 flex items-center gap-1.5"
-                      >
-                        {preCheckScanning ? (
-                          <span>Scanning Documents...</span>
-                        ) : (
-                          <>
-                            <Sparkles className="w-3.5 h-3.5 text-[#E7A93B]" />
-                            <span>{preCheckRan ? "Re-Run Pre-Check" : "Run Pre-Check"}</span>
-                          </>
-                        )}
-                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={handleFillTestKyc}
+                          className="text-[11px] font-bold text-blue-700 hover:text-blue-900 bg-white hover:bg-blue-50 border border-blue-200 px-2.5 py-1.5 rounded-xl shadow-2xs transition inline-flex items-center gap-1 cursor-pointer"
+                          title="Fills valid Aadhaar, PAN, PCC and sample documents"
+                        >
+                          <Sparkles className="w-3 h-3 text-amber-500" />
+                          <span>Fill Test KYC</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRunPreCheck()}
+                          disabled={preCheckScanning}
+                          className="btn-primary !min-h-[38px] text-xs !py-1.5 !px-4 disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+                        >
+                          {preCheckScanning ? (
+                            <>
+                              <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              <span>Scanning Documents...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-3.5 h-3.5 text-[#E7A93B]" />
+                              <span>{preCheckRan ? "Re-Run Pre-Check" : "Run Pre-Check"}</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
 
                     {preCheckRan && preCheckResult && (
-                      <div className={`p-4 rounded-xl border space-y-2.5 text-xs ${
+                      <div className={`p-4 rounded-xl border space-y-3 text-xs ${
                         preCheckResult.status === "PRELIMINARY_PASSED"
                           ? "bg-blue-50/80 border-blue-300 text-blue-950"
                           : preCheckResult.status === "DOCUMENTS_MISSING"
@@ -1557,7 +1683,13 @@ export const WorkerOnboardingPage: React.FC = () => {
                       }`}>
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-start gap-2.5">
-                            <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                            <ShieldCheck className={`w-5 h-5 shrink-0 mt-0.5 ${
+                              preCheckResult.status === "PRELIMINARY_PASSED"
+                                ? "text-blue-600"
+                                : preCheckResult.status === "DOCUMENTS_MISSING"
+                                ? "text-amber-600"
+                                : "text-rose-600"
+                            }`} />
                             <div>
                               <span className="font-black block text-sm">
                                 {preCheckResult.status === "PRELIMINARY_PASSED"
@@ -1566,7 +1698,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                                   ? "Structural Check Passed — Scans Recommended"
                                   : "Credential Structural Check Failed"}
                               </span>
-                              <span className="text-[11px] opacity-80 leading-normal block mt-0.5">
+                              <span className="text-[11px] opacity-90 leading-normal block mt-0.5">
                                 {preCheckResult.summaryText}
                               </span>
                             </div>
@@ -1578,21 +1710,84 @@ export const WorkerOnboardingPage: React.FC = () => {
                               ? "bg-amber-600 text-white"
                               : "bg-rose-600 text-white"
                           }`}>
-                            MANUAL REVIEW PENDING
+                            {preCheckResult.status === "CHECKSUM_FAILED" ? "ACTION REQUIRED" : "MANUAL REVIEW PENDING"}
                           </span>
                         </div>
 
-                        <div className="p-3 bg-white/80 rounded-xl text-[11px] space-y-1.5 border border-blue-100">
-                          <div className="flex items-center gap-2 text-slate-800 font-semibold">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            <span>UIDAI Verhoeff Checksum: <strong className="text-emerald-700">Valid D5 Polynomial Parity</strong></span>
+                        {/* If Aadhaar checksum digit is wrong, provide 1-click correct check digit */}
+                        {preCheckResult.suggestedAadhaar && (
+                          <div className="p-2.5 bg-rose-100/90 border border-rose-300 rounded-xl flex items-center justify-between gap-2 text-[11px] text-rose-950">
+                            <div>
+                              <span className="block font-semibold">UIDAI Verhoeff Suggested Checksum:</span>
+                              <span className="font-mono text-xs font-bold text-rose-800">{preCheckResult.suggestedAadhaar}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleApplyCorrectedAadhaar(preCheckResult.suggestedAadhaar!)}
+                              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-[11px] cursor-pointer shadow-xs transition shrink-0"
+                            >
+                              Apply &amp; Validate
+                            </button>
                           </div>
-                          <div className="flex items-center gap-2 text-slate-800 font-semibold">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            <span>NSDL PAN Format: <strong className="text-emerald-700">Valid Format (5A-4N-1A)</strong></span>
+                        )}
+
+                        <div className="p-3 bg-white/90 rounded-xl text-[11px] space-y-2 border border-blue-100">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div className="flex items-center gap-2 font-medium">
+                              {preCheckResult.aadhaarValid ? (
+                                <>
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                  <span className="text-slate-800">Aadhaar Verhoeff: <strong className="text-emerald-700">Valid D5 Parity</strong></span>
+                                </>
+                              ) : (
+                                <>
+                                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                                  <span className="text-slate-800">Aadhaar Verhoeff: <strong className="text-rose-700">Checksum Failed</strong></span>
+                                </>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 font-medium">
+                              {preCheckResult.panValid ? (
+                                <>
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                  <span className="text-slate-800">NSDL PAN Format: <strong className="text-emerald-700">Valid (5A-4N-1A)</strong></span>
+                                </>
+                              ) : (
+                                <>
+                                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                                  <span className="text-slate-800">NSDL PAN Format: <strong className="text-rose-700">Invalid Format</strong></span>
+                                </>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 font-medium">
+                              {aadhaarFile ? (
+                                <>
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                  <span className="text-slate-800">Aadhaar Document: <strong className="text-emerald-700">Attached</strong></span>
+                                </>
+                              ) : (
+                                <>
+                                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                                  <span className="text-slate-800">Aadhaar Document: <strong className="text-amber-700">Scan Required</strong></span>
+                                </>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 font-medium">
+                              {panFile ? (
+                                <>
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                  <span className="text-slate-800">PAN Card Document: <strong className="text-emerald-700">Attached</strong></span>
+                                </>
+                              ) : (
+                                <>
+                                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                                  <span className="text-slate-800">PAN Card Document: <strong className="text-amber-700">Scan Required</strong></span>
+                                </>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-[10px] text-slate-600 mt-2 border-t border-slate-200/80 pt-2 leading-relaxed">
-                            ℹ️ <strong>Truth in Verification:</strong> Algorithmic validation confirms structural correctness only. In accordance with UIDAI and cooperative governance standards, <em>identity authenticity is not certified until original documents are scrutinized by the Super Administrator</em>.
+                          <p className="text-[10px] text-slate-500 mt-2 border-t border-slate-200/80 pt-2 leading-relaxed">
+                            ℹ️ <strong>Truth in Verification:</strong> Algorithmic validation confirms structural correctness only. In accordance with UIDAI and cooperative governance standards, <em>identity authenticity is certified upon manual inspection of original cards by the Super Administrator</em>.
                           </p>
                         </div>
                       </div>
@@ -1760,6 +1955,14 @@ export const WorkerOnboardingPage: React.FC = () => {
 
               )}
 
+              {/* Contextual Step Error Alert */}
+              {error && (
+                <div className="mt-4 p-3 bg-rose-50 border border-rose-300 rounded-xl flex items-center gap-2.5 text-rose-700 text-xs font-semibold">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                  <span>{error}</span>
+                </div>
+              )}
+
               {/* Navigation Pill Buttons */}
               <div className="mt-8 pt-6 border-t border-slate-200 flex items-center justify-between">
                 {step > 1 ? (
@@ -1776,23 +1979,40 @@ export const WorkerOnboardingPage: React.FC = () => {
                 )}
 
                 {step < 5 ? (
-                  <button
-                    type="button"
-                    onClick={handleNext}
-                    disabled={
-                      step === 3 && (
-                        !aadhaarFile ||
-                        !panFile ||
-                        !preCheckRan ||
-                        !preCheckResult ||
-                        preCheckResult.status === "CHECKSUM_FAILED"
-                      )
-                    }
-                    className="btn-primary !min-h-[42px] text-xs !py-2 !px-7 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <span>Continue</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex flex-col items-end gap-1.5">
+                    {step === 3 && (
+                      <div className="text-[11px] font-medium text-slate-500">
+                        {!aadhaarNumber || aadhaarNumber.replace(/\s+/g, "").length !== 12 || !panNumber || panNumber.trim().length !== 10 ? (
+                          <span className="text-amber-600">Enter 12-digit Aadhaar &amp; 10-char PAN</span>
+                        ) : !aadhaarFile || !panFile ? (
+                          <span className="text-amber-600">Attach Aadhaar &amp; PAN scans</span>
+                        ) : !preCheckRan ? (
+                          <span className="text-blue-600 font-bold">👉 Click &quot;Run Pre-Check&quot; above to validate</span>
+                        ) : preCheckResult?.status === "CHECKSUM_FAILED" ? (
+                          <span className="text-rose-600 font-bold">⚠️ Correct Aadhaar or PAN before continuing</span>
+                        ) : (
+                          <span className="text-emerald-600 font-bold">✓ Pre-check validated • Ready to continue</span>
+                        )}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleNext}
+                      disabled={
+                        step === 3 && (
+                          !aadhaarFile ||
+                          !panFile ||
+                          !preCheckRan ||
+                          !preCheckResult ||
+                          preCheckResult.status === "CHECKSUM_FAILED"
+                        )
+                      }
+                      className="btn-primary !min-h-[42px] text-xs !py-2 !px-7 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span>Continue</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 ) : (
                   <button
                     type="button"

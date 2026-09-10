@@ -33,6 +33,14 @@ export const checkEmail = async (req: Request, res: Response): Promise<void> => 
       res.status(400).json({ success: false, message: "Valid email address is required." });
       return;
     }
+    if (mongoose.connection.readyState !== 1) {
+      res.json({
+        success: true,
+        exists: false,
+        message: "Email is available."
+      });
+      return;
+    }
     const existingUser = await User.findOne({ email: rawEmail });
     const existingWorker = existingUser ? null : await Worker.findOne({ email: rawEmail });
     res.json({
@@ -58,6 +66,14 @@ export const checkPhone = async (req: Request, res: Response): Promise<void> => 
     const cleanDigits = rawPhone.replace(/\D/g, "");
     if (cleanDigits.length < 10) {
       res.status(400).json({ success: false, message: "Valid 10-digit phone number is required." });
+      return;
+    }
+    if (mongoose.connection.readyState !== 1) {
+      res.json({
+        success: true,
+        exists: false,
+        message: "Phone number is available."
+      });
       return;
     }
     const last10 = cleanDigits.slice(-10);

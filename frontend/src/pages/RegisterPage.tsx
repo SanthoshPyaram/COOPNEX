@@ -54,6 +54,7 @@ export const RegisterPage: React.FC = () => {
   const [phoneDuplicateError, setPhoneDuplicateError] = useState<string | null>(null);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isCheckingPhone, setIsCheckingPhone] = useState(false);
+  const [phoneChecked, setPhoneChecked] = useState(false);
 
   // Email Field & Verification State
   const [email, setEmail] = useState("");
@@ -69,11 +70,12 @@ export const RegisterPage: React.FC = () => {
   const [authProviderUserId, setAuthProviderUserId] = useState<string | undefined>(undefined);
   const emailOtpInputs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const handlePhoneBlur = async () => {
-    const cleanDigits = phone.replace(/\D/g, "");
+  const checkPhoneAvailability = async (rawDigits: string) => {
+    const cleanDigits = rawDigits.replace(/\D/g, "");
     if (!cleanDigits) return;
     if (cleanDigits.length < 10) {
       setPhoneError(t("auth.phoneInvalid", "Please provide a valid 10-digit mobile number."));
+      setPhoneChecked(false);
       return;
     }
     setPhoneError(null);
@@ -82,6 +84,7 @@ export const RegisterPage: React.FC = () => {
       const res = await fetch(`${API_BASE}/auth/check-phone?phone=${encodeURIComponent(cleanDigits.slice(-10))}`);
       const data = await res.json();
       setIsCheckingPhone(false);
+      setPhoneChecked(true);
       if (data.exists) {
         setPhoneDuplicateError(t("auth.phoneAlreadyRegistered", "Phone number already registered. Please use another number."));
       } else {
@@ -89,6 +92,14 @@ export const RegisterPage: React.FC = () => {
       }
     } catch {
       setIsCheckingPhone(false);
+      setPhoneChecked(true);
+    }
+  };
+
+  const handlePhoneBlur = () => {
+    const cleanDigits = phone.replace(/\D/g, "");
+    if (cleanDigits.length === 10) {
+      checkPhoneAvailability(cleanDigits);
     }
   };
 
@@ -780,11 +791,23 @@ export const RegisterPage: React.FC = () => {
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                     Phone Number (10 Digits) *
                   </label>
-                  {isCheckingPhone && (
-                    <span className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold animate-pulse">
-                      Checking availability...
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isCheckingPhone ? (
+                      <span className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold animate-pulse">
+                        Checking availability...
+                      </span>
+                    ) : phoneDuplicateError ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded-full">
+                        <AlertCircle className="w-3 h-3" />
+                        <span>Already Registered</span>
+                      </span>
+                    ) : phoneChecked && phone.length === 10 ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full">
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>Available</span>
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="relative">
                   <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -799,6 +822,10 @@ export const RegisterPage: React.FC = () => {
                       setPhone(clean);
                       setPhoneError(null);
                       setPhoneDuplicateError(null);
+                      setPhoneChecked(false);
+                      if (clean.length === 10) {
+                        checkPhoneAvailability(clean);
+                      }
                     }}
                     onBlur={handlePhoneBlur}
                     className={`w-full bg-white dark:bg-slate-800 border ${
