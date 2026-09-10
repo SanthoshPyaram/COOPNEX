@@ -74,7 +74,7 @@ import { CooperativeMottoPrinciples } from "../components/animations/Cooperative
 import { EmergencyBloodCoopBanner } from "../components/animations/EmergencyBloodCoopBanner";
 
 export const LandingPage: React.FC = () => {
-  const { isAuthenticated, switchDemoRoleForTesting } = useAuth();
+  const { isAuthenticated, user, switchDemoRoleForTesting } = useAuth();
   const { t, language } = useLanguage();
   const { theme } = useTheme();
   const navigate = useNavigate();
@@ -291,7 +291,7 @@ export const LandingPage: React.FC = () => {
   }, [activeWorkerTrade, selectedPincode, currentLocationInfo.city, currentLocationInfo.district, currentLocationInfo.state]);
 
   const handleOpenTrialBooking = (worker: any) => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || user?.role !== "CUSTOMER") {
       setPendingWorkerForAuth(worker);
       setAuthPromptOpen(true);
       return;
@@ -312,6 +312,8 @@ export const LandingPage: React.FC = () => {
       setTrialConfirmed(false);
       setTrialBookingId(`SS-TR-${Math.floor(1000 + Math.random() * 9000)}`);
       setPendingWorkerForAuth(null);
+    } else {
+      navigate("/services");
     }
   };
 
@@ -1516,13 +1518,21 @@ export const LandingPage: React.FC = () => {
           {t("cta.subheadline") || "Experience the dignity of cooperative labour and the reliability of government-verified local craftsmanship today."}
         </p>
         <div className="flex flex-wrap justify-center gap-3 pt-2">
-          <Link
-            to="/services"
-            className="btn-primary !min-h-[46px] !px-8 text-sm font-bold shadow-lg"
+          <button
+            type="button"
+            onClick={() => {
+              if (!isAuthenticated || user?.role !== "CUSTOMER") {
+                setPendingWorkerForAuth(null);
+                setAuthPromptOpen(true);
+              } else {
+                navigate("/services");
+              }
+            }}
+            className="btn-primary !min-h-[46px] !px-8 text-sm font-bold shadow-lg cursor-pointer flex items-center gap-2"
           >
             <span>{t("cta.bookBtn") || "Book Verified Service"}</span>
             <ArrowRight className="w-4 h-4" />
-          </Link>
+          </button>
           <Link
             to="/join-worker"
             className="btn-accent !min-h-[46px] !px-8 text-sm font-bold"

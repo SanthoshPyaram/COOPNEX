@@ -110,20 +110,32 @@ export const SocietyAdminPage: React.FC = () => {
       console.error(e);
     }
 
-    // 2. Non-blocking backend patch
+    // 2. Non-blocking backend patch & KYC review approval
     try {
-      await fetch(`${API_BASE}/workers/${workerId}/verify`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
-        },
-        body: JSON.stringify({
-          level: targetLevel,
-          status: "VERIFIED",
-          notes: `Verified by Society Secretary on ${new Date().toLocaleDateString()}`
-        })
-      }).catch(() => null);
+      const token = localStorage.getItem("sahakari_token") || "";
+      if (token && workerId && !workerId.startsWith("WRK-COOP")) {
+        fetch(`${API_BASE}/admin/kyc/${workerId}/review`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ action: "APPROVE", newLevel: targetLevel })
+        }).catch(() => null);
+
+        fetch(`${API_BASE}/workers/${workerId}/verify`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            level: targetLevel,
+            status: "VERIFIED",
+            notes: `Verified by Society Secretary on ${new Date().toLocaleDateString()}`
+          })
+        }).catch(() => null);
+      }
     } catch {}
 
     setActionSuccess(`Worker level elevated to Level ${targetLevel} & verified successfully!`);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { api } from "../services/api";
+import { api, API_BASE } from "../services/api";
 import { Booking, BookingStatus } from "../types";
 import { WorkerAppShell } from "../components/worker/WorkerAppShell";
 import { WorkerDashboardTab } from "../components/worker/WorkerDashboardTab";
@@ -69,7 +69,35 @@ export const WorkerPage: React.FC = () => {
   const [workerStatus, setWorkerStatus] = useState<string>(getInitialWorkerStatus);
   const [statusCheckMsg, setStatusCheckMsg] = useState<string | null>(null);
 
-  const refreshWorkerStatus = () => {
+  const refreshWorkerStatus = async () => {
+    // 1. Query live MongoDB backend first if online
+    try {
+      const res = await fetch(`${API_BASE}/workers`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.workers)) {
+          const userEmpId = ((user as any)?.employeeId || "").toUpperCase();
+          const userEmail = (user?.email || "").toLowerCase();
+          const dbMatch = data.workers.find((w: any) => {
+            const wEmp = (w.employeeId || w.workerIdNumber || "").toUpperCase();
+            const wEmail = (w.email || "").toLowerCase();
+            return (userEmpId && wEmp && userEmpId === wEmp) || (userEmail && wEmail && userEmail === wEmail);
+          });
+
+          if (dbMatch && dbMatch.verificationStatus) {
+            setWorkerStatus(dbMatch.verificationStatus);
+            localStorage.setItem("sahakari_worker_status", dbMatch.verificationStatus);
+            if (dbMatch.verificationStatus === "VERIFIED") {
+              setStatusCheckMsg("Congratulations! Your account has been verified by the Cooperative Administrator!");
+              setTimeout(() => setStatusCheckMsg(null), 5000);
+              return;
+            }
+          }
+        }
+      }
+    } catch {}
+
+    // 2. Check local registered workers
     try {
       const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
       const matched = localWorkers.find(
@@ -102,9 +130,22 @@ export const WorkerPage: React.FC = () => {
   };
 
   useEffect(() => {
+    refreshWorkerStatus();
     const handleStorage = () => refreshWorkerStatus();
     window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
+
+    // Auto-poll every 8 seconds if worker status is not verified yet
+    const interval = setInterval(() => {
+      const currentFlag = localStorage.getItem("sahakari_worker_status");
+      if (currentFlag !== "VERIFIED") {
+        refreshWorkerStatus();
+      }
+    }, 8000);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      clearInterval(interval);
+    };
   }, [user]);
 
   const [activeJobs, setActiveJobs] = useState<Booking[]>([]);

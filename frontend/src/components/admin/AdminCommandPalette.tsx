@@ -56,15 +56,6 @@ export const AdminCommandPalette: React.FC<AdminCommandPaletteProps> = ({
       meta: "KPIs, 3D Cooperative Network, Live Alerts"
     },
     {
-      id: "nav-mandate",
-      title: "What Does Admin Do? (Administrative Mandate)",
-      category: "Navigation",
-      shortcut: "G M",
-      icon: Sparkles,
-      onSelect: () => onNavigateTab("mandate"),
-      meta: "6 Core Super Admin Responsibilities, Verification, 100% Escrow, SOS Dispatch"
-    },
-    {
       id: "nav-kyc",
       title: "Worker KYC & Verification",
       category: "Workforce",

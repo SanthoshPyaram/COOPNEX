@@ -18,12 +18,14 @@ import {
   ChevronRight,
   ShieldCheck,
   AlertTriangle,
-  X
+  X,
+  Lock,
+  Sparkles
 } from "lucide-react";
 
 export const ServicesPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, switchDemoRoleForTesting } = useAuth();
   const navigate = useNavigate();
 
   const initialService = searchParams.get("service") || "Electrician";
@@ -37,6 +39,10 @@ export const ServicesPage: React.FC = () => {
     getPanIndiaWorkerProfiles("Vijayawada", "NTR District", "Andhra Pradesh", currentPincode, initialService)
   );
   const [loading, setLoading] = useState(false);
+
+  // Auth Gating Modal State
+  const [authPromptOpen, setAuthPromptOpen] = useState(false);
+  const [pendingWorkerForAuth, setPendingWorkerForAuth] = useState<WorkerProfile | null>(null);
 
   // Booking Modal State (SERVICE -> DETAILS -> WORKER -> TIME -> PAYMENT -> CONFIRM)
   const [selectedWorker, setSelectedWorker] = useState<WorkerProfile | null>(null);
@@ -79,6 +85,38 @@ export const ServicesPage: React.FC = () => {
   useEffect(() => {
     loadWorkers();
   }, [selectedService, minRating]);
+
+  // Auth-gated booking triggers
+  const handleInitiateBooking = (worker: WorkerProfile) => {
+    if (!isAuthenticated || user?.role !== "CUSTOMER") {
+      setPendingWorkerForAuth(worker);
+      setAuthPromptOpen(true);
+      return;
+    }
+    setSelectedWorker(worker);
+    setBookingStep(1);
+  };
+
+  const handleInitiateEmergency = () => {
+    if (!isAuthenticated || user?.role !== "CUSTOMER") {
+      setPendingWorkerForAuth(null);
+      setAuthPromptOpen(true);
+      return;
+    }
+    handleQuickEmergencyDispatch();
+  };
+
+  const handle1ClickCitizenLogin = async () => {
+    await switchDemoRoleForTesting("CUSTOMER");
+    setAuthPromptOpen(false);
+    if (pendingWorkerForAuth) {
+      setSelectedWorker(pendingWorkerForAuth);
+      setBookingStep(1);
+      setPendingWorkerForAuth(null);
+    } else if (emergencyActive) {
+      handleQuickEmergencyDispatch();
+    }
+  };
 
   // Handle Booking Confirmation
   const handleProceedToPayment = async () => {
@@ -165,9 +203,9 @@ export const ServicesPage: React.FC = () => {
             </div>
 
             <button
-              onClick={handleQuickEmergencyDispatch}
+              onClick={handleInitiateEmergency}
               disabled={isProcessing}
-              className="bg-white text-red-700 hover:bg-red-50 font-black px-5 py-2.5 rounded-xl text-xs shadow-sm transition"
+              className="bg-white text-red-700 hover:bg-red-50 font-black px-5 py-2.5 rounded-xl text-xs shadow-sm transition cursor-pointer"
             >
               {isProcessing ? "Dispatching..." : "Dispatch Nearest Worker Now"}
             </button>
@@ -338,10 +376,7 @@ export const ServicesPage: React.FC = () => {
                   </div>
 
                   <button
-                    onClick={() => {
-                      setSelectedWorker(w);
-                      setBookingStep(1);
-                    }}
+                    onClick={() => handleInitiateBooking(w)}
                     className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
                   >
                     Book {w.name.split(" ")[0]}
@@ -515,6 +550,92 @@ export const ServicesPage: React.FC = () => {
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Citizen Sign-in Required Modal */}
+        {authPromptOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-xs animate-fadeIn">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full overflow-hidden">
+              <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-blue-50/50">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm">
+                      Citizen Sign-In Required
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Cooperative dispatch &amp; safety verification
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAuthPromptOpen(false)}
+                  className="w-8 h-8 rounded-full bg-white text-slate-500 hover:text-slate-800 flex items-center justify-center border border-slate-200 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4 text-center">
+                {pendingWorkerForAuth && (
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-left">
+                    <img
+                      src={
+                        pendingWorkerForAuth.avatarUrl ||
+                        "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80"
+                      }
+                      alt={pendingWorkerForAuth.name}
+                      className="w-12 h-12 rounded-lg object-cover border border-blue-500/20 shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-bold text-xs text-slate-900 truncate">
+                        {pendingWorkerForAuth.name}
+                      </h4>
+                      <p className="text-[11px] text-blue-600 font-medium">
+                        {pendingWorkerForAuth.skills?.[0] || selectedService} • {pendingWorkerForAuth.societyName}
+                      </p>
+                      <span className="text-[10px] font-bold text-slate-600">
+                        ₹{pendingWorkerForAuth.baseHourlyRate || 450}/hr statutory base wage
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  To confirm your service location, generate secure arrival OTPs, and guarantee escrow safety, please sign in or register as a citizen.
+                </p>
+
+                <div className="space-y-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={handle1ClickCitizenLogin}
+                    className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold justify-center shadow-md flex items-center gap-2 cursor-pointer transition"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    <span>1-Click Sign In as Citizen (Instant Demo)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate("/login?redirect=/services")}
+                    className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold justify-center cursor-pointer transition"
+                  >
+                    <span>Sign In with Password / Email OTP</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate("/register")}
+                    className="w-full py-2 rounded-lg text-xs font-bold text-slate-500 hover:text-blue-600 transition cursor-pointer"
+                  >
+                    New to COOPNEX? Create Free Account →
+                  </button>
+                </div>
               </div>
             </div>
           </div>

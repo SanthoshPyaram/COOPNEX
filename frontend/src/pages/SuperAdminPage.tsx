@@ -14,7 +14,7 @@ import { PaymentFlow3D } from "../components/admin/3d/PaymentFlow3D";
 import { AiDemand3D } from "../components/admin/3d/AiDemand3D";
 import { EmergencyDispatch3D } from "../components/admin/3d/EmergencyDispatch3D";
 import { AdminAiIntelligenceDashboard } from "../components/admin/AdminAiIntelligenceDashboard";
-import { AdminResponsibilitiesShowcase } from "../components/admin/AdminResponsibilitiesShowcase";
+import { API_BASE } from "../services/api";
 
 import {
   Users,
@@ -578,10 +578,145 @@ export const SuperAdminPage: React.FC = () => {
   const [selectedCityId, setSelectedCityId] = useState<string>("vja");
   const [isWelfareFlipped, setIsWelfareFlipped] = useState<boolean>(false);
 
-  // Sync workforce with localStorage on mount & storage events
+  // Sync workforce with MongoDB backend & localStorage
+  const fetchBackendAndLocalWorkforce = async () => {
+    try {
+      let dbWorkersMapped: any[] = [];
+      try {
+        const res = await fetch(`${API_BASE}/admin/kyc-submissions`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.submissions)) {
+            dbWorkersMapped = json.submissions.map((sub: any) => ({
+              _id: sub._id,
+              name: sub.name,
+              phone: sub.phone || "+91 98765 43210",
+              email: sub.email,
+              avatarUrl: sub.avatarUrl || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80",
+              gender: sub.gender || "Male",
+              age: sub.age || 32,
+              skills: Array.isArray(sub.skills) && sub.skills.length > 0 ? sub.skills : ["Specialist"],
+              trade: (sub.skills && sub.skills[0]) || "Specialist",
+              societyName: sub.societyName || "Vijayawada Central Labour Co-op (PLCS-04)",
+              district: sub.district || "Vijayawada",
+              verificationLevel: sub.verificationLevel || 1,
+              verificationStatus: sub.verificationStatus || "UNDER_REVIEW",
+              riskScore: "LOW",
+              riskNum: 1,
+              experienceYears: sub.experienceYears || 3,
+              totalJobs: sub.jobsCompletedCount || 0,
+              rating: sub.rating || 5.0,
+              lifetimeEarnings: "₹0",
+              welfareContribution: "₹0",
+              createdAt: sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : "Just now",
+              employeeId: sub.employeeId || sub.workerIdNumber || "COOP-WRK-MEMBER",
+              kycDocuments: sub.kycDocuments && sub.kycDocuments.length > 0 ? sub.kycDocuments : [
+                { documentType: "Police Clearance Certificate (PCC)", documentNumber: "PCC-PRE-CHECK", verificationStatus: sub.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING_AUDIT", issuer: "Local Police" },
+                { documentType: "Aadhaar Card", documentNumber: "XXXX-XXXX-8921", verificationStatus: "SYSTEM_VERIFIED", issuer: "UIDAI", systemCheckDetails: "UIDAI Verhoeff Checksum Valid" },
+                { documentType: "PAN Card", documentNumber: "ABCDE1234F", verificationStatus: "SYSTEM_VERIFIED", issuer: "NSDL", systemCheckDetails: "NSDL Active Match 100%" }
+              ],
+              policeVerification: {
+                certificateNumber: "PCC-PASSED",
+                policeStation: `${sub.district || "Vijayawada"} City Police`,
+                commissionerate: `${sub.district || "Vijayawada"} Police Commissionerate`,
+                shoName: "Police Commissionerate Scrutiny",
+                crimeRecordStatus: "NO COGNIZABLE RECORD (CCTNS Cleared)",
+                cctnsRecordCheck: "PASSED (Clean Pre-check)",
+                issuedDate: "Verified",
+                validUntil: "2027",
+                sealText: "COOPERATIVE LABOUR WELFARE BOARD"
+              }
+            }));
+          }
+        }
+      } catch (err) {
+        console.warn("MongoDB KYC submissions fetch notice:", err);
+      }
+
+      // Also load local registered workers
+      const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
+      const mappedLocal = localWorkers.map((w: any) => ({
+        _id: w._id || w.id || `WRK-${w.employeeId}`,
+        name: w.name,
+        phone: w.phone || "+91 98765 43210",
+        email: w.email,
+        avatarUrl: w.avatarUrl || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80",
+        gender: w.gender || "Male",
+        age: w.age || 32,
+        skills: Array.isArray(w.skills) && w.skills.length > 0 ? w.skills : [w.trade || "Electrician"],
+        trade: w.trade || w.primarySkill || "Electrician",
+        societyName: w.societyName || "Vijayawada Central Labour Co-op (PLCS-04)",
+        district: w.district || "Vijayawada",
+        verificationLevel: w.verificationLevel || 1,
+        verificationStatus: w.verificationStatus || "UNDER_REVIEW",
+        riskScore: w.riskScore || "LOW",
+        riskNum: w.riskNum || 1,
+        experienceYears: w.experienceYears || 2,
+        totalJobs: w.totalJobs || 0,
+        rating: w.rating || 5.0,
+        lifetimeEarnings: "₹0",
+        welfareContribution: "₹0",
+        createdAt: w.registeredAt || w.createdAt || "Just now",
+        employeeId: w.employeeId,
+        policeVerification: {
+          certificateNumber: "PCC-PENDING-AUDIT",
+          policeStation: `${w.district || "Vijayawada"} City Police`,
+          commissionerate: `${w.district || "Vijayawada"} Police Commissionerate`,
+          shoName: "Pending Admin Scrutiny",
+          crimeRecordStatus: "NO COGNIZABLE RECORD (Algorithmic CCTNS Cleared)",
+          cctnsRecordCheck: "PASSED (Clean Pre-check)",
+          issuedDate: "Pending Verification",
+          validUntil: "Pending",
+          sealText: "COOPERATIVE LABOUR WELFARE BOARD"
+        },
+        kycDocuments: [
+          { documentType: "Police Clearance Certificate (PCC)", documentNumber: "PCC-PRE-CHECK", verificationStatus: w.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING_AUDIT", issuer: "Local Police" },
+          { documentType: "Aadhaar Card", documentNumber: w.aadhaarNumber || "XXXX-XXXX-8921", verificationStatus: "SYSTEM_VERIFIED", issuer: "UIDAI", systemCheckDetails: "UIDAI Verhoeff D5 Checksum Valid" },
+          { documentType: "PAN Card", documentNumber: w.panNumber || "ABCDE1234F", verificationStatus: "SYSTEM_VERIFIED", issuer: "NSDL", systemCheckDetails: "NSDL Active Match 100%" }
+        ]
+      }));
+
+      // Merge: DB workers first, then local workers not yet in DB, then static registry
+      const seenIds = new Set<string>();
+      const seenEmails = new Set<string>();
+      const combined: any[] = [];
+
+      for (const w of dbWorkersMapped) {
+        if (w.employeeId) seenIds.add(String(w.employeeId).toUpperCase());
+        if (w.email) seenEmails.add(String(w.email).toLowerCase());
+        combined.push(w);
+      }
+
+      for (const w of mappedLocal) {
+        const empUpper = String(w.employeeId || "").toUpperCase();
+        const emailLower = String(w.email || "").toLowerCase();
+        if ((!empUpper || !seenIds.has(empUpper)) && (!emailLower || !seenEmails.has(emailLower))) {
+          if (empUpper) seenIds.add(empUpper);
+          if (emailLower) seenEmails.add(emailLower);
+          combined.push(w);
+        }
+      }
+
+      for (const w of INITIAL_WORKFORCE_REGISTRY) {
+        const empUpper = String((w as any).employeeId || "").toUpperCase();
+        const emailLower = String(w.email || "").toLowerCase();
+        if ((!empUpper || !seenIds.has(empUpper)) && (!emailLower || !seenEmails.has(emailLower))) {
+          if (empUpper) seenIds.add(empUpper);
+          if (emailLower) seenEmails.add(emailLower);
+          combined.push(w);
+        }
+      }
+
+      setWorkforceData(combined);
+    } catch (e) {
+      console.warn("fetchBackendAndLocalWorkforce error:", e);
+    }
+  };
+
   useEffect(() => {
+    fetchBackendAndLocalWorkforce();
     const handleStorage = () => {
-      setWorkforceData(loadCombinedWorkforce());
+      fetchBackendAndLocalWorkforce();
     };
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
@@ -649,6 +784,19 @@ export const SuperAdminPage: React.FC = () => {
     } catch (e) {
       console.error(e);
     }
+
+    // 4. Actively notify MongoDB backend if online
+    const token = localStorage.getItem("sahakari_token");
+    if (token && workerId && !workerId.startsWith("WRK-COOP")) {
+      fetch(`${API_BASE}/admin/kyc/${workerId}/review`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: "APPROVE", newLevel: level })
+      }).catch((err) => console.warn("Backend KYC review approval notice:", err));
+    }
   };
 
   const handleRejectWorkerKyc = (workerId: string, reason: string) => {
@@ -679,6 +827,18 @@ export const SuperAdminPage: React.FC = () => {
       localStorage.setItem("coopnex_registered_workers", JSON.stringify(updated));
     } catch (e) {
       console.error(e);
+    }
+
+    const token = localStorage.getItem("sahakari_token");
+    if (token && workerId && !workerId.startsWith("WRK-COOP")) {
+      fetch(`${API_BASE}/admin/kyc/${workerId}/review`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: "BLACKLIST", rejectionReason: reason })
+      }).catch((err) => console.warn("Backend KYC review rejection notice:", err));
     }
   };
 
@@ -886,9 +1046,6 @@ export const SuperAdminPage: React.FC = () => {
               })}
             </div>
 
-            {/* 6 Core Administrative Responsibilities Showcase */}
-            <AdminResponsibilitiesShowcase onNavigateTab={(tab) => setActiveTab(tab)} />
-
             {/* Signature 3D Cooperative Network + Operational Alerts Strip */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               <div className="lg:col-span-8">
@@ -974,15 +1131,6 @@ export const SuperAdminPage: React.FC = () => {
         )}
 
         {/* =========================================================================
-            1.1 TAB: ADMIN MANDATE (WHAT ADMIN DOES EXPANDED VIEW)
-        ========================================================================== */}
-        {activeTab === "mandate" && (
-          <div className="space-y-6">
-            <AdminResponsibilitiesShowcase onNavigateTab={(tab) => setActiveTab(tab)} />
-          </div>
-        )}
-
-        {/* =========================================================================
             2. TAB: WORKFORCE REGISTRY
         ========================================================================== */}
         {activeTab === "workers" && (
@@ -995,36 +1143,6 @@ export const SuperAdminPage: React.FC = () => {
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Platform-wide directory of certified artisans, skill tiers, ratings, and Police Clearance statuses.
                 </p>
-              </div>
-            </div>
-
-            {/* Informative Admin Mandate Banner - Light Style */}
-            <div className="rounded-2xl bg-gradient-to-r from-emerald-50/80 via-white to-blue-50/40 border border-slate-200 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
-              <div className="flex items-center gap-4">
-                <img
-                  src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=300&q=80"
-                  alt="Verified Artisan"
-                  className="w-14 h-14 rounded-xl object-cover border-2 border-emerald-300 shadow-xs shrink-0"
-                />
-                <div>
-                  <div className="text-[11px] font-black uppercase tracking-wider text-[#075E54]">
-                    Super Admin Mandate • Workforce Oversight
-                  </div>
-                  <div className="text-sm font-bold text-slate-900 mt-0.5">
-                    Tier Verification &amp; Police Background Audit
-                  </div>
-                  <div className="text-xs text-slate-600 mt-0.5">
-                    Every artisan in this registry is audited by the Super Admin for Police Clearance, Aadhaar checksums, and trade skill qualifications.
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2.5 shrink-0 text-xs font-mono">
-                <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-slate-800 shadow-2xs">
-                  12,480 Active
-                </span>
-                <span className="px-3 py-1.5 rounded-xl bg-emerald-100 text-[#075E54] font-bold">
-                  100% Cleared
-                </span>
               </div>
             </div>
 
@@ -1073,36 +1191,6 @@ export const SuperAdminPage: React.FC = () => {
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Inspect Police Clearance Certificates (PCC), Aadhaar Verhoeff checks, and award certified skill tiers.
                 </p>
-              </div>
-            </div>
-
-            {/* Informative Admin Mandate Banner - Light Style */}
-            <div className="rounded-2xl bg-gradient-to-r from-blue-50/80 via-white to-emerald-50/40 border border-slate-200 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
-              <div className="flex items-center gap-4">
-                <img
-                  src="https://images.unsplash.com/photo-1450133064473-71024230f91b?w=300&q=80"
-                  alt="Official PCC Verification"
-                  className="w-14 h-14 rounded-xl object-cover border-2 border-blue-300 shadow-xs shrink-0"
-                />
-                <div>
-                  <div className="text-[11px] font-black uppercase tracking-wider text-blue-700">
-                    Super Admin Mandate • Statutory Document Verification
-                  </div>
-                  <div className="text-sm font-bold text-slate-900 mt-0.5">
-                    Police Clearance Certificates (PCC) &amp; UIDAI Verhoeff Checksums
-                  </div>
-                  <div className="text-xs text-slate-600 mt-0.5">
-                    The Super Administrator personally examines Station House Officer (SHO) precinct seals, CCTNS crime records, and Aadhaar biometrics before issuing Tier credentials.
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2.5 shrink-0 text-xs font-mono">
-                <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-slate-800 shadow-2xs">
-                  {pendingCount} Pending
-                </span>
-                <span className="px-3 py-1.5 rounded-xl bg-blue-100 text-blue-800 font-bold">
-                  PCC Strict Audit
-                </span>
               </div>
             </div>
 
@@ -1248,36 +1336,6 @@ export const SuperAdminPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Informative Admin Mandate Banner - Light Style */}
-            <div className="rounded-2xl bg-gradient-to-r from-rose-50/80 via-white to-purple-50/40 border border-slate-200 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
-              <div className="flex items-center gap-4">
-                <img
-                  src="https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=300&q=80"
-                  alt="Emergency Responder"
-                  className="w-14 h-14 rounded-xl object-cover border-2 border-rose-300 shadow-xs shrink-0"
-                />
-                <div>
-                  <div className="text-[11px] font-black uppercase tracking-wider text-rose-700">
-                    Super Admin Mandate • Rapid Emergency Dispatch
-                  </div>
-                  <div className="text-sm font-bold text-slate-900 mt-0.5">
-                    Sub-7-Minute Proximity Vectoring &amp; Safety Overrides
-                  </div>
-                  <div className="text-xs text-slate-600 mt-0.5">
-                    Monitors live GPS tracking connecting distressed residents to nearest tier-4 verified technicians for gas leaks, electrical flashovers, and water bursts.
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2.5 shrink-0 text-xs font-mono">
-                <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-slate-800 shadow-2xs">
-                  Target &lt; 7.0m
-                </span>
-                <span className="px-3 py-1.5 rounded-xl bg-rose-100 text-rose-800 font-bold">
-                  Avg 6.4m SLA
-                </span>
-              </div>
-            </div>
-
             <EmergencyDispatch3D />
           </div>
         )}
@@ -1373,36 +1431,6 @@ export const SuperAdminPage: React.FC = () => {
                     <Download className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Export Ledger (CSV)</span>
                   </button>
-                </div>
-              </div>
-
-              {/* Informative Admin Mandate Banner */}
-              <div className="rounded-2xl bg-gradient-to-r from-blue-50/90 via-white to-indigo-50/40 border border-slate-200 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
-                <div className="flex items-center gap-4">
-                  <img
-                    src="https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?w=300&q=80"
-                    alt="Instant Payout"
-                    className="w-14 h-14 rounded-xl object-cover border-2 border-blue-200 shadow-xs shrink-0"
-                  />
-                  <div>
-                    <div className="text-[11px] font-black uppercase tracking-wider text-blue-800">
-                      Super Admin Mandate • Escrow &amp; Worker Welfare Center
-                    </div>
-                    <div className="text-sm font-bold text-slate-900 mt-0.5">
-                      Statutory 100% Worker Payouts (0% Exploitation) &amp; 10% Cooperative Fund
-                    </div>
-                    <div className="text-xs text-slate-600 mt-0.5">
-                      Releases direct DBT bank deposits upon citizen OTP verification. Full NPCI audit trail and zero hidden surcharge deductions.
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2.5 shrink-0 text-xs font-mono">
-                  <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-slate-800 shadow-2xs">
-                    0% Commission
-                  </span>
-                  <span className="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 font-bold">
-                    ₹24.85L Settled
-                  </span>
                 </div>
               </div>
 

@@ -98,7 +98,6 @@ export const AdminShell: React.FC<AdminShellProps> = ({
       title: "OPERATIONS",
       items: [
         { id: "command", label: "Command Center", icon: LayoutDashboard },
-        { id: "mandate", label: "Admin Mandate", icon: Sparkles },
         { id: "workers", label: "Workers", icon: Users },
         {
           id: "kyc",
