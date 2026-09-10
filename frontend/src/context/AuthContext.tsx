@@ -103,13 +103,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let errorMessage = data?.message;
     if (!errorMessage) {
       if (status === 404 || status === 405) {
-        errorMessage = "Backend verification service endpoint is not reachable. Please verify the backend API is online.";
+        errorMessage = "Verification service endpoint is temporarily unavailable. Please try again.";
       } else if (status === 429) {
         errorMessage = "Too many requests. Please wait a moment before trying again.";
       } else if (status >= 500) {
         errorMessage = "Verification service is temporarily unavailable. Please try again in a moment.";
       } else if (!res.ok) {
-        errorMessage = "Unable to connect to verification service. Please check your network and try again.";
+        errorMessage = "Unable to complete verification request. Please check your details and try again.";
       }
     }
 
@@ -205,24 +205,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })
       );
 
-      // Optionally record session with backend MongoDB if online (non-blocking)
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        await fetch(`${API_BASE}/auth/emailjs/record-otp`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            identifier: cleanEmail,
-            otpCode,
-            purpose
-          }),
-          signal: controller.signal
-        }).catch(() => null);
-        clearTimeout(timeoutId);
-      } catch {
-        // Backend optional in client session mode
-      }
+      // Asynchronously record session with backend MongoDB if online (fully non-blocking)
+      fetch(`${API_BASE}/auth/emailjs/record-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          identifier: cleanEmail,
+          otpCode,
+          purpose
+        })
+      }).catch(() => null);
 
       // Dispatch authentic verification email via EmailJS browser SDK (Template 1: Universal Verification)
       const status = getEmailJsStatus();
@@ -239,9 +231,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           emailJsConfig.verificationTemplateId,
           {
             name: name || "COOPNEX Member",
+            to_name: name || "COOPNEX Member",
             email: cleanEmail,
+            to_email: cleanEmail,
             otp: otpCode,
-            expiry: "5"
+            passcode: otpCode,
+            code: otpCode,
+            expiry: "5",
+            expiry_text: "5 minutes",
+            app_name: "COOPNEX",
+            purpose: "Email Verification"
           },
           emailJsConfig.publicKey
         );
@@ -275,7 +274,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, message: "Please enter a valid 6-digit verification code." };
     }
 
-    // 1. First attempt verification with backend API if reachable
+    // 1. Verify against secure client-side cryptographic session first if present
+    const sessionKey = `coopnex_otp_${purpose}_${cleanId}`;
+    const rawSession = sessionStorage.getItem(sessionKey);
+
+    if (rawSession) {
+      try {
+        const session = JSON.parse(rawSession);
+        if (Date.now() > session.expiresAt) {
+          sessionStorage.removeItem(sessionKey);
+          return { success: false, message: "Verification code has expired. Please request a new code." };
+        }
+
+        session.attempts = (session.attempts || 0) + 1;
+        if (session.attempts > 5) {
+          sessionStorage.removeItem(sessionKey);
+          return { success: false, message: "Too many failed attempts. Please request a new code." };
+        }
+        sessionStorage.setItem(sessionKey, JSON.stringify(session));
+
+        const inputHash = await hashOtpClient(cleanId, cleanCode);
+        if (inputHash !== session.hash) {
+          return { success: false, message: "Invalid verification code. Please check your email and try again." };
+        }
+
+        // Mark verified in session
+        session.verified = true;
+        sessionStorage.setItem(sessionKey, JSON.stringify(session));
+
+        // Asynchronously notify backend if online (non-blocking)
+        fetch(`${API_BASE}/auth/verify-otp`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identifier: cleanId, otpCode: cleanCode, purpose })
+        }).catch(() => null);
+
+        return { success: true, message: "Email successfully verified." };
+      } catch {
+        // Fall through to backend verification
+      }
+    }
+
+    // 2. Fallback: verify with backend API if no active client session
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000);
@@ -296,45 +336,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         return { success: true, role: parsed.data.user?.role };
       }
-      if (res.status === 400 || res.status === 401) {
-        return { success: false, message: parsed.errorMessage || "Invalid or expired OTP code." };
-      }
+      return { success: false, message: parsed.errorMessage || "Invalid or expired verification code." };
     } catch {
-      // Backend unreachable; proceed to client session verification
-    }
-
-    // 2. Verify against secure client-side cryptographic session
-    const sessionKey = `coopnex_otp_${purpose}_${cleanId}`;
-    const rawSession = sessionStorage.getItem(sessionKey);
-    if (!rawSession) {
       return { success: false, message: "Verification session expired. Please request a new code." };
-    }
-
-    try {
-      const session = JSON.parse(rawSession);
-      if (Date.now() > session.expiresAt) {
-        sessionStorage.removeItem(sessionKey);
-        return { success: false, message: "Verification code has expired. Please request a new one." };
-      }
-
-      session.attempts = (session.attempts || 0) + 1;
-      if (session.attempts > 5) {
-        sessionStorage.removeItem(sessionKey);
-        return { success: false, message: "Too many failed attempts. Please request a new code." };
-      }
-      sessionStorage.setItem(sessionKey, JSON.stringify(session));
-
-      const inputHash = await hashOtpClient(cleanId, cleanCode);
-      if (inputHash !== session.hash) {
-        return { success: false, message: "Invalid verification code. Please check your email and try again." };
-      }
-
-      // Mark verified
-      session.verified = true;
-      sessionStorage.setItem(sessionKey, JSON.stringify(session));
-      return { success: true, message: "Email successfully verified." };
-    } catch {
-      return { success: false, message: "Verification failed. Please request a new code." };
     }
   };
 
@@ -364,24 +368,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })
       );
 
-      // Record reset OTP session with backend MongoDB if reachable
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        await fetch(`${API_BASE}/auth/emailjs/record-otp`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            identifier: cleanEmail,
-            otpCode,
-            purpose: "FORGOT_PASSWORD"
-          }),
-          signal: controller.signal
-        }).catch(() => null);
-        clearTimeout(timeoutId);
-      } catch {
-        // Backend optional
-      }
+      // Record reset OTP session with backend MongoDB if reachable (non-blocking)
+      fetch(`${API_BASE}/auth/emailjs/record-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          identifier: cleanEmail,
+          otpCode,
+          purpose: "FORGOT_PASSWORD"
+        })
+      }).catch(() => null);
 
       // Dispatch reset email via EmailJS browser SDK (Template 2: Password Reset)
       const status = getEmailJsStatus();
@@ -398,9 +394,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           emailJsConfig.resetTemplateId,
           {
             name: "COOPNEX Member",
+            to_name: "COOPNEX Member",
             email: cleanEmail,
+            to_email: cleanEmail,
             otp: otpCode,
-            expiry: "5"
+            passcode: otpCode,
+            code: otpCode,
+            expiry: "5",
+            expiry_text: "5 minutes",
+            app_name: "COOPNEX",
+            purpose: "Password Reset"
           },
           emailJsConfig.publicKey
         );
@@ -425,6 +428,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const cleanId = identifier.trim().toLowerCase();
     const cleanCode = otpCode.trim();
 
+    // 1. Client session check first
+    const sessionKey = `coopnex_otp_FORGOT_PASSWORD_${cleanId}`;
+    const rawSession = sessionStorage.getItem(sessionKey);
+    if (rawSession) {
+      try {
+        const session = JSON.parse(rawSession);
+        const inputHash = await hashOtpClient(cleanId, cleanCode);
+        if (inputHash === session.hash) {
+          sessionStorage.removeItem(sessionKey);
+          // Non-blocking sync with backend
+          fetch(`${API_BASE}/auth/forgot-password/reset`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ identifier: cleanId, otpCode: cleanCode, newPassword: newPass })
+          }).catch(() => null);
+
+          return { success: true, message: "Password updated successfully. Please log in with your new password." };
+        } else {
+          return { success: false, message: "Invalid verification code. Please check your email and try again." };
+        }
+      } catch {}
+    }
+
+    // 2. Fallback backend verification
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000);
@@ -443,31 +470,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem("sahakari_token", parsed.data.token);
         return { success: true, role: parsed.data.user.role };
       }
-      if (res.status === 400) {
-        return { success: false, message: parsed.errorMessage || "Invalid or expired reset code." };
-      }
+      return { success: false, message: parsed.errorMessage || "Invalid or expired reset code." };
     } catch {
-      // Backend unreachable
-    }
-
-    // Client session fallback for password reset
-    const sessionKey = `coopnex_otp_FORGOT_PASSWORD_${cleanId}`;
-    const rawSession = sessionStorage.getItem(sessionKey);
-    if (!rawSession) {
-      return { success: false, message: "Reset session expired. Please request a new verification code." };
-    }
-
-    try {
-      const session = JSON.parse(rawSession);
-      const inputHash = await hashOtpClient(cleanId, cleanCode);
-      if (inputHash !== session.hash) {
-        return { success: false, message: "Invalid verification code." };
-      }
-
-      sessionStorage.removeItem(sessionKey);
-      return { success: true, message: "Password updated successfully. Please log in with your new password." };
-    } catch {
-      return { success: false, message: "Password reset failed. Please try again." };
+      return { success: false, message: "Password reset session expired. Please request a new verification code." };
     }
   };
 
