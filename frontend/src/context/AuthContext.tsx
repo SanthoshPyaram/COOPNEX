@@ -711,6 +711,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const filteredWorkers = existingWorkers.filter(
             (w: any) => w.email?.toLowerCase() !== cleanEmail && w.employeeId !== finalUser.employeeId
           );
+          const workerProf = parsed.data?.user?.workerProfile || backendUser?.workerProfile;
+          const kycDocs = Array.isArray(workerProf?.kycDocuments) ? workerProf.kycDocuments : [];
+
           filteredWorkers.unshift({
             ...finalUser,
             _id: finalUser.id,
@@ -719,6 +722,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             societyName: data.selectedSociety || data.societyName || "Vijayawada Central Labour Co-op Society (PACS-04)",
             aadhaarNumber: data.aadhaarNumber,
             panNumber: data.panNumber,
+            aadhaarFileBase64: data.aadhaarFileBase64,
+            aadhaarOriginalFilename: data.aadhaarOriginalFilename,
+            panFileBase64: data.panFileBase64,
+            panOriginalFilename: data.panOriginalFilename,
+            pccFileBase64: data.pccFileBase64,
+            pccOriginalFilename: data.pccOriginalFilename,
+            kycDocuments: kycDocs.length > 0 ? kycDocs : [
+              ...(data.aadhaarFileBase64 || data.aadhaarNumber ? [{
+                documentType: "Aadhaar Card",
+                documentNumber: data.aadhaarNumber,
+                fileUrl: data.aadhaarFileBase64 || "",
+                storageReference: data.aadhaarFileBase64 || "",
+                originalFilename: data.aadhaarOriginalFilename || "aadhaar_card.pdf",
+                verificationStatus: "PENDING"
+              }] : []),
+              ...(data.panFileBase64 || data.panNumber ? [{
+                documentType: "PAN Card",
+                documentNumber: data.panNumber,
+                fileUrl: data.panFileBase64 || "",
+                storageReference: data.panFileBase64 || "",
+                originalFilename: data.panOriginalFilename || "pan_card.pdf",
+                verificationStatus: "PENDING"
+              }] : []),
+              ...(data.pccFileBase64 || data.pccNumber ? [{
+                documentType: "Police Clearance Certificate (PCC)",
+                documentNumber: data.pccNumber || "PCC-SUBMITTED",
+                fileUrl: data.pccFileBase64 || "",
+                storageReference: data.pccFileBase64 || "",
+                originalFilename: data.pccOriginalFilename || "police_clearance.pdf",
+                verificationStatus: "PENDING"
+              }] : [])
+            ],
             registeredAt: new Date().toLocaleString()
           });
           localStorage.setItem("coopnex_registered_workers", JSON.stringify(filteredWorkers));

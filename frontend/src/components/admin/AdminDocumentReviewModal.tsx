@@ -42,6 +42,7 @@ export interface ReviewDocumentData {
   aiVerificationNotes?: string;
   url?: string;
   mime?: string;
+  isAvailable?: boolean;
 }
 
 export interface AdminDocumentReviewModalProps {
@@ -130,25 +131,30 @@ export const AdminDocumentReviewModal: React.FC<AdminDocumentReviewModalProps> =
       return;
     }
 
-    const rawUrl = doc.url || doc.fileUrl || doc.storageReference || "";
-    if (!rawUrl) {
+    let cleanUrl = (doc.url || doc.fileUrl || doc.storageReference || "").trim();
+    if (!cleanUrl) {
       setBlobUrl(null);
       return;
     }
 
     // Direct blob: or data: can be rendered without fetching
-    if (rawUrl.startsWith("blob:") || rawUrl.startsWith("data:")) {
-      setBlobUrl(rawUrl);
+    if (cleanUrl.startsWith("blob:") || cleanUrl.startsWith("data:")) {
+      setBlobUrl(cleanUrl);
       return;
+    }
+
+    if (cleanUrl.startsWith("DOC-") || cleanUrl.startsWith("/DOC-")) {
+      cleanUrl = `/api/documents/${cleanUrl.replace(/^\//, "")}`;
     }
 
     let isMounted = true;
     setIsLoadingDoc(true);
 
     const token = localStorage.getItem("sahakari_token");
-    const fullUrl = rawUrl.startsWith("http")
-      ? rawUrl
-      : `${API_BASE.replace(/\/api\/?$/, "")}${rawUrl.startsWith("/") ? "" : "/"}${rawUrl}`;
+    const apiOrigin = API_BASE.replace(/\/api\/?$/, "");
+    const fullUrl = cleanUrl.startsWith("http")
+      ? cleanUrl
+      : `${apiOrigin}${cleanUrl.startsWith("/") ? "" : "/"}${cleanUrl}`;
 
     const fetchUrl = token && !fullUrl.includes("token=")
       ? `${fullUrl}${fullUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
@@ -165,11 +171,15 @@ export const AdminDocumentReviewModal: React.FC<AdminDocumentReviewModalProps> =
           const obj = URL.createObjectURL(blob);
           setBlobUrl(obj);
         } else {
-          setBlobUrl(fetchUrl);
+          setBlobUrl(null);
+          setImgError(true);
         }
       })
       .catch(() => {
-        if (isMounted) setBlobUrl(fetchUrl);
+        if (isMounted) {
+          setBlobUrl(null);
+          setImgError(true);
+        }
       })
       .finally(() => {
         if (isMounted) setIsLoadingDoc(false);
@@ -183,16 +193,19 @@ export const AdminDocumentReviewModal: React.FC<AdminDocumentReviewModalProps> =
   if (!isOpen || !doc || !worker) return null;
 
   const docUrl = blobUrl || doc.url || doc.fileUrl || doc.storageReference || "";
+  const docMime = (doc.mime || "").toLowerCase();
+  const filename = (doc.originalFilename || "").toLowerCase();
   const isImage =
-    doc.mime?.includes("image") ||
+    docMime.includes("image") ||
     docUrl.startsWith("data:image") ||
-    docUrl.startsWith("blob:") ||
-    /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(doc.originalFilename || docUrl);
+    /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(filename) ||
+    (/\.(jpg|jpeg|png|webp|gif|svg)$/i.test(docUrl) && !docUrl.startsWith("blob:"));
 
   const isPdf =
-    doc.mime?.includes("pdf") ||
+    docMime.includes("pdf") ||
     docUrl.startsWith("data:application/pdf") ||
-    /\.pdf$/i.test(doc.originalFilename || docUrl) ||
+    /\.pdf$/i.test(filename) ||
+    (/\.pdf$/i.test(docUrl) && !docUrl.startsWith("blob:")) ||
     (!isImage && docUrl.length > 0);
 
   const docStatus = doc.verificationStatus || worker.verificationStatus || "PENDING";
@@ -610,75 +623,59 @@ export const AdminDocumentReviewModal: React.FC<AdminDocumentReviewModalProps> =
                   </div>
                 )
               ) : (
-                /* High-Fidelity Official Statutory Identity Document Card */
-                <div className="p-5 sm:p-6 max-w-md w-full bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 space-y-4 animate-fadeIn">
-                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-[11px] shadow-xs">
-                        GOV
-                      </div>
-                      <div>
-                        <div className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                          Official Statutory Registry
-                        </div>
-                        <div className="font-bold text-xs text-slate-900 dark:text-white">
-                          {doc.documentType === "POLICE_CLEARANCE"
-                            ? "Police Clearance Record (PCC)"
-                            : doc.documentType === "PAN"
-                            ? "Income Tax Dept — PAN Record"
-                            : doc.documentType === "AADHAAR"
-                            ? "UIDAI — Aadhaar Identity Record"
-                            : doc.documentType}
-                        </div>
-                      </div>
-                    </div>
-                    <span className="px-2 py-0.5 rounded text-[9px] font-black tracking-wider bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                      RECORD VERIFIED
-                    </span>
+                /* Authentic Document Scan Unavailable State */
+                <div className="p-6 max-w-md w-full bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 space-y-4 animate-fadeIn text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 flex items-center justify-center mx-auto text-slate-500 dark:text-slate-400 shadow-2xs">
+                    <FileText className="w-6 h-6" />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2.5 text-xs">
-                    <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                      <div className="text-[9px] uppercase font-bold text-slate-400">Citizen Holder</div>
-                      <div className="font-bold text-slate-800 dark:text-slate-100 truncate mt-0.5">{worker.name}</div>
-                    </div>
-                    <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                      <div className="text-[9px] uppercase font-bold text-slate-400">Worker ID</div>
-                      <div className="font-mono font-bold text-blue-600 dark:text-blue-400 truncate mt-0.5">
-                        {worker._id || worker.id || worker.employeeId}
-                      </div>
-                    </div>
-                    <div className="col-span-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                      <div className="text-[9px] uppercase font-bold text-slate-400">Statutory Identifier / Number</div>
-                      <div className="font-mono font-black text-xs text-slate-900 dark:text-white mt-0.5 break-all">
-                        {doc.documentNumber || "Recorded in Statutory Dossier"}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px] text-emerald-800 dark:text-emerald-300 space-y-1">
-                    <div className="flex items-center gap-1.5 font-bold">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      <span>National Registry &amp; CCTNS Attestation Clear</span>
-                    </div>
-                    <p className="text-[10px] text-emerald-700 dark:text-emerald-400 leading-snug">
-                      Verified identity document confirmed in cooperative labour repository.
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                      Document Scan Unavailable
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                      The uploaded file for this statutory document ({doc.documentType}) is unavailable or was not attached during artisan registration.
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between pt-1 text-[10px]">
-                    <span className="text-slate-400 font-mono truncate max-w-[200px]">
-                      {doc.originalFilename || `${doc.documentType}.pdf`}
-                    </span>
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 text-left space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400 text-[11px]">Document Type:</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">{doc.documentType}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400 text-[11px]">Document Number:</span>
+                      <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{doc.documentNumber || "Not recorded"}</span>
+                    </div>
+                    {doc.originalFilename && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-400 text-[11px]">Expected Filename:</span>
+                        <span className="font-mono text-slate-600 dark:text-slate-300 truncate max-w-[180px]">{doc.originalFilename}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-slate-400 text-[11px]">Artisan / Worker:</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">{worker.name} ({worker.employeeId || worker._id || worker.id})</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-1 flex items-center justify-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setReuploadPromptOpen(true)}
+                      className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Request Re-upload</span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => {
                         setImgError(false);
                         setBlobUrl(null);
                       }}
-                      className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-bold flex items-center gap-1 cursor-pointer"
+                      className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition cursor-pointer"
                     >
-                      <RotateCcw className="w-3 h-3" />
                       Reload Stream
                     </button>
                   </div>

@@ -52,8 +52,6 @@ export const KycDetailDrawer: React.FC<KycDetailDrawerProps> = ({
   const [showApprovalConfirmModal, setShowApprovalConfirmModal] = useState<boolean>(false);
   const [confirmedManualReview, setConfirmedManualReview] = useState<boolean>(false);
 
-  if (!worker) return null;
-
   const viewDocument = async (doc: any) => {
     const targetUrl = doc.fileUrl || doc.storageReference || doc.url;
     if (!targetUrl) {
@@ -142,6 +140,8 @@ export const KycDetailDrawer: React.FC<KycDetailDrawerProps> = ({
 
     return list;
   }, [worker]);
+
+  if (!worker) return null;
 
   const police = worker.policeVerification;
 

@@ -77,7 +77,6 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
 
   const effectiveKycDocuments = React.useMemo(() => {
     if (!worker) return [];
-    const sampleDocPdf = "data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsOfCjEgMCBvYmoKPDwKL1RpdGxlIChTdGF0dXRvcnkgRG9jdW1lbnQgRG9zc2llcikKL0F1dGhvciAoQ09PUE5FWCkKPj4KZW5kb2JqCg==";
     const rawList: any[] = worker.kycDocuments ? [...worker.kycDocuments] : [];
 
     const hasAadhaar = rawList.some((d: any) => d.documentType?.toLowerCase().includes("aadhaar"));
@@ -87,8 +86,8 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
         documentNumber: worker.aadhaarNumber ? `XXXX-XXXX-${String(worker.aadhaarNumber).slice(-4)}` : "Recorded in Dossier",
         verificationStatus: worker.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING",
         checksumValid: true,
-        fileUrl: worker.aadhaarFileBase64 || sampleDocPdf,
-        originalFilename: worker.aadhaarOriginalFilename || "aadhaar_card.pdf",
+        fileUrl: worker.aadhaarFileBase64 || "",
+        originalFilename: worker.aadhaarOriginalFilename || (worker.aadhaarFileBase64 ? "aadhaar_card.pdf" : undefined),
         issuer: "UIDAI",
         uploadedAt: worker.createdAt || "Registration Dossier"
       });
@@ -101,16 +100,29 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
         documentNumber: worker.panNumber ? `${String(worker.panNumber).slice(0, 5)}XXXX${String(worker.panNumber).slice(-1)}` : "Recorded in Dossier",
         verificationStatus: worker.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING",
         formatValid: true,
-        fileUrl: worker.panFileBase64 || sampleDocPdf,
-        originalFilename: worker.panOriginalFilename || "pan_card.pdf",
+        fileUrl: worker.panFileBase64 || "",
+        originalFilename: worker.panOriginalFilename || (worker.panFileBase64 ? "pan_card.pdf" : undefined),
         issuer: "Income Tax Department",
+        uploadedAt: worker.createdAt || "Registration Dossier"
+      });
+    }
+
+    const hasPcc = rawList.some((d: any) => d.documentType?.toLowerCase().includes("police") || d.documentType?.toLowerCase().includes("pcc"));
+    if (!hasPcc && (worker.pccFileBase64 || worker.pccNumber)) {
+      rawList.push({
+        documentType: "Police Clearance Certificate (PCC)",
+        documentNumber: worker.pccNumber || "Recorded in Dossier",
+        verificationStatus: worker.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING",
+        fileUrl: worker.pccFileBase64 || "",
+        originalFilename: worker.pccOriginalFilename || (worker.pccFileBase64 ? "police_clearance.pdf" : undefined),
+        issuer: "Local Police",
         uploadedAt: worker.createdAt || "Registration Dossier"
       });
     }
 
     return rawList.map((d: any) => ({
       ...d,
-      fileUrl: d.fileUrl || d.storageReference || d.url || sampleDocPdf
+      fileUrl: (d.fileUrl || d.storageReference || d.url || "").trim()
     }));
   }, [worker]);
 
@@ -119,42 +131,56 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
   const police = worker.policeVerification;
 
   const viewDocument = async (doc: any) => {
-    const targetUrl = doc.fileUrl || doc.storageReference || doc.url;
+    let targetUrl = (doc.fileUrl || doc.storageReference || doc.url || "").trim();
     if (!targetUrl) {
       alert("No uploaded document file found for this record.");
       return;
     }
+
+    if (targetUrl.startsWith("DOC-") || targetUrl.startsWith("/DOC-")) {
+      targetUrl = `/api/documents/${targetUrl.replace(/^\//, "")}`;
+    }
+
     const token = localStorage.getItem("sahakari_token");
     const isImageFile = /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(doc.originalFilename || targetUrl);
     let resolvedUrl = targetUrl;
     let resolvedMime = doc.mimeType || (isImageFile ? (doc.originalFilename?.endsWith(".svg") ? "image/svg+xml" : "image/jpeg") : (targetUrl.startsWith("data:image") ? "image/png" : "application/pdf"));
+    let isAvailable = true;
 
     try {
-      const rawBase = targetUrl.startsWith("http") || targetUrl.startsWith("data:")
-        ? targetUrl
-        : `${API_BASE.replace(/\/api\/?$/, "")}${targetUrl.startsWith("/") ? "" : "/"}${targetUrl}`;
-
-      const fullUrl = rawBase.startsWith("http") && token && !rawBase.includes("token=")
-        ? `${rawBase}${rawBase.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
-        : rawBase;
-
-      if (fullUrl.startsWith("data:")) {
-        resolvedUrl = fullUrl;
-        resolvedMime = fullUrl.split(";")[0].replace("data:", "");
+      if (targetUrl.startsWith("data:") || targetUrl.startsWith("blob:")) {
+        resolvedUrl = targetUrl;
+        if (targetUrl.startsWith("data:")) {
+          resolvedMime = targetUrl.split(";")[0].replace("data:", "");
+        }
       } else {
-        const res = await fetch(fullUrl, {
+        const apiOrigin = API_BASE.replace(/\/api\/?$/, "");
+        const fullUrl = targetUrl.startsWith("http")
+          ? targetUrl
+          : `${apiOrigin}${targetUrl.startsWith("/") ? "" : "/"}${targetUrl}`;
+
+        const fetchUrl = fullUrl.startsWith("http") && token && !fullUrl.includes("token=")
+          ? `${fullUrl}${fullUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
+          : fullUrl;
+
+        const res = await fetch(fetchUrl, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
+
         if (res.ok) {
           const blob = await res.blob();
           resolvedUrl = URL.createObjectURL(blob);
           resolvedMime = blob.type || resolvedMime;
         } else {
-          resolvedUrl = fullUrl;
+          console.warn(`Document request returned status ${res.status}`);
+          isAvailable = false;
+          resolvedUrl = "";
         }
       }
-    } catch {
-      resolvedUrl = targetUrl;
+    } catch (err) {
+      console.warn("Document network fetch error:", err);
+      isAvailable = false;
+      resolvedUrl = "";
     }
 
     setPreviewDoc({
@@ -164,12 +190,13 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
       checksumValid: doc.checksumValid,
       formatValid: doc.formatValid,
       fileUrl: targetUrl,
-      originalFilename: doc.originalFilename || `${doc.documentType || "document"}.pdf`,
+      originalFilename: doc.originalFilename || `${doc.documentType || "document"}.${resolvedMime.includes("image") ? "jpg" : "pdf"}`,
       uploadedAt: doc.uploadedAt || worker.createdAt || "Registration Dossier",
       issuer: doc.issuer,
       aiVerificationNotes: doc.aiVerificationNotes,
       url: resolvedUrl,
-      mime: resolvedMime
+      mime: resolvedMime,
+      isAvailable
     });
   };
 
@@ -603,7 +630,7 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
                             </div>
 
                             <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                              {docTarget && (
+                              {docTarget ? (
                                 <button
                                   type="button"
                                   onClick={() => viewDocument(doc)}
@@ -612,6 +639,10 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
                                   <FileText className="w-3 h-3" />
                                   <span>View Document</span>
                                 </button>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded text-[10px] text-slate-400 dark:text-slate-500 italic bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
+                                  Document unavailable
+                                </span>
                               )}
                               <span
                                 className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${

@@ -555,11 +555,34 @@ const loadCombinedWorkforce = () => {
         validUntil: "Pending",
         sealText: "COOPERATIVE LABOUR WELFARE BOARD"
       },
-      kycDocuments: [
-        { documentType: "Police Clearance Certificate (PCC)", documentNumber: "PCC-PRE-CHECK", verificationStatus: w.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING_AUDIT", issuer: "Local Police" },
-        { documentType: "Aadhaar Card", documentNumber: w.aadhaarNumber || "XXXX-XXXX-8921", verificationStatus: "SYSTEM_VERIFIED", issuer: "UIDAI", systemCheckDetails: "UIDAI Verhoeff D5 Checksum Valid" },
-        { documentType: "PAN Card", documentNumber: w.panNumber || "ABCDE1234F", verificationStatus: "SYSTEM_VERIFIED", issuer: "NSDL", systemCheckDetails: "NSDL Active Match 100%" }
-      ]
+      kycDocuments: Array.isArray(w.kycDocuments) && w.kycDocuments.length > 0
+        ? w.kycDocuments
+        : [
+            ...(w.aadhaarFileBase64 || w.aadhaarNumber ? [{
+              documentType: "Aadhaar Card",
+              documentNumber: w.aadhaarNumber || "Recorded in Dossier",
+              fileUrl: w.aadhaarFileBase64 || "",
+              storageReference: w.aadhaarFileBase64 || "",
+              originalFilename: w.aadhaarOriginalFilename || (w.aadhaarFileBase64 ? "aadhaar_card.pdf" : undefined),
+              verificationStatus: w.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING"
+            }] : []),
+            ...(w.panFileBase64 || w.panNumber ? [{
+              documentType: "PAN Card",
+              documentNumber: w.panNumber || "Recorded in Dossier",
+              fileUrl: w.panFileBase64 || "",
+              storageReference: w.panFileBase64 || "",
+              originalFilename: w.panOriginalFilename || (w.panFileBase64 ? "pan_card.pdf" : undefined),
+              verificationStatus: w.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING"
+            }] : []),
+            ...(w.pccFileBase64 || w.pccNumber ? [{
+              documentType: "Police Clearance Certificate (PCC)",
+              documentNumber: w.pccNumber || "PCC-RECORD",
+              fileUrl: w.pccFileBase64 || "",
+              storageReference: w.pccFileBase64 || "",
+              originalFilename: w.pccOriginalFilename || (w.pccFileBase64 ? "police_clearance.pdf" : undefined),
+              verificationStatus: w.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING"
+            }] : [])
+          ]
     }));
 
     const existingEmails = new Set(mappedLocal.map((w: any) => w.email?.toLowerCase()));
@@ -614,11 +637,7 @@ export const SuperAdminPage: React.FC = () => {
               welfareContribution: "₹0",
               createdAt: sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : "Just now",
               employeeId: sub.employeeId || sub.workerIdNumber || "COOP-WRK-MEMBER",
-              kycDocuments: sub.kycDocuments && sub.kycDocuments.length > 0 ? sub.kycDocuments : [
-                { documentType: "Police Clearance Certificate (PCC)", documentNumber: "PCC-PRE-CHECK", verificationStatus: sub.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING", issuer: "Local Police" },
-                { documentType: "Aadhaar Card", documentNumber: "XXXX-XXXX-8921", verificationStatus: "PENDING", issuer: "UIDAI", systemCheckDetails: "UIDAI Verhoeff Checksum Valid" },
-                { documentType: "PAN Card", documentNumber: "ABCDE1234F", verificationStatus: "PENDING", issuer: "NSDL", systemCheckDetails: "NSDL Active Match 100%" }
-              ],
+              kycDocuments: Array.isArray(sub.kycDocuments) ? sub.kycDocuments : [],
               policeVerification: {
                 certificateNumber: "PCC-PASSED",
                 policeStation: `${sub.district || "Vijayawada"} City Police`,
@@ -673,11 +692,34 @@ export const SuperAdminPage: React.FC = () => {
           validUntil: "Pending",
           sealText: "COOPERATIVE LABOUR WELFARE BOARD"
         },
-        kycDocuments: [
-          { documentType: "Police Clearance Certificate (PCC)", documentNumber: "PCC-PRE-CHECK", verificationStatus: w.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING_AUDIT", issuer: "Local Police" },
-          { documentType: "Aadhaar Card", documentNumber: w.aadhaarNumber || "XXXX-XXXX-8921", verificationStatus: "SYSTEM_VERIFIED", issuer: "UIDAI", systemCheckDetails: "UIDAI Verhoeff D5 Checksum Valid" },
-          { documentType: "PAN Card", documentNumber: w.panNumber || "ABCDE1234F", verificationStatus: "SYSTEM_VERIFIED", issuer: "NSDL", systemCheckDetails: "NSDL Active Match 100%" }
-        ]
+        kycDocuments: Array.isArray(w.kycDocuments) && w.kycDocuments.length > 0
+          ? w.kycDocuments
+          : [
+              ...(w.aadhaarFileBase64 || w.aadhaarNumber ? [{
+                documentType: "Aadhaar Card",
+                documentNumber: w.aadhaarNumber || "Recorded in Dossier",
+                fileUrl: w.aadhaarFileBase64 || "",
+                storageReference: w.aadhaarFileBase64 || "",
+                originalFilename: w.aadhaarOriginalFilename || (w.aadhaarFileBase64 ? "aadhaar_card.pdf" : undefined),
+                verificationStatus: w.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING"
+              }] : []),
+              ...(w.panFileBase64 || w.panNumber ? [{
+                documentType: "PAN Card",
+                documentNumber: w.panNumber || "Recorded in Dossier",
+                fileUrl: w.panFileBase64 || "",
+                storageReference: w.panFileBase64 || "",
+                originalFilename: w.panOriginalFilename || (w.panFileBase64 ? "pan_card.pdf" : undefined),
+                verificationStatus: w.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING"
+              }] : []),
+              ...(w.pccFileBase64 || w.pccNumber ? [{
+                documentType: "Police Clearance Certificate (PCC)",
+                documentNumber: w.pccNumber || "PCC-RECORD",
+                fileUrl: w.pccFileBase64 || "",
+                storageReference: w.pccFileBase64 || "",
+                originalFilename: w.pccOriginalFilename || (w.pccFileBase64 ? "police_clearance.pdf" : undefined),
+                verificationStatus: w.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING"
+              }] : [])
+            ]
       }));
 
       // Merge: DB workers first, then local workers not yet in DB, then static registry

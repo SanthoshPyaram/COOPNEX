@@ -57,11 +57,14 @@ export const getDocument = async (req: AuthenticatedRequest, res: Response): Pro
     }
 
     const userRole = req.user.role;
-    const isSuperAdmin = userRole === USER_ROLES.SUPER_ADMIN;
+    const isAuthorizedAdmin =
+      userRole === USER_ROLES.SUPER_ADMIN ||
+      userRole === USER_ROLES.FEDERATION_ADMIN ||
+      userRole === USER_ROLES.SOCIETY_ADMIN;
 
     // Check if worker owns this document
     let isOwner = false;
-    if (!isSuperAdmin) {
+    if (!isAuthorizedAdmin) {
       const worker = await Worker.findOne({
         $or: [
           { userId: req.user._id },
@@ -76,10 +79,10 @@ export const getDocument = async (req: AuthenticatedRequest, res: Response): Pro
       }
     }
 
-    if (!isSuperAdmin && !isOwner) {
+    if (!isAuthorizedAdmin && !isOwner) {
       res.status(403).json({
         success: false,
-        message: "Access Denied: Statutory KYC documents can only be inspected by authorized Super Administrators."
+        message: "Access Denied: Statutory KYC documents can only be inspected by authorized Administrators."
       });
       return;
     }

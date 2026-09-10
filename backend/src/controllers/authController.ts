@@ -373,7 +373,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
               const saved = await saveDocument({
                 rawContent: rawAadhaarFile,
                 originalName: aadhaarName,
-                mimeType: rawAadhaarFile.startsWith("data:") ? rawAadhaarFile.split(";")[0].replace("data:", "") : "application/pdf"
+                mimeType: rawAadhaarFile.startsWith("data:") ? rawAadhaarFile.split(";")[0].replace("data:", "") : "application/pdf",
+                workerId: user._id.toString(),
+                documentType: "AADHAAR"
               });
               aadhaarRef = saved.storageReference;
               aadhaarSize = saved.sizeBytes;
@@ -414,7 +416,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
               const saved = await saveDocument({
                 rawContent: rawPanFile,
                 originalName: panName,
-                mimeType: rawPanFile.startsWith("data:") ? rawPanFile.split(";")[0].replace("data:", "") : "application/pdf"
+                mimeType: rawPanFile.startsWith("data:") ? rawPanFile.split(";")[0].replace("data:", "") : "application/pdf",
+                workerId: user._id.toString(),
+                documentType: "PAN"
               });
               panRef = saved.storageReference;
               panSize = saved.sizeBytes;
@@ -455,7 +459,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
               const saved = await saveDocument({
                 rawContent: rawPccFile,
                 originalName: pccName,
-                mimeType: rawPccFile.startsWith("data:") ? rawPccFile.split(";")[0].replace("data:", "") : "application/pdf"
+                mimeType: rawPccFile.startsWith("data:") ? rawPccFile.split(";")[0].replace("data:", "") : "application/pdf",
+                workerId: user._id.toString(),
+                documentType: "POLICE_CLEARANCE"
               });
               pccRef = saved.storageReference;
               pccSize = saved.sizeBytes;
