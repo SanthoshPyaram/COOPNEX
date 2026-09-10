@@ -22,6 +22,8 @@ coverage/
 !.env.example
 backend/uploads/
 uploads/
+backend/data_backup/
+data_backup/
 
 # Python
 __pycache__/

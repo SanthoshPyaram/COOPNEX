@@ -13,7 +13,7 @@ dotenv.config({ path: frontendEnvPath });
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import mongoose from "mongoose";
-import { connectDB } from "./config/db";
+import { connectDB, disconnectDB } from "./config/db";
 import { ensureDemoAccounts } from "./services/demoSeedService";
 import { apiRouter } from "./routes";
 import http from "http";
@@ -161,13 +161,25 @@ const startServer = async () => {
   startPortRedirectBridge(5173, 3000);
   startPortRedirectBridge(3001, 3000);
 
-  app.listen(PORT, () => {
+  const server = app.listen(Number(PORT), "0.0.0.0", () => {
     console.log(`=======================================================`);
     console.log(` SAHAKARI SEVA - National Cooperative Marketplace API`);
-    console.log(` Running on: http://localhost:${PORT}`);
-    console.log(` Health:     http://localhost:${PORT}/health`);
+    console.log(` Running on: http://0.0.0.0:${PORT}`);
+    console.log(` Health:     http://0.0.0.0:${PORT}/health`);
     console.log(`=======================================================`);
   });
+
+  const handleShutdown = async (signal: string) => {
+    console.log(`[Server] Received ${signal}. Shutting down gracefully...`);
+    server.close(async () => {
+      await disconnectDB();
+      console.log("[Server] Process exited cleanly.");
+      process.exit(0);
+    });
+  };
+
+  process.on("SIGTERM", () => handleShutdown("SIGTERM"));
+  process.on("SIGINT", () => handleShutdown("SIGINT"));
 };
 
 startServer();

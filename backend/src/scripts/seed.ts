@@ -16,8 +16,9 @@ dotenv.config();
 const SEED_PASSWORD = "DemoPassword123!";
 
 export async function seedDatabase() {
-  const mongoUri = process.env.MONGODB_URI || "mongodb://localhost:27017/sahakari_seva";
-  console.log(`[Seed] Connecting to MongoDB: ${mongoUri}...`);
+  const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || "mongodb://localhost:27017/sahakari_seva";
+  const maskedUri = mongoUri.replace(/\/\/[^:]+:[^@]+@/, "//***:***@");
+  console.log(`[Seed] Connecting to MongoDB: ${maskedUri}...`);
   await mongoose.connect(mongoUri);
 
   console.log("[Seed] Clearing old data...");

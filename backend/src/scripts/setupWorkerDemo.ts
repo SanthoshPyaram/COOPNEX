@@ -10,8 +10,9 @@ import { USER_ROLES } from "../config/constants";
 dotenv.config();
 
 export async function setupWorkerDemo() {
-  const mongoUri = process.env.MONGODB_URI || "mongodb://localhost:27017/sahakari_seva";
-  console.log(`[Worker Demo Setup] Connecting to MongoDB: ${mongoUri}...`);
+  const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || "mongodb://localhost:27017/sahakari_seva";
+  const maskedUri = mongoUri.replace(/\/\/[^:]+:[^@]+@/, "//***:***@");
+  console.log(`[Worker Demo Setup] Connecting to MongoDB: ${maskedUri}...`);
   await mongoose.connect(mongoUri);
 
   const DEMO_EMAIL = "worker.demo@coopnex.in";
