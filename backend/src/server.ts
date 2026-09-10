@@ -129,6 +129,7 @@ app.get(["/health", "/api/health"], (_req: Request, res: Response) => {
 
 // API Routes
 app.use("/api", apiRouter);
+app.use(apiRouter); // Alias to resolve /admin/... and /documents/... if requested directly
 
 // Production Static Serving
 const frontendDist = path.resolve(__dirname, "../../frontend/dist");

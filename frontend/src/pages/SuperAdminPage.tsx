@@ -602,6 +602,20 @@ export const SuperAdminPage: React.FC = () => {
   const [selectedCityId, setSelectedCityId] = useState<string>("vja");
   const [isWelfareFlipped, setIsWelfareFlipped] = useState<boolean>(false);
 
+  // Payments & Revenue Center state
+  const [paymentTransactions] = useState<AdminPaymentTransaction[]>(DETAILED_PAYMENT_TRANSACTIONS);
+  const [selectedPaymentTx, setSelectedPaymentTx] = useState<AdminPaymentTransaction | null>(null);
+  const [paymentSearch, setPaymentSearch] = useState<string>("");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("ALL");
+  const [paymentSettlementFilter, setPaymentSettlementFilter] = useState<string>("ALL");
+
+  // Security Center state
+  const [securityEvents, setSecurityEvents] = useState<any[]>([
+    { eventId: "SEC-902", eventType: "LOGIN_SUCCESS", riskLevel: "LOW", ipAddress: "127.0.0.1", actionTaken: "MFA TOTP verified successfully (Session authorized)", time: "Today, 02:45 PM" },
+    { eventId: "SEC-901", eventType: "MFA_FAILED", riskLevel: "MEDIUM", ipAddress: "192.168.1.45", actionTaken: "Invalid 6-digit TOTP code entered (Attempt 1 of 5)", time: "Today, 01:20 PM" },
+    { eventId: "SEC-900", eventType: "CRITICAL_ACTION", riskLevel: "HIGH", ipAddress: "127.0.0.1", actionTaken: "Worker WRK-KYC-004 blacklisted for forged precinct stamp", time: "Today, 10:15 AM" }
+  ]);
+
   // Sync workforce with MongoDB backend & localStorage
   const fetchBackendAndLocalWorkforce = async () => {
     try {
@@ -768,19 +782,6 @@ export const SuperAdminPage: React.FC = () => {
     return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
-  // Payments & Revenue Center state
-  const [paymentTransactions] = useState<AdminPaymentTransaction[]>(DETAILED_PAYMENT_TRANSACTIONS);
-  const [selectedPaymentTx, setSelectedPaymentTx] = useState<AdminPaymentTransaction | null>(null);
-  const [paymentSearch, setPaymentSearch] = useState<string>("");
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("ALL");
-  const [paymentSettlementFilter, setPaymentSettlementFilter] = useState<string>("ALL");
-
-  // Security Center state
-  const [securityEvents, setSecurityEvents] = useState<any[]>([
-    { eventId: "SEC-902", eventType: "LOGIN_SUCCESS", riskLevel: "LOW", ipAddress: "127.0.0.1", actionTaken: "MFA TOTP verified successfully (Session authorized)", time: "Today, 02:45 PM" },
-    { eventId: "SEC-901", eventType: "MFA_FAILED", riskLevel: "MEDIUM", ipAddress: "192.168.1.45", actionTaken: "Invalid 6-digit TOTP code entered (Attempt 1 of 5)", time: "Today, 01:20 PM" },
-    { eventId: "SEC-900", eventType: "CRITICAL_ACTION", riskLevel: "HIGH", ipAddress: "127.0.0.1", actionTaken: "Worker WRK-KYC-004 blacklisted for forged precinct stamp", time: "Today, 10:15 AM" }
-  ]);
 
   const handleApproveWorkerKyc = (workerId: string, level: number) => {
     // 1. Update React state immediately

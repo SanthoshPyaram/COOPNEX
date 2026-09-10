@@ -63,18 +63,6 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
   const [showApprovalConfirmModal, setShowApprovalConfirmModal] = useState<boolean>(false);
   const [confirmedManualReview, setConfirmedManualReview] = useState<boolean>(false);
 
-  const workerIdKey = worker?._id || worker?.id || worker?.employeeId;
-  React.useEffect(() => {
-    if (worker) {
-      setSelectedLevel(worker.verificationLevel || 1);
-      setActiveTab(initialTab);
-      setIsRejecting(false);
-      setRejectReason("");
-      setShowApprovalConfirmModal(false);
-      setConfirmedManualReview(false);
-    }
-  }, [workerIdKey, initialTab]);
-
   const effectiveKycDocuments = React.useMemo(() => {
     if (!worker) return [];
     const rawList: any[] = worker.kycDocuments ? [...worker.kycDocuments] : [];
@@ -125,6 +113,18 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
       fileUrl: (d.fileUrl || d.storageReference || d.url || "").trim()
     }));
   }, [worker]);
+
+  const workerIdKey = worker?._id || worker?.id || worker?.employeeId;
+  React.useEffect(() => {
+    if (worker) {
+      setSelectedLevel(worker.verificationLevel || 1);
+      setActiveTab(initialTab);
+      setIsRejecting(false);
+      setRejectReason("");
+      setShowApprovalConfirmModal(false);
+      setConfirmedManualReview(false);
+    }
+  }, [workerIdKey, initialTab]);
 
   if (!worker) return null;
 
@@ -892,48 +892,50 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
       )}
 
       {/* DEDICATED TWO-COLUMN ADMIN DOCUMENT REVIEW WORKSPACE */}
-      <AdminDocumentReviewModal
-        isOpen={Boolean(previewDoc)}
-        onClose={() => setPreviewDoc(null)}
-        worker={worker}
-        document={previewDoc}
-        onApproveDocument={(docType) => {
-          if (worker.kycDocuments) {
-            worker.kycDocuments = worker.kycDocuments.map((d: any) =>
-              d.documentType === docType ? { ...d, verificationStatus: "VERIFIED" } : d
-            );
-          }
-          if (previewDoc) {
-            setPreviewDoc((prev) => prev ? { ...prev, verificationStatus: "VERIFIED" } : null);
-          }
-        }}
-        onRejectDocument={(docType, reason) => {
-          if (worker.kycDocuments) {
-            worker.kycDocuments = worker.kycDocuments.map((d: any) =>
-              d.documentType === docType
-                ? { ...d, verificationStatus: "REJECTED", rejectionReason: reason }
-                : d
-            );
-          }
-          if (previewDoc) {
-            setPreviewDoc((prev) => prev ? { ...prev, verificationStatus: "REJECTED" } : null);
-          }
-        }}
-        onRequestReupload={(docType, feedback) => {
-          if (worker.kycDocuments) {
-            worker.kycDocuments = worker.kycDocuments.map((d: any) =>
-              d.documentType === docType
-                ? { ...d, verificationStatus: "REUPLOAD_REQUESTED", aiVerificationNotes: feedback }
-                : d
-            );
-          }
-          if (previewDoc) {
-            setPreviewDoc((prev) =>
-              prev ? { ...prev, verificationStatus: "REUPLOAD_REQUESTED", aiVerificationNotes: feedback } : null
-            );
-          }
-        }}
-      />
+      {previewDoc && (
+        <AdminDocumentReviewModal
+          isOpen={Boolean(previewDoc)}
+          onClose={() => setPreviewDoc(null)}
+          worker={worker}
+          document={previewDoc}
+          onApproveDocument={(docType) => {
+            if (worker.kycDocuments) {
+              worker.kycDocuments = worker.kycDocuments.map((d: any) =>
+                d.documentType === docType ? { ...d, verificationStatus: "VERIFIED" } : d
+              );
+            }
+            if (previewDoc) {
+              setPreviewDoc((prev) => prev ? { ...prev, verificationStatus: "VERIFIED" } : null);
+            }
+          }}
+          onRejectDocument={(docType, reason) => {
+            if (worker.kycDocuments) {
+              worker.kycDocuments = worker.kycDocuments.map((d: any) =>
+                d.documentType === docType
+                  ? { ...d, verificationStatus: "REJECTED", rejectionReason: reason }
+                  : d
+              );
+            }
+            if (previewDoc) {
+              setPreviewDoc((prev) => prev ? { ...prev, verificationStatus: "REJECTED" } : null);
+            }
+          }}
+          onRequestReupload={(docType, feedback) => {
+            if (worker.kycDocuments) {
+              worker.kycDocuments = worker.kycDocuments.map((d: any) =>
+                d.documentType === docType
+                  ? { ...d, verificationStatus: "REUPLOAD_REQUESTED", aiVerificationNotes: feedback }
+                  : d
+              );
+            }
+            if (previewDoc) {
+              setPreviewDoc((prev) =>
+                prev ? { ...prev, verificationStatus: "REUPLOAD_REQUESTED", aiVerificationNotes: feedback } : null
+              );
+            }
+          }}
+        />
+      )}
 
       {/* SUPER ADMIN SCRUTINY ATTESTATION CONFIRMATION */}
       {showApprovalConfirmModal && (
