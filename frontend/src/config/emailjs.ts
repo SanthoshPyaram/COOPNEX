@@ -13,10 +13,10 @@
  */
 
 export const emailJsConfig = {
-  serviceId: (import.meta.env.VITE_EMAILJS_SERVICE_ID || "").trim(),
-  verificationTemplateId: (import.meta.env.VITE_EMAILJS_VERIFICATION_TEMPLATE_ID || "").trim(),
-  resetTemplateId: (import.meta.env.VITE_EMAILJS_RESET_TEMPLATE_ID || "").trim(),
-  publicKey: (import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "").trim()
+  serviceId: (import.meta.env.VITE_EMAILJS_SERVICE_ID || "service_9t0h2rw").trim(),
+  verificationTemplateId: (import.meta.env.VITE_EMAILJS_VERIFICATION_TEMPLATE_ID || "template_fp4f1mm").trim(),
+  resetTemplateId: (import.meta.env.VITE_EMAILJS_RESET_TEMPLATE_ID || "template_be8rx9d").trim(),
+  publicKey: (import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "tl2Adrvyaq949VsOc").trim()
 };
 
 /**
