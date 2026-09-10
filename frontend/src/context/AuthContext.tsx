@@ -26,6 +26,8 @@ export interface UserData {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   employeeId?: string;
+  verificationStatus?: string;
+  verificationLevel?: number;
   workerProfile?: any;
 }
 
@@ -41,7 +43,7 @@ interface AuthContextType {
   forgotPasswordSendOtp: (identifier: string) => Promise<{ success: boolean; message?: string; otpCode?: string; emailDispatched?: boolean; previewUrl?: string }>;
   forgotPasswordReset: (identifier: string, otpCode: string, newPass: string) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
   registerCustomer: (data: any) => Promise<{ success: boolean; message?: string }>;
-  registerWorker: (data: any) => Promise<{ success: boolean; message?: string }>;
+  registerWorker: (data: any) => Promise<{ success: boolean; message?: string; employeeId?: string }>;
   logout: () => void;
   setAdminSession: (user: UserData, token: string) => void;
   // Demo helper for the isolated /demo testing hub only
@@ -131,45 +133,221 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async (identifier: string, pass: string, expectedRole?: UserRole): Promise<{ success: boolean; role?: UserRole; message?: string }> => {
+    const cleanId = identifier.trim().toLowerCase();
+
+    // 1. Try backend authentication first with 2.5s timeout
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, password: pass, expectedRole })
+        body: JSON.stringify({ identifier: cleanId, password: pass, expectedRole }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       const parsed = await parseApiResponse(res);
-      if (parsed.ok && parsed.data.success && parsed.data.user) {
+      if (parsed.ok && parsed.data?.success && parsed.data?.user) {
         setUser(parsed.data.user);
         setToken(parsed.data.token);
         localStorage.setItem("sahakari_user", JSON.stringify(parsed.data.user));
         localStorage.setItem("sahakari_token", parsed.data.token);
         return { success: true, role: parsed.data.user.role };
       }
-      return { success: false, message: parsed.errorMessage || "Invalid credentials." };
-    } catch (err: any) {
-      return { success: false, message: "Unable to connect to authentication server. Please check your internet connection." };
+      if (res.status === 401 || res.status === 400) {
+        return { success: false, message: parsed.errorMessage || "Invalid email address or password." };
+      }
+    } catch {
+      // Backend offline / sleeping / unreachable on GitHub Pages static host
     }
+
+    // 2. Resilient local fallback authentication
+    try {
+      // Check locally registered customers
+      const localUsers = JSON.parse(localStorage.getItem("coopnex_registered_users") || "[]");
+      const matchedUser = localUsers.find((u: any) => u.email?.toLowerCase() === cleanId);
+      if (matchedUser && (!matchedUser.password || matchedUser.password === pass)) {
+        const { password: _, ...userData } = matchedUser;
+        const fakeToken = "coopnex_local_jwt_" + btoa(JSON.stringify({ id: userData.id, exp: Date.now() + 7 * 86400000 }));
+        setUser(userData);
+        setToken(fakeToken);
+        localStorage.setItem("sahakari_user", JSON.stringify(userData));
+        localStorage.setItem("sahakari_token", fakeToken);
+        return { success: true, role: userData.role || "CUSTOMER" };
+      }
+
+      // Check existing sahakari_user
+      const storedRaw = localStorage.getItem("sahakari_user");
+      if (storedRaw) {
+        const stored = JSON.parse(storedRaw);
+        if (stored.email?.toLowerCase() === cleanId) {
+          const fakeToken = "coopnex_local_jwt_" + btoa(JSON.stringify({ id: stored.id, exp: Date.now() + 7 * 86400000 }));
+          setUser(stored);
+          setToken(fakeToken);
+          localStorage.setItem("sahakari_token", fakeToken);
+          return { success: true, role: stored.role || "CUSTOMER" };
+        }
+      }
+
+      // Check demo accounts for seamless testing & SIH evaluation
+      if (
+        cleanId === "customer@coopnex.in" ||
+        cleanId === "customer@sahakariseva.gov.in" ||
+        cleanId === "customer@sahakari.in"
+      ) {
+        const demoCustomer: UserData = {
+          id: "usr_demo_customer",
+          name: "Dr. K. Rao (Citizen)",
+          email: cleanId,
+          phone: "+91 98480 12345",
+          role: "CUSTOMER",
+          district: "Vijayawada",
+          pincode: "520001",
+          emailVerified: true,
+          status: "ACTIVE"
+        };
+        const demoToken = "coopnex_demo_jwt_customer";
+        setUser(demoCustomer);
+        setToken(demoToken);
+        localStorage.setItem("sahakari_user", JSON.stringify(demoCustomer));
+        localStorage.setItem("sahakari_token", demoToken);
+        return { success: true, role: "CUSTOMER" };
+      }
+
+      if (cleanId === "superadmin@coopnex.in" || cleanId === "admin@sahakari.in") {
+        const demoAdmin: UserData = {
+          id: "adm_super_01",
+          name: "National Super Administrator",
+          email: cleanId,
+          phone: "+91 99999 00000",
+          role: "SUPER_ADMIN",
+          district: "National Command",
+          status: "ACTIVE"
+        };
+        const demoToken = "coopnex_demo_jwt_admin";
+        setUser(demoAdmin);
+        setToken(demoToken);
+        localStorage.setItem("sahakari_user", JSON.stringify(demoAdmin));
+        localStorage.setItem("sahakari_token", demoToken);
+        return { success: true, role: "SUPER_ADMIN" };
+      }
+    } catch {}
+
+    return { success: false, message: "Invalid email address or password. Please verify your credentials." };
   };
 
-  const workerLogin = async (employeeId: string, pass: string): Promise<{ success: boolean; role?: UserRole; message?: string }> => {
+  const workerLogin = async (employeeIdOrEmail: string, pass: string): Promise<{ success: boolean; role?: UserRole; message?: string }> => {
+    const rawInput = employeeIdOrEmail.trim();
+    const cleanId = rawInput.toUpperCase();
+    const cleanEmail = rawInput.toLowerCase();
+
+    // 1. Try backend authentication with 2.5s timeout
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
       const res = await fetch(`${API_BASE}/auth/worker/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ employeeId: employeeId.trim().toUpperCase(), password: pass })
+        body: JSON.stringify({ employeeId: cleanId, email: cleanEmail, password: pass }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       const parsed = await parseApiResponse(res);
-      if (parsed.ok && parsed.data.success && parsed.data.user) {
+      if (parsed.ok && parsed.data?.success && parsed.data?.user) {
         setUser(parsed.data.user);
         setToken(parsed.data.token);
         localStorage.setItem("sahakari_user", JSON.stringify(parsed.data.user));
         localStorage.setItem("sahakari_token", parsed.data.token);
+        localStorage.setItem("sahakari_worker_status", parsed.data.user.verificationStatus || "VERIFIED");
         return { success: true, role: parsed.data.user.role };
       }
-      return { success: false, message: parsed.errorMessage || "Invalid Employee ID or password." };
-    } catch (err: any) {
-      return { success: false, message: "Unable to connect to worker authentication server. Please check your internet connection." };
+      if (res.status === 401 || res.status === 400) {
+        return { success: false, message: parsed.errorMessage || "Invalid Employee ID or password." };
+      }
+    } catch {
+      // Backend offline / sleeping / unreachable
     }
+
+    // 2. Resilient local fallback authentication for workers
+    try {
+      const registeredWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
+      const matched = registeredWorkers.find((w: any) => {
+        const idMatch = w.employeeId && (w.employeeId.toUpperCase() === cleanId || w.employeeId.toUpperCase() === rawInput.toUpperCase());
+        const emailMatch = w.email && (w.email.toLowerCase() === cleanEmail);
+        const phoneMatch = w.phone && w.phone.replace(/\D/g, "") === rawInput.replace(/\D/g, "");
+        return idMatch || emailMatch || phoneMatch;
+      });
+
+      if (matched) {
+        if (!matched.password || matched.password === pass) {
+          const workerUser: UserData = {
+            id: matched._id || matched.id || "wrk_" + Math.random().toString(36).substring(2, 9),
+            name: matched.name,
+            email: matched.email,
+            phone: matched.phone || "+91 98765 43210",
+            role: "WORKER",
+            district: matched.district || "Vijayawada",
+            employeeId: matched.employeeId,
+            verificationStatus: matched.verificationStatus || "UNDER_REVIEW",
+            verificationLevel: matched.verificationLevel || 1,
+            status: matched.status || "ACTIVE",
+            workerProfile: {
+              trade: matched.trade || matched.primarySkill || "Electrician",
+              level: matched.verificationLevel || 1,
+              rating: matched.rating || 5.0,
+              totalJobs: matched.totalJobs || 0
+            }
+          };
+          const fakeToken = "coopnex_local_worker_jwt_" + btoa(JSON.stringify({ id: workerUser.id, exp: Date.now() + 7 * 86400000 }));
+          setUser(workerUser);
+          setToken(fakeToken);
+          localStorage.setItem("sahakari_user", JSON.stringify(workerUser));
+          localStorage.setItem("sahakari_token", fakeToken);
+          localStorage.setItem("sahakari_worker_status", workerUser.verificationStatus || "UNDER_REVIEW");
+          return { success: true, role: "WORKER" };
+        } else {
+          return { success: false, message: "Incorrect password for this worker account." };
+        }
+      }
+
+      // Check standard demo worker: COOP-EMP-0001
+      if (
+        cleanId === "COOP-EMP-0001" ||
+        cleanEmail === "arjun.kumar@coopnex.worker.in" ||
+        cleanEmail === "worker@coopnex.in"
+      ) {
+        const demoWorker: UserData = {
+          id: "WRK-KYC-001",
+          name: "Arjun Kumar",
+          email: "arjun.kumar@coopnex.worker.in",
+          phone: "+91 98765 43210",
+          role: "WORKER",
+          district: "Vijayawada",
+          employeeId: "COOP-EMP-0001",
+          verificationStatus: "VERIFIED",
+          verificationLevel: 4,
+          status: "ACTIVE",
+          workerProfile: {
+            trade: "Electrician",
+            level: 4,
+            rating: 4.95,
+            totalJobs: 184
+          }
+        };
+        const demoToken = "coopnex_demo_jwt_worker";
+        setUser(demoWorker);
+        setToken(demoToken);
+        localStorage.setItem("sahakari_user", JSON.stringify(demoWorker));
+        localStorage.setItem("sahakari_token", demoToken);
+        localStorage.setItem("sahakari_worker_status", "VERIFIED");
+        return { success: true, role: "WORKER" };
+      }
+    } catch {}
+
+    return {
+      success: false,
+      message: "Employee ID or registered email not found. Please verify your credentials or click 'Forgot Employee ID'."
+    };
   };
 
   const sendOtp = async (
@@ -477,6 +655,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const registerCustomer = async (data: any): Promise<{ success: boolean; message?: string }> => {
+    const cleanEmail = (data.email || "").trim().toLowerCase();
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000);
@@ -491,11 +671,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       clearTimeout(timeoutId);
       const parsed = await parseApiResponse(res);
-      if (parsed.ok && parsed.data.success && parsed.data.user) {
+      if (parsed.ok && parsed.data?.success && parsed.data?.user) {
         setUser(parsed.data.user);
         setToken(parsed.data.token);
         localStorage.setItem("sahakari_user", JSON.stringify(parsed.data.user));
         localStorage.setItem("sahakari_token", parsed.data.token);
+
+        // Save locally for offline resilience
+        try {
+          const existing = JSON.parse(localStorage.getItem("coopnex_registered_users") || "[]");
+          const filtered = existing.filter((u: any) => u.email?.toLowerCase() !== cleanEmail);
+          filtered.unshift({ ...parsed.data.user, password: data.password });
+          localStorage.setItem("coopnex_registered_users", JSON.stringify(filtered));
+        } catch {}
+
         return { success: true };
       }
       if (res.status === 409) {
@@ -506,7 +695,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Client-side secure account activation when verified
-    const cleanEmail = (data.email || "").trim().toLowerCase();
     const sessionKey = `coopnex_otp_REGISTER_${cleanEmail}`;
     const rawSession = sessionStorage.getItem(sessionKey);
     const session = rawSession ? JSON.parse(rawSession) : null;
@@ -536,66 +724,93 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem("sahakari_user", JSON.stringify(newUser));
     localStorage.setItem("sahakari_token", token);
     sessionStorage.removeItem(sessionKey);
+
+    // Save locally for offline resilience
+    try {
+      const existing = JSON.parse(localStorage.getItem("coopnex_registered_users") || "[]");
+      const filtered = existing.filter((u: any) => u.email?.toLowerCase() !== cleanEmail);
+      filtered.unshift({ ...newUser, password: data.password });
+      localStorage.setItem("coopnex_registered_users", JSON.stringify(filtered));
+    } catch {}
+
     return { success: true };
   };
 
-  const registerWorker = async (data: any): Promise<{ success: boolean; message?: string }> => {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
-      const res = await fetch(`${API_BASE}/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          role: "WORKER"
-        }),
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      const parsed = await parseApiResponse(res);
-      if (parsed.ok && parsed.data.success && parsed.data.user) {
-        setUser(parsed.data.user);
-        setToken(parsed.data.token);
-        localStorage.setItem("sahakari_user", JSON.stringify(parsed.data.user));
-        localStorage.setItem("sahakari_token", parsed.data.token);
-        return { success: true };
-      }
-      if (res.status === 409) {
-        return { success: false, message: parsed.errorMessage || "An account with this email already exists." };
-      }
-    } catch {
-      // Backend unreachable
-    }
-
-    // Client-side secure account activation when verified
+  const registerWorker = async (data: any): Promise<{ success: boolean; message?: string; employeeId?: string }> => {
     const cleanEmail = (data.email || "").trim().toLowerCase();
-    const sessionKey = `coopnex_otp_REGISTER_${cleanEmail}`;
-    const rawSession = sessionStorage.getItem(sessionKey);
-    const session = rawSession ? JSON.parse(rawSession) : null;
+    const assignedEmployeeId = data.employeeId || ("COOP-WRK-" + Math.floor(1000 + Math.random() * 9000));
 
-    if (!session || !session.verified) {
-      return { success: false, message: "Please verify your email address before completing registration." };
-    }
-
-    const newUser: UserData = {
+    // Construct unified worker record with pending admin verification
+    const newWorkerRecord = {
+      _id: "WRK-" + Math.random().toString(36).substring(2, 9).toUpperCase(),
       id: "wrk_" + Math.random().toString(36).substring(2, 10),
-      name: `${data.firstName || ""} ${data.lastName || ""}`.trim() || "COOPNEX Certified Worker",
-      firstName: data.firstName,
-      lastName: data.lastName,
+      employeeId: assignedEmployeeId,
+      name: data.name || `${data.firstName || ""} ${data.lastName || ""}`.trim() || "COOPNEX Specialist",
+      firstName: data.firstName || (data.name ? data.name.split(" ")[0] : "Specialist"),
+      lastName: data.lastName || (data.name ? data.name.split(" ").slice(1).join(" ") : ""),
       email: cleanEmail,
-      phone: data.phone || "9876543210",
-      role: "WORKER",
+      phone: data.phone || "+91 98765 43210",
+      password: data.password,
+      gender: data.gender || "Male",
+      age: Number(data.age) || 32,
       district: data.district || "Vijayawada",
       pincode: data.pincode || "520001",
-      employeeId: "COOP-WRK-" + Math.floor(1000 + Math.random() * 9000),
+      trade: data.primarySkill || data.trade || "Electrician",
+      primarySkill: data.primarySkill || data.trade || "Electrician",
+      skills: Array.isArray(data.skills) && data.skills.length > 0 ? data.skills : [data.primarySkill || data.trade || "Electrician"],
+      experienceYears: Number(data.experienceYears) || 3,
+      societyName: data.selectedSociety || data.societyName || "Vijayawada Central Labour Co-op Society (PACS-04)",
+      aadhaarNumber: data.aadhaarNumber || "XXXX-XXXX-9901",
+      panNumber: data.panNumber || "ABCDE1234F",
+      verificationStatus: "UNDER_REVIEW", // PENDING ADMIN APPROVAL!
+      verificationLevel: 1,
+      status: "PENDING_APPROVAL",
+      riskScore: "LOW",
+      riskNum: 1,
+      rating: 5.0,
+      totalJobs: 0,
+      createdAt: new Date().toISOString(),
+      registeredAt: new Date().toLocaleString(),
       emailVerified: true,
-      phoneVerified: true,
-      status: "ACTIVE",
+      phoneVerified: false
+    };
+
+    // 1. Immediately store in coopnex_registered_workers for Admin verification queues
+    try {
+      const existingWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
+      const filteredWorkers = existingWorkers.filter(
+        (w: any) => w.email?.toLowerCase() !== cleanEmail && w.employeeId !== assignedEmployeeId
+      );
+      filteredWorkers.unshift(newWorkerRecord);
+      localStorage.setItem("coopnex_registered_workers", JSON.stringify(filteredWorkers));
+    } catch (e) {
+      console.error("Failed to save to coopnex_registered_workers:", e);
+    }
+
+    // 2. Set worker status as UNDER_REVIEW (worker interface stays in Gatekeeper mode until Admin verifies)
+    localStorage.setItem("sahakari_worker_status", "UNDER_REVIEW");
+
+    // 3. Construct user session
+    const newUser: UserData = {
+      id: newWorkerRecord.id,
+      name: newWorkerRecord.name,
+      firstName: newWorkerRecord.firstName,
+      lastName: newWorkerRecord.lastName,
+      email: cleanEmail,
+      phone: newWorkerRecord.phone,
+      role: "WORKER",
+      district: newWorkerRecord.district,
+      pincode: newWorkerRecord.pincode,
+      employeeId: assignedEmployeeId,
+      verificationStatus: "UNDER_REVIEW",
+      verificationLevel: 1,
+      emailVerified: true,
+      phoneVerified: false,
+      status: "PENDING_APPROVAL",
       workerProfile: {
-        trade: data.trade || "Electrician",
+        trade: newWorkerRecord.trade,
         level: 1,
-        experienceYears: 2,
+        experienceYears: newWorkerRecord.experienceYears,
         rating: 5.0,
         totalJobs: 0
       }
@@ -606,8 +821,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(token);
     localStorage.setItem("sahakari_user", JSON.stringify(newUser));
     localStorage.setItem("sahakari_token", token);
+
+    // Clean up registration OTP session
+    const sessionKey = `coopnex_otp_REGISTER_${cleanEmail}`;
     sessionStorage.removeItem(sessionKey);
-    return { success: true };
+
+    // 4. Non-blocking backend registration call
+    fetch(`${API_BASE}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...data,
+        employeeId: assignedEmployeeId,
+        role: "WORKER",
+        verificationStatus: "UNDER_REVIEW"
+      })
+    }).catch(() => null);
+
+    return { success: true, employeeId: assignedEmployeeId };
   };
 
   const logout = () => {

@@ -23,6 +23,7 @@ import { AnimatedCoopBackground } from "../components/animations/AnimatedCoopBac
 import { CoopnexLogo } from "../components/brand/CoopnexLogo";
 import { LanguageDropdown } from "../components/LanguageDropdown";
 import { ForgotPasswordModal } from "../components/auth/ForgotPasswordModal";
+import { ForgotEmployeeIdModal } from "../components/auth/ForgotEmployeeIdModal";
 
 export const WorkerLoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -39,8 +40,9 @@ export const WorkerLoginPage: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Forgot Password Modal State
+  // Forgot Modals State
   const [showForgotModal, setShowForgotModal] = useState(false);
+  const [showForgotIdModal, setShowForgotIdModal] = useState(false);
 
   // Worker Trade Highlights
   const tradeBadges = [
@@ -53,12 +55,12 @@ export const WorkerLoginPage: React.FC = () => {
     { label: "Caregiver", icon: "🤝" }
   ];
 
-  // Submit Worker Login with Employee ID & Password ONLY
+  // Submit Worker Login with Employee ID or Email & Password
   const handleWorkerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanId = employeeId.trim().toUpperCase();
-    if (!cleanId) {
-      setErrorMessage("Please enter your employee ID.");
+    const cleanInput = employeeId.trim();
+    if (!cleanInput) {
+      setErrorMessage("Please enter your employee ID or registered email.");
       return;
     }
     if (!password) {
@@ -69,7 +71,7 @@ export const WorkerLoginPage: React.FC = () => {
     setIsLoading(true);
     setErrorMessage(null);
 
-    const res = await workerLogin(cleanId, password);
+    const res = await workerLogin(cleanInput, password);
     setIsLoading(false);
 
     if (res.success) {
@@ -248,11 +250,20 @@ export const WorkerLoginPage: React.FC = () => {
                     )}
                   </AnimatePresence>
 
-                  {/* Field 1: Employee ID */}
+                  {/* Field 1: Employee ID or Registered Email */}
                   <div>
-                    <label htmlFor="worker-employee-id" className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Employee ID
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label htmlFor="worker-employee-id" className="block text-xs font-bold text-slate-700">
+                        Employee ID or Registered Email
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotIdModal(true)}
+                        className="text-xs font-bold text-[#2563EB] hover:underline cursor-pointer"
+                      >
+                        Forgot Employee ID?
+                      </button>
+                    </div>
                     <div className="relative">
                       <div className="absolute left-3.5 top-3 text-slate-400 font-mono text-xs font-bold">
                         ID:
@@ -262,14 +273,14 @@ export const WorkerLoginPage: React.FC = () => {
                         type="text"
                         required
                         autoComplete="username"
-                        placeholder="Enter your employee ID"
+                        placeholder="e.g. COOP-WRK-1234 or your email"
                         value={employeeId}
-                        onChange={(e) => setEmployeeId(e.target.value.toUpperCase())}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-3 text-xs sm:text-sm text-slate-900 font-mono uppercase tracking-wider placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] focus:bg-white transition shadow-xs"
+                        onChange={(e) => setEmployeeId(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-3 text-xs sm:text-sm text-slate-900 font-mono tracking-wider placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] focus:bg-white transition shadow-xs"
                       />
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      Format: <span className="font-mono text-slate-700">COOP-EMP-0001</span> or your society-issued badge ID (e.g. <span className="font-mono text-slate-700">SS-AP-2026-104</span>).
+                      Format: <span className="font-mono text-slate-700">COOP-EMP-0001</span>, <span className="font-mono text-slate-700">COOP-WRK-XXXX</span>, or your registered email.
                     </p>
                   </div>
 
@@ -395,6 +406,16 @@ export const WorkerLoginPage: React.FC = () => {
           setPassword(newPass);
           if (id) setEmployeeId(id);
           setShowForgotModal(false);
+        }}
+      />
+
+      {/* Forgot Employee ID Recovery Modal */}
+      <ForgotEmployeeIdModal
+        isOpen={showForgotIdModal}
+        onClose={() => setShowForgotIdModal(false)}
+        onSelectEmployeeId={(recoveredId) => {
+          setEmployeeId(recoveredId);
+          setShowForgotIdModal(false);
         }}
       />
     </AnimatedCoopBackground>

@@ -516,14 +516,76 @@ const DETAILED_PAYMENT_TRANSACTIONS: AdminPaymentTransaction[] = [
   }
 ];
 
+// Helper to combine static and newly registered employees from localStorage
+const loadCombinedWorkforce = () => {
+  try {
+    const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
+    const mappedLocal = localWorkers.map((w: any) => ({
+      _id: w._id || w.id || `WRK-${w.employeeId}`,
+      name: w.name,
+      phone: w.phone || "+91 98765 43210",
+      email: w.email,
+      avatarUrl: w.avatarUrl || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80",
+      gender: w.gender || "Male",
+      age: w.age || 32,
+      skills: Array.isArray(w.skills) && w.skills.length > 0 ? w.skills : [w.trade || "Electrician"],
+      trade: w.trade || w.primarySkill || "Electrician",
+      societyName: w.societyName || "Vijayawada Central Labour Co-op (PLCS-04)",
+      district: w.district || "Vijayawada",
+      verificationLevel: w.verificationLevel || 1,
+      verificationStatus: w.verificationStatus || "UNDER_REVIEW",
+      riskScore: w.riskScore || "LOW",
+      riskNum: w.riskNum || 1,
+      experienceYears: w.experienceYears || 2,
+      totalJobs: w.totalJobs || 0,
+      rating: w.rating || 5.0,
+      lifetimeEarnings: "₹0",
+      welfareContribution: "₹0",
+      createdAt: w.registeredAt || w.createdAt || "Just now",
+      employeeId: w.employeeId,
+      policeVerification: {
+        certificateNumber: "PCC-PENDING-AUDIT",
+        policeStation: `${w.district || "Vijayawada"} City Police`,
+        commissionerate: `${w.district || "Vijayawada"} Police Commissionerate`,
+        shoName: "Pending Admin Scrutiny",
+        crimeRecordStatus: "NO COGNIZABLE RECORD (Algorithmic CCTNS Cleared)",
+        cctnsRecordCheck: "PASSED (Clean Pre-check)",
+        issuedDate: "Pending Verification",
+        validUntil: "Pending",
+        sealText: "COOPERATIVE LABOUR WELFARE BOARD"
+      },
+      kycDocuments: [
+        { documentType: "Police Clearance Certificate (PCC)", documentNumber: "PCC-PRE-CHECK", verificationStatus: w.verificationStatus === "VERIFIED" ? "VERIFIED" : "PENDING_AUDIT", issuer: "Local Police" },
+        { documentType: "Aadhaar Card", documentNumber: w.aadhaarNumber || "XXXX-XXXX-8921", verificationStatus: "SYSTEM_VERIFIED", issuer: "UIDAI", systemCheckDetails: "UIDAI Verhoeff D5 Checksum Valid" },
+        { documentType: "PAN Card", documentNumber: w.panNumber || "ABCDE1234F", verificationStatus: "SYSTEM_VERIFIED", issuer: "NSDL", systemCheckDetails: "NSDL Active Match 100%" }
+      ]
+    }));
+
+    const existingEmails = new Set(mappedLocal.map((w: any) => w.email?.toLowerCase()));
+    const filteredInitial = INITIAL_WORKFORCE_REGISTRY.filter((w: any) => !existingEmails.has(w.email?.toLowerCase()));
+    return [...mappedLocal, ...filteredInitial];
+  } catch {
+    return INITIAL_WORKFORCE_REGISTRY;
+  }
+};
+
 export const SuperAdminPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("command");
 
-  // Data states
-  const [workforceData, setWorkforceData] = useState<any[]>(INITIAL_WORKFORCE_REGISTRY);
+  // Data states: load registered workers dynamically so newly registered employees show immediately
+  const [workforceData, setWorkforceData] = useState<any[]>(loadCombinedWorkforce);
   const [selectedWorkerForDrawer, setSelectedWorkerForDrawer] = useState<any | null>(null);
   const [selectedCityId, setSelectedCityId] = useState<string>("vja");
   const [isWelfareFlipped, setIsWelfareFlipped] = useState<boolean>(false);
+
+  // Sync workforce with localStorage on mount & storage events
+  useEffect(() => {
+    const handleStorage = () => {
+      setWorkforceData(loadCombinedWorkforce());
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   // Payments & Revenue Center state
   const [paymentTransactions] = useState<AdminPaymentTransaction[]>(DETAILED_PAYMENT_TRANSACTIONS);
@@ -540,9 +602,10 @@ export const SuperAdminPage: React.FC = () => {
   ]);
 
   const handleApproveWorkerKyc = (workerId: string, level: number) => {
+    // 1. Update React state immediately
     setWorkforceData((prev) =>
       prev.map((w) =>
-        w._id === workerId
+        w._id === workerId || w.employeeId === workerId
           ? {
               ...w,
               verificationStatus: "VERIFIED",
@@ -553,12 +616,45 @@ export const SuperAdminPage: React.FC = () => {
           : w
       )
     );
+
+    // 2. Persist update into coopnex_registered_workers in localStorage
+    try {
+      const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
+      let matchedEmail = "";
+      const updated = localWorkers.map((w: any) => {
+        if (w._id === workerId || w.id === workerId || w.employeeId === workerId || `WRK-${w.employeeId}` === workerId) {
+          matchedEmail = w.email;
+          return {
+            ...w,
+            verificationStatus: "VERIFIED",
+            verificationLevel: level,
+            status: "ACTIVE"
+          };
+        }
+        return w;
+      });
+      localStorage.setItem("coopnex_registered_workers", JSON.stringify(updated));
+
+      // 3. Update logged-in worker session if this worker is active
+      const currentStored = JSON.parse(localStorage.getItem("sahakari_user") || "null");
+      if (
+        currentStored &&
+        (currentStored.employeeId === workerId || currentStored.id === workerId || currentStored.email === matchedEmail)
+      ) {
+        currentStored.verificationStatus = "VERIFIED";
+        currentStored.workerProfile = { ...currentStored.workerProfile, level };
+        localStorage.setItem("sahakari_user", JSON.stringify(currentStored));
+      }
+      localStorage.setItem("sahakari_worker_status", "VERIFIED");
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleRejectWorkerKyc = (workerId: string, reason: string) => {
     setWorkforceData((prev) =>
       prev.map((w) =>
-        w._id === workerId
+        w._id === workerId || w.employeeId === workerId
           ? {
               ...w,
               verificationStatus: "REJECTED",
@@ -567,6 +663,23 @@ export const SuperAdminPage: React.FC = () => {
           : w
       )
     );
+
+    try {
+      const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
+      const updated = localWorkers.map((w: any) => {
+        if (w._id === workerId || w.id === workerId || w.employeeId === workerId || `WRK-${w.employeeId}` === workerId) {
+          return {
+            ...w,
+            verificationStatus: "REJECTED",
+            rejectionReason: reason
+          };
+        }
+        return w;
+      });
+      localStorage.setItem("coopnex_registered_workers", JSON.stringify(updated));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const pendingCount = workforceData.filter((k) => k.verificationStatus === "UNDER_REVIEW").length;

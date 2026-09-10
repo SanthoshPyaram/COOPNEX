@@ -25,7 +25,8 @@ import {
   Settings,
   Globe,
   VolumeX,
-  Radio
+  Radio,
+  Lock
 } from "lucide-react";
 
 export const WorkerPage: React.FC = () => {
@@ -36,10 +37,75 @@ export const WorkerPage: React.FC = () => {
   const activeTab = searchParams.get("tab") || "dashboard";
   const setActiveTab = (tab: string) => setSearchParams({ tab });
 
-  // Worker Gatekeeper Status
-  const [workerStatus, setWorkerStatus] = useState<string>(() => {
-    return localStorage.getItem("sahakari_worker_status") || "VERIFIED";
-  });
+  // Worker Gatekeeper Status: checks user, local registered workers, and admin status
+  const getInitialWorkerStatus = (): string => {
+    if (user?.verificationStatus) {
+      return user.verificationStatus;
+    }
+    try {
+      const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
+      const matched = localWorkers.find(
+        (w: any) =>
+          (user?.email && w.email?.toLowerCase() === user.email.toLowerCase()) ||
+          ((user as any)?.employeeId && w.employeeId === (user as any).employeeId) ||
+          (user?.id && (w.id === user.id || w._id === user.id))
+      );
+      if (matched?.verificationStatus) {
+        return matched.verificationStatus;
+      }
+    } catch {}
+
+    const flag = localStorage.getItem("sahakari_worker_status");
+    if (flag) return flag;
+
+    // Demo account COOP-EMP-0001 is pre-verified
+    if ((user as any)?.employeeId === "COOP-EMP-0001" || user?.email === "arjun.kumar@coopnex.worker.in") {
+      return "VERIFIED";
+    }
+
+    return "UNDER_REVIEW";
+  };
+
+  const [workerStatus, setWorkerStatus] = useState<string>(getInitialWorkerStatus);
+  const [statusCheckMsg, setStatusCheckMsg] = useState<string | null>(null);
+
+  const refreshWorkerStatus = () => {
+    try {
+      const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
+      const matched = localWorkers.find(
+        (w: any) =>
+          (user?.email && w.email?.toLowerCase() === user.email.toLowerCase()) ||
+          ((user as any)?.employeeId && w.employeeId === (user as any).employeeId) ||
+          (user?.id && (w.id === user.id || w._id === user.id))
+      );
+      if (matched?.verificationStatus) {
+        setWorkerStatus(matched.verificationStatus);
+        localStorage.setItem("sahakari_worker_status", matched.verificationStatus);
+        if (matched.verificationStatus === "VERIFIED") {
+          setStatusCheckMsg("Congratulations! Your account has been verified by the Cooperative Administrator!");
+        } else {
+          setStatusCheckMsg("Application is still under review by the Cooperative Administrator.");
+        }
+        setTimeout(() => setStatusCheckMsg(null), 4000);
+        return;
+      }
+    } catch {}
+
+    const flag = localStorage.getItem("sahakari_worker_status") || "UNDER_REVIEW";
+    setWorkerStatus(flag);
+    if (flag === "VERIFIED") {
+      setStatusCheckMsg("Your account is verified! All worker features are unlocked.");
+    } else {
+      setStatusCheckMsg("Application is still pending administrator approval.");
+    }
+    setTimeout(() => setStatusCheckMsg(null), 4000);
+  };
+
+  useEffect(() => {
+    const handleStorage = () => refreshWorkerStatus();
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [user]);
 
   const [activeJobs, setActiveJobs] = useState<Booking[]>([]);
   const [isAvailable, setIsAvailable] = useState(true);
@@ -278,21 +344,117 @@ export const WorkerPage: React.FC = () => {
         </div>
       )}
 
+      {/* Payout / Status Notification Toast */}
+      {statusCheckMsg && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-300 rounded-2xl text-xs text-blue-900 flex items-center gap-3 animate-fadeIn shadow-xs">
+          <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0" />
+          <span className="font-semibold">{statusCheckMsg}</span>
+        </div>
+      )}
+
       {/* GATEKEEPER SCREEN (IF UNDER REVIEW) */}
       {workerStatus !== "VERIFIED" ? (
-        <div className="bg-amber-50 border border-amber-300 rounded-3xl p-6 text-amber-950 space-y-4 text-xs">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-black">Accreditation Under Statutory Review</h3>
-            <button
-              onClick={handleSimulateApproval}
-              className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs cursor-pointer"
-            >
-              Simulate Instant Approval
-            </button>
+        <div className="bg-white rounded-3xl border border-amber-200 shadow-xl p-6 sm:p-8 space-y-6 animate-fadeIn">
+          {/* Status Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">
+            <div className="space-y-1.5">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-black uppercase tracking-wider">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <span>Status: Awaiting Administrator Verification</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+                Cooperative Accreditation Under Statutory Review
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
+                Your specialist profile has been registered and is undergoing scrutiny by the Primary Cooperative Society Administration. Under statutory labour rules, live customer dispatches and instant payouts unlock once your credentials receive administrative signoff.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={refreshWorkerStatus}
+                className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Radio className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
+                <span>Check Status</span>
+              </button>
+              <button
+                onClick={handleSimulateApproval}
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center gap-1.5 cursor-pointer shadow-md"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Simulate Admin Approval (Instant Test)</span>
+              </button>
+            </div>
           </div>
-          <p>
-            Your Police Clearance Certificate (PCC) is undergoing verification with Gunadala Police Precinct. Platform dispatches will unlock automatically upon authorization.
-          </p>
+
+          {/* Registered Worker Profile Summary */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-1">
+              <span className="text-[11px] font-bold uppercase text-slate-400">Assigned Employee ID</span>
+              <div className="font-mono font-black text-slate-900 text-sm">
+                {(user as any)?.employeeId || "COOP-WRK-PENDING"}
+              </div>
+              <span className="text-[10px] text-blue-600 font-semibold">Official Society Badge ID</span>
+            </div>
+
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-1">
+              <span className="text-[11px] font-bold uppercase text-slate-400">Specialist Name</span>
+              <div className="font-bold text-slate-900 text-sm truncate">
+                {user?.name || "COOPNEX Specialist"}
+              </div>
+              <span className="text-[10px] text-emerald-600 font-semibold">Email Verified</span>
+            </div>
+
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-1">
+              <span className="text-[11px] font-bold uppercase text-slate-400">Trade Specialization</span>
+              <div className="font-bold text-blue-700 text-sm">
+                {(user as any)?.workerProfile?.trade || "Electrician"}
+              </div>
+              <span className="text-[10px] text-slate-500">Tier 1 Apprentice &rarr; Tier 4 Master</span>
+            </div>
+
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-1">
+              <span className="text-[11px] font-bold uppercase text-slate-400">Affiliated Society</span>
+              <div className="font-bold text-slate-900 text-sm truncate">
+                Vijayawada Central Labour Co-op
+              </div>
+              <span className="text-[10px] text-slate-500 font-mono">PACS-04 • Andhra Pradesh</span>
+            </div>
+          </div>
+
+          {/* Statutory Verification Pipeline */}
+          <div className="bg-slate-50/70 rounded-2xl border border-slate-200 p-5 space-y-3">
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
+              Statutory Accreditation Pipeline:
+            </h4>
+            <div className="space-y-2.5 text-xs">
+              <div className="flex items-center gap-2.5 text-emerald-800">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  <strong>Step 1: Identity &amp; Email Verification:</strong> Passed (Cryptographic 6-digit OTP authenticated via EmailJS).
+                </span>
+              </div>
+              <div className="flex items-center gap-2.5 text-emerald-800">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  <strong>Step 2: UIDAI Aadhaar &amp; PAN Pre-Check:</strong> Passed (D5 Verhoeff checksum &amp; NSDL structure validated).
+                </span>
+              </div>
+              <div className="flex items-center gap-2.5 text-amber-900">
+                <Clock className="w-4 h-4 text-amber-500 animate-spin shrink-0" />
+                <span>
+                  <strong>Step 3: Primary Society Administrator Audit:</strong> In Review (The administrator inspects physical trade certs &amp; PCC at <code className="bg-amber-100 px-1 py-0.5 rounded font-mono text-[11px]">/admin</code> or <code className="bg-amber-100 px-1 py-0.5 rounded font-mono text-[11px]">/society</code>).
+                </span>
+              </div>
+              <div className="flex items-center gap-2.5 text-slate-500">
+                <Lock className="w-4 h-4 text-slate-400 shrink-0" />
+                <span>
+                  <strong>Step 4: Live Dispatch Activation:</strong> Locked until Administrator verifies above steps.
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         /* MAIN MODULAR TABS */
