@@ -60,6 +60,7 @@ export interface AdminDocumentReviewModalProps {
     verificationStatus?: string;
     verificationLevel?: number;
     avatarUrl?: string;
+    gender?: string;
     policeVerification?: {
       certificateNumber?: string;
       cctnsRecordCheck?: string;
@@ -156,12 +157,13 @@ export const AdminDocumentReviewModal: React.FC<AdminDocumentReviewModalProps> =
       ? cleanUrl
       : `${apiOrigin}${cleanUrl.startsWith("/") ? "" : "/"}${cleanUrl}`;
 
-    const fetchUrl = token && !fullUrl.includes("token=")
+    const isInternal = !cleanUrl.startsWith("http") || cleanUrl.startsWith(apiOrigin);
+    const fetchUrl = isInternal && token && !fullUrl.includes("token=")
       ? `${fullUrl}${fullUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
       : fullUrl;
 
     fetch(fetchUrl, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
+      headers: (isInternal && token) ? { Authorization: `Bearer ${token}` } : {}
     })
       .then(async (res) => {
         if (!isMounted) return;
@@ -347,6 +349,7 @@ export const AdminDocumentReviewModal: React.FC<AdminDocumentReviewModalProps> =
                 <AvatarPlaceholder
                   src={worker.avatarUrl}
                   name={worker.name}
+                  gender={worker.gender}
                   className="w-11 h-11 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0 shadow-2xs"
                 />
                 <div className="min-w-0">

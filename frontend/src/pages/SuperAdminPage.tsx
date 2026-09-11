@@ -903,6 +903,7 @@ export const SuperAdminPage: React.FC = () => {
           <AvatarPlaceholder
             src={w.avatarUrl}
             name={w.name}
+            gender={w.gender}
             className="w-9 h-9 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0 shadow-xs"
           />
           <div className="min-w-0">

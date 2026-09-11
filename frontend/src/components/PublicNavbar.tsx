@@ -23,11 +23,10 @@ export const PublicNavbar: React.FC = () => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Streamlined Navigation: Home, Workers, and Admin Portal
+  // Streamlined Navigation: Home and Workers (Admin Portal removed from public navigation)
   const navLinks = [
     { name: t("nav.home", "Home"), path: "/" },
-    { name: t("nav.workers", "Workers"), path: "/for-workers" },
-    { name: t("nav.admin", "Admin Portal"), path: role === "SUPER_ADMIN" ? "/admin" : "/admin/login" }
+    { name: t("nav.workers", "Workers"), path: "/for-workers" }
   ];
 
   const getDashboardRoute = () => {

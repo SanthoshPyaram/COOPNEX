@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { WorkerProfile, Booking } from "../types";
 import { api } from "../services/api";
+import { resolveWorkerAvatar } from "../utils/workerAvatar";
 import {
   X,
   ArrowLeft,
@@ -31,20 +32,26 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
   onBookingCreated,
   customerAddressDefault = "Flat 402, Sri Sai Residency, Near Benz Circle, Vijayawada"
 }) => {
-  if (!isOpen || !worker) return null;
-
   const [step, setStep] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
 
   // Form State
-  const [serviceCategory, setServiceCategory] = useState(worker.skills?.[0] || "Electrician");
+  const [serviceCategory, setServiceCategory] = useState(worker?.skills?.[0] || "Electrician");
   const [description, setDescription] = useState("");
   const [isEmergency, setIsEmergency] = useState(false);
   const [timeSlot, setTimeSlot] = useState("Today Morning (9:00 AM - 12:00 PM)");
   const [address, setAddress] = useState(customerAddressDefault);
   const [landmark, setLandmark] = useState("Near Benz Circle");
   const [createdBooking, setCreatedBooking] = useState<any | null>(null);
+
+  React.useEffect(() => {
+    if (worker?.skills?.[0]) {
+      setServiceCategory(worker.skills[0]);
+    }
+  }, [worker]);
+
+  if (!isOpen || !worker) return null;
 
   // Pricing calculations
   const baseRate = worker.baseHourlyRate || 350;
@@ -154,7 +161,7 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
             <div className="space-y-4">
               <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200">
                 <img
-                  src={worker.avatarUrl || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80"}
+                  src={resolveWorkerAvatar(worker)}
                   alt={worker.name}
                   className="w-12 h-12 rounded-xl object-cover border border-blue-200 shrink-0"
                 />

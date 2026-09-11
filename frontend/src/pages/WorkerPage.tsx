@@ -199,108 +199,16 @@ export const WorkerPage: React.FC = () => {
     aadhaarVerhoeffStatus: isVerified ? "UIDAI Aadhaar Verified" : "Verhoeff Checksum Valid (Manual Review Pending)"
   };
 
-  const DEFAULT_DEMO_JOBS: Booking[] = [
-    {
-      _id: "demo-job-1",
-      bookingNumber: "BK-VJA-2026-801",
-      customerId: "cust-01",
-      customerName: "Smt. Priya Sharma",
-      customerPhone: "+91 98480 22341",
-      serviceCategory: "Electrician",
-      requirementDescription: "MCB main board tripping intermittently with spark noise in kitchen wiring.",
-      serviceLocation: { address: "Flat 402, Sri Sai Residency, Ring Road, Gunadala, Vijayawada", coordinates: [80.648, 16.506] },
-      bookingType: "EMERGENCY",
-      status: "ASSIGNED",
-      statusTimeline: [{ status: "ASSIGNED", timestamp: new Date().toISOString(), note: "Dispatched to worker" }],
-      scheduledAt: "Immediate (7m SLA)",
-      aiMatchScore: 98,
-      aiMatchReasons: ["Level 4 certified", "Within 1.8km", "Emergency Pool"],
-      fairWageBreakdown: {
-        customerPaid: 800,
-        baseWorkerWage: 720,
-        skillPremium: 0,
-        experiencePremium: 0,
-        travelAllowance: 0,
-        emergencyAllowance: 0,
-        workerEarning: 720,
-        cooperativeContribution: 80,
-        taxGst: 0
-      },
-      paymentStatus: "PENDING",
-      createdAt: new Date().toISOString()
-    },
-    {
-      _id: "demo-job-2",
-      bookingNumber: "BK-VJA-2026-794",
-      customerId: "cust-02",
-      customerName: "Sri K. Venkata Rao",
-      customerPhone: "+91 98480 33452",
-      serviceCategory: "Electrician",
-      requirementDescription: "AC 16A Dedicated Power Line and Isolator Installation in Master Bedroom.",
-      serviceLocation: { address: "House 12-4, Ring Road, Benz Circle, Vijayawada", coordinates: [80.65, 16.5] },
-      bookingType: "STANDARD",
-      status: "ACCEPTED",
-      statusTimeline: [{ status: "ACCEPTED", timestamp: new Date().toISOString(), note: "Accepted by worker" }],
-      scheduledAt: "Today 4:30 PM",
-      aiMatchScore: 95,
-      aiMatchReasons: ["Level 4 certified", "Proximity 2.4km"],
-      fairWageBreakdown: {
-        customerPaid: 750,
-        baseWorkerWage: 675,
-        skillPremium: 0,
-        experiencePremium: 0,
-        travelAllowance: 0,
-        emergencyAllowance: 0,
-        workerEarning: 675,
-        cooperativeContribution: 75,
-        taxGst: 0
-      },
-      paymentStatus: "PENDING",
-      createdAt: new Date(Date.now() - 3600000).toISOString()
-    },
-    {
-      _id: "demo-job-3",
-      bookingNumber: "BK-VJA-2026-778",
-      customerId: "cust-03",
-      customerName: "Sri T. Nageswara Rao",
-      customerPhone: "+91 97000 44563",
-      serviceCategory: "Electrician",
-      requirementDescription: "Ceiling fan regulator replacement and safety earthing check.",
-      serviceLocation: { address: "Near Siddhartha Medical College, Gunadala, Vijayawada", coordinates: [80.66, 16.51] },
-      bookingType: "STANDARD",
-      status: "COMPLETED",
-      statusTimeline: [{ status: "COMPLETED", timestamp: new Date().toISOString(), note: "Completed with citizen OTP" }],
-      scheduledAt: "Today 11:00 AM",
-      aiMatchScore: 92,
-      aiMatchReasons: ["Earthing Specialist"],
-      fairWageBreakdown: {
-        customerPaid: 600,
-        baseWorkerWage: 540,
-        skillPremium: 0,
-        experiencePremium: 0,
-        travelAllowance: 0,
-        emergencyAllowance: 0,
-        workerEarning: 540,
-        cooperativeContribution: 60,
-        taxGst: 0
-      },
-      paymentStatus: "PAID",
-      createdAt: new Date(Date.now() - 7200000).toISOString()
-    }
-  ];
-
   // Fetch Bookings from API
   useEffect(() => {
     const fetchData = async () => {
       try {
         const bookings = await api.getMyBookings();
-        if (bookings && bookings.length > 0) {
+        if (Array.isArray(bookings)) {
           setActiveJobs(bookings);
-        } else {
-          setActiveJobs(DEFAULT_DEMO_JOBS);
         }
-      } catch {
-        setActiveJobs(DEFAULT_DEMO_JOBS);
+      } catch (err) {
+        console.warn("Worker bookings fetch error:", err);
       }
     };
     fetchData();
@@ -308,9 +216,17 @@ export const WorkerPage: React.FC = () => {
 
   const handleUpdateStatus = async (bookingId: string, nextStatus: BookingStatus) => {
     try {
-      await api.updateBookingStatus(bookingId, nextStatus, `Worker updated status to ${nextStatus}`);
-    } catch (err) {
+      const res = await api.updateBookingStatus(bookingId, nextStatus, `Worker updated status to ${nextStatus}`);
+      if (res && res.booking) {
+        setActiveJobs((prev) =>
+          prev.map((job) => (job._id === bookingId ? res.booking : job))
+        );
+        return;
+      }
+    } catch (err: any) {
       console.warn("Booking update warning:", err);
+      alert(err.message || "Failed to update booking status.");
+      return;
     }
     setActiveJobs((prev) =>
       prev.map((job) => (job._id === bookingId ? { ...job, status: nextStatus } : job))
@@ -365,7 +281,7 @@ export const WorkerPage: React.FC = () => {
     setWalletBalance(0);
   };
 
-  const newRequestsCount = activeJobs.filter((j) => j.status === "ASSIGNED").length;
+  const newRequestsCount = activeJobs.filter((j) => j.status === "ASSIGNED" || j.status === "REQUESTED").length;
 
   if (!user || user.role !== "WORKER") {
     return (

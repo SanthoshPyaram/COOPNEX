@@ -132,53 +132,54 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
 
   const viewDocument = async (doc: any) => {
     let targetUrl = (doc.fileUrl || doc.storageReference || doc.url || "").trim();
-    if (!targetUrl) {
-      alert("No uploaded document file found for this record.");
-      return;
-    }
-
-    if (targetUrl.startsWith("DOC-") || targetUrl.startsWith("/DOC-")) {
-      targetUrl = `/api/documents/${targetUrl.replace(/^\//, "")}`;
-    }
-
     const token = localStorage.getItem("sahakari_token");
     const isImageFile = /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(doc.originalFilename || targetUrl);
     let resolvedUrl = targetUrl;
     let resolvedMime = doc.mimeType || (isImageFile ? (doc.originalFilename?.endsWith(".svg") ? "image/svg+xml" : "image/jpeg") : (targetUrl.startsWith("data:image") ? "image/png" : "application/pdf"));
-    let isAvailable = true;
+    let isAvailable = Boolean(targetUrl);
 
-    try {
-      if (targetUrl.startsWith("data:") || targetUrl.startsWith("blob:")) {
-        resolvedUrl = targetUrl;
-        if (targetUrl.startsWith("data:")) {
-          resolvedMime = targetUrl.split(";")[0].replace("data:", "");
-        }
-      } else {
-        const apiOrigin = API_BASE.replace(/\/api\/?$/, "");
-        const fullUrl = targetUrl.startsWith("http")
-          ? targetUrl
-          : `${apiOrigin}${targetUrl.startsWith("/") ? "" : "/"}${targetUrl}`;
-
-        const fetchUrl = fullUrl.startsWith("http") && token && !fullUrl.includes("token=")
-          ? `${fullUrl}${fullUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
-          : fullUrl;
-
-        const res = await fetch(fetchUrl, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
-        });
-
-        if (res.ok) {
-          const blob = await res.blob();
-          resolvedUrl = URL.createObjectURL(blob);
-          resolvedMime = blob.type || resolvedMime;
-        } else {
-          console.warn(`Document request returned status ${res.status}`);
-          isAvailable = false;
-          resolvedUrl = "";
-        }
+    if (targetUrl) {
+      if (targetUrl.startsWith("DOC-") || targetUrl.startsWith("/DOC-")) {
+        targetUrl = `/api/documents/${targetUrl.replace(/^\//, "")}`;
       }
-    } catch (err) {
-      console.warn("Document network fetch error:", err);
+
+      try {
+        if (targetUrl.startsWith("data:") || targetUrl.startsWith("blob:")) {
+          resolvedUrl = targetUrl;
+          if (targetUrl.startsWith("data:")) {
+            resolvedMime = targetUrl.split(";")[0].replace("data:", "");
+          }
+        } else {
+          const apiOrigin = API_BASE.replace(/\/api\/?$/, "");
+          const fullUrl = targetUrl.startsWith("http")
+            ? targetUrl
+            : `${apiOrigin}${targetUrl.startsWith("/") ? "" : "/"}${targetUrl}`;
+
+          const isInternal = !targetUrl.startsWith("http") || targetUrl.startsWith(apiOrigin);
+          const fetchUrl = isInternal && token && !fullUrl.includes("token=")
+            ? `${fullUrl}${fullUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
+            : fullUrl;
+
+          const res = await fetch(fetchUrl, {
+            headers: (isInternal && token) ? { Authorization: `Bearer ${token}` } : {}
+          });
+
+          if (res.ok) {
+            const blob = await res.blob();
+            resolvedUrl = URL.createObjectURL(blob);
+            resolvedMime = blob.type || resolvedMime;
+          } else {
+            console.warn(`Document request returned status ${res.status}`);
+            isAvailable = false;
+            resolvedUrl = "";
+          }
+        }
+      } catch (err) {
+        console.warn("Document network fetch error:", err);
+        isAvailable = false;
+        resolvedUrl = "";
+      }
+    } else {
       isAvailable = false;
       resolvedUrl = "";
     }
@@ -401,6 +402,7 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
                       <AvatarPlaceholder
                         src={worker.avatarUrl}
                         name={worker.name}
+                        gender={worker.gender}
                         className="w-16 h-16 rounded-2xl object-cover border-2 border-[#075E54] shadow-sm shrink-0"
                       />
                       <div>

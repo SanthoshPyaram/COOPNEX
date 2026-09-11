@@ -17,6 +17,7 @@ import { CustomerBookingModal } from "../components/CustomerBookingModal";
 import { WhyThisWorkerModal } from "../components/WhyThisWorkerModal";
 import { ReviewModal } from "../components/ReviewModal";
 import { LeafletMap } from "../components/LeafletMap";
+import { resolveWorkerAvatar } from "../utils/workerAvatar";
 import {
   Search,
   Zap,
@@ -850,12 +851,7 @@ export const CustomerDashboardPage: React.FC = () => {
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-start gap-3.5">
                             <img
-                              src={
-                                worker.avatarUrl ||
-                                (worker.gender === "Female"
-                                  ? "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80"
-                                  : "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80")
-                              }
+                              src={resolveWorkerAvatar(worker)}
                               alt={worker.name}
                               className="w-16 h-16 rounded-2xl object-cover border-2 border-blue-200/80 shadow-xs shrink-0 cursor-pointer"
                               onClick={() => setProfileModalWorker(worker)}

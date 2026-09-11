@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { WorkerProfile } from "../../types";
 import { VerificationBadge } from "../VerificationBadge";
+import { resolveWorkerAvatar } from "../../utils/workerAvatar";
 import {
   Heart,
   Star,
@@ -97,7 +98,7 @@ export const CustomerFavoritesView: React.FC<CustomerFavoritesViewProps> = ({
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <img
-                    src={worker.avatarUrl || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80"}
+                    src={resolveWorkerAvatar(worker)}
                     alt={worker.name}
                     className="w-14 h-14 rounded-2xl object-cover border border-slate-200 shrink-0 shadow-2xs"
                   />

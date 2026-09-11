@@ -10,6 +10,7 @@ import { FairWageBreakdownCard } from "../components/FairWageBreakdownCard";
 import { WhyThisWorkerModal } from "../components/WhyThisWorkerModal";
 import { StatusTimeline } from "../components/StatusTimeline";
 import { LeafletMap } from "../components/LeafletMap";
+import { resolveWorkerAvatar } from "../utils/workerAvatar";
 import {
   Search,
   Zap,
@@ -388,10 +389,7 @@ export const CustomerPage: React.FC = () => {
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex items-center gap-3.5">
                             <img
-                              src={
-                                worker.avatarUrl ||
-                                "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80"
-                              }
+                              src={resolveWorkerAvatar(worker)}
                               alt={worker.name}
                               className="w-14 h-14 rounded-2xl object-cover border border-slate-200 shadow-xs"
                             />

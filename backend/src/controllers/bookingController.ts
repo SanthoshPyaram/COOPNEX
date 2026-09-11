@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import { Booking } from "../models/Booking";
 import { Worker } from "../models/Worker";
 import { Review } from "../models/Review";
@@ -29,10 +30,22 @@ export const createBooking = async (req: AuthenticatedRequest, res: Response): P
     let workerExperienceYears = 4;
 
     if (workerId) {
-      assignedWorker = await Worker.findById(workerId);
+      if (mongoose.Types.ObjectId.isValid(workerId)) {
+        assignedWorker = await Worker.findById(workerId);
+      }
+      if (!assignedWorker) {
+        assignedWorker = await Worker.findOne({
+          $or: [
+            { userId: workerId },
+            { workerIdNumber: workerId },
+            { employeeId: workerId }
+          ]
+        });
+      }
+
       if (assignedWorker) {
-        workerVerificationLevel = assignedWorker.verificationLevel;
-        workerExperienceYears = assignedWorker.experienceYears;
+        workerVerificationLevel = assignedWorker.verificationLevel || 3;
+        workerExperienceYears = assignedWorker.experienceYears || 4;
         const wCoords = assignedWorker.location?.coordinates || [80.648, 16.506];
         const cCoords = serviceLocation?.coordinates || [80.648, 16.506];
         distanceKm = GeoService.calculateDistanceKm(cCoords[1], cCoords[0], wCoords[1], wCoords[0]);
@@ -107,8 +120,29 @@ export const getMyBookings = async (req: AuthenticatedRequest, res: Response): P
 
     let query: any = {};
     if (role === "WORKER") {
-      const worker = await Worker.findOne({ userId });
-      query = { workerId: worker?._id };
+      const worker = await Worker.findOne({
+        $or: [
+          { userId },
+          ...(mongoose.Types.ObjectId.isValid(userId) ? [{ _id: userId }] : []),
+          ...(req.user?.phone ? [{ phone: req.user.phone }] : [])
+        ]
+      });
+      if (worker) {
+        query = {
+          $or: [
+            { workerId: worker._id },
+            { workerId: worker.userId },
+            { workerPhone: worker.phone }
+          ]
+        };
+      } else {
+        query = {
+          $or: [
+            { workerId: userId },
+            ...(req.user?.phone ? [{ workerPhone: req.user.phone }] : [])
+          ]
+        };
+      }
     } else {
       query = { customerId: userId };
     }
@@ -154,6 +188,51 @@ export const updateBookingStatus = async (req: AuthenticatedRequest, res: Respon
     if (!booking) {
       res.status(404).json({ success: false, message: "Booking not found." });
       return;
+    }
+
+    // Role-based validation & worker ownership check
+    if (req.user?.role === "WORKER") {
+      const worker = await Worker.findOne({
+        $or: [
+          { userId: req.user._id },
+          ...(mongoose.Types.ObjectId.isValid(req.user._id) ? [{ _id: req.user._id }] : []),
+          ...(req.user.phone ? [{ phone: req.user.phone }] : [])
+        ]
+      });
+
+      // If booking is already assigned, ensure this worker owns it
+      if (booking.workerId || booking.workerPhone) {
+        const isAssignedToThisWorker =
+          (worker && booking.workerId && booking.workerId.toString() === worker._id.toString()) ||
+          (worker && booking.workerId && booking.workerId.toString() === worker.userId?.toString()) ||
+          (worker && booking.workerPhone && booking.workerPhone === worker.phone) ||
+          (booking.workerId && booking.workerId.toString() === req.user._id.toString()) ||
+          (booking.workerPhone && booking.workerPhone === req.user.phone);
+
+        if (!isAssignedToThisWorker) {
+          res.status(403).json({
+            success: false,
+            message: "Forbidden: You are not authorized to accept or modify this booking as it is assigned to another worker."
+          });
+          return;
+        }
+      } else if (status === BOOKING_STATUS.ACCEPTED && worker) {
+        // Unassigned booking being claimed by this worker
+        booking.workerId = worker._id;
+        booking.workerName = worker.name;
+        booking.workerPhone = worker.phone;
+        booking.societyId = worker.societyId;
+      }
+
+      // Check for duplicate acceptance / race condition
+      if (status === BOOKING_STATUS.ACCEPTED && booking.status === BOOKING_STATUS.ACCEPTED) {
+        res.status(409).json({
+          success: false,
+          message: "Booking is already accepted.",
+          booking
+        });
+        return;
+      }
     }
 
     booking.status = status;

@@ -58,6 +58,7 @@ import { VoiceButton } from "../components/VoiceButton";
 import { ttsService } from "../services/tts";
 import { TiltCard3D } from "../components/3d/TiltCard3D";
 import { API_BASE } from "../services/api";
+import { resolveWorkerAvatar } from "../utils/workerAvatar";
 
 // WebGL 3D Components
 import { HeroCoopNetwork3D } from "../components/3d/webgl/HeroCoopNetwork3D";
@@ -977,12 +978,7 @@ export const LandingPage: React.FC = () => {
                     <div className="flex items-start justify-between">
                       <div className="relative overflow-hidden rounded-xl border-2 border-rose-600/30 group-hover:border-rose-500 transition-colors shadow-xs">
                         <img
-                          src={
-                            worker.avatarUrl ||
-                            (worker.gender === "Female"
-                              ? "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80"
-                              : "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80")
-                          }
+                          src={resolveWorkerAvatar(worker)}
                           alt={worker.name}
                           className="w-16 h-16 object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
                         />
@@ -1047,7 +1043,7 @@ export const LandingPage: React.FC = () => {
                         rate: worker.baseHourlyRate || 380,
                         rating: worker.rating || 4.9,
                         society: worker.societyName || currentLocationInfo.cooperativeName,
-                        avatar: worker.avatarUrl
+                        avatar: resolveWorkerAvatar(worker)
                       })
                     }
                     className="w-full btn-accent !min-h-[42px] text-xs font-bold justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-hidden"

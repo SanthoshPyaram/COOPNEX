@@ -5,6 +5,7 @@ import { API_BASE } from "../../services/api";
 interface AvatarPlaceholderProps {
   src?: string | null;
   name?: string;
+  gender?: string | null;
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
   shape?: "rounded" | "circle";
@@ -27,10 +28,10 @@ const iconSizes = {
   xl: "w-12 h-12"
 };
 
-
 export const AvatarPlaceholder: React.FC<AvatarPlaceholderProps> = ({
   src,
   name = "",
+  gender,
   size = "md",
   className = "",
   shape = "rounded",
@@ -75,10 +76,24 @@ export const AvatarPlaceholder: React.FC<AvatarPlaceholderProps> = ({
 
   const initials = getInitials(name);
 
-  if (hasValidSrc && resolvedSrc) {
+  const genderFallbackSrc = React.useMemo(() => {
+    if (!gender) return null;
+    const g = gender.trim().toUpperCase();
+    if (g === "FEMALE" || g.startsWith("FEM")) {
+      return "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80";
+    }
+    if (g === "MALE" || g === "MAN") {
+      return "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80";
+    }
+    return "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&q=80";
+  }, [gender]);
+
+  const activeImageSrc = (hasValidSrc && resolvedSrc) ? resolvedSrc : (!imgError && genderFallbackSrc ? genderFallbackSrc : null);
+
+  if (activeImageSrc) {
     return (
       <img
-        src={resolvedSrc}
+        src={activeImageSrc}
         alt={alt || name}
         onError={() => setImgError(true)}
         className={`${sizeClasses[size]} ${roundedClass} object-cover border border-slate-200 dark:border-slate-700 shrink-0 ${className}`}

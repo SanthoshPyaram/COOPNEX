@@ -6,6 +6,7 @@ import { WorkerProfile, Booking } from "../types";
 import { getPanIndiaWorkerProfiles } from "../data/indiaLocations";
 import { VerificationBadge } from "../components/VerificationBadge";
 import { FairWageBreakdownCard } from "../components/FairWageBreakdownCard";
+import { resolveWorkerAvatar } from "../utils/workerAvatar";
 import {
   Search,
   Zap,
@@ -338,10 +339,7 @@ export const ServicesPage: React.FC = () => {
                 >
                   <div className="flex items-start gap-3.5">
                     <img
-                      src={
-                        w.avatarUrl ||
-                        "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80"
-                      }
+                      src={resolveWorkerAvatar(w)}
                       alt={w.name}
                       className="w-14 h-14 rounded-2xl object-cover border border-slate-200"
                     />
@@ -585,10 +583,7 @@ export const ServicesPage: React.FC = () => {
                 {pendingWorkerForAuth && (
                   <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-left">
                     <img
-                      src={
-                        pendingWorkerForAuth.avatarUrl ||
-                        "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80"
-                      }
+                      src={resolveWorkerAvatar(pendingWorkerForAuth)}
                       alt={pendingWorkerForAuth.name}
                       className="w-12 h-12 rounded-lg object-cover border border-blue-500/20 shrink-0"
                     />

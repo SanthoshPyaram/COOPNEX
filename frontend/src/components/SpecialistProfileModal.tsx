@@ -1,6 +1,7 @@
 import React from "react";
 import { WorkerProfile } from "../types";
 import { VerificationBadge } from "./VerificationBadge";
+import { resolveWorkerAvatar } from "../utils/workerAvatar";
 import {
   X,
   ArrowLeft,
@@ -65,12 +66,7 @@ export const SpecialistProfileModal: React.FC<SpecialistProfileModalProps> = ({
           {/* Main Hero Card */}
           <div className="flex flex-col sm:flex-row sm:items-start gap-4 pb-5 border-b border-slate-100">
             <img
-              src={
-                worker.avatarUrl ||
-                (worker.gender === "Female"
-                  ? "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80"
-                  : "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80")
-              }
+              src={resolveWorkerAvatar(worker)}
               alt={worker.name}
               className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-blue-200/80 shadow-md shrink-0"
             />

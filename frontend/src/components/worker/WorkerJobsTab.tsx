@@ -49,11 +49,11 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
 
   const filteredJobs = jobs.filter((job) => {
     if (activeFilterTab === "ASSIGNED") {
-      if (job.status !== "ASSIGNED") return false;
+      if (job.status !== "ASSIGNED" && job.status !== "REQUESTED") return false;
     } else if (activeFilterTab === "ACCEPTED") {
       if (job.status !== "ACCEPTED") return false;
     } else if (activeFilterTab === "SCHEDULED") {
-      if (job.status !== "ACCEPTED" && job.status !== "ASSIGNED") return false;
+      if (job.status !== "ACCEPTED" && job.status !== "ASSIGNED" && job.status !== "REQUESTED") return false;
     } else if (activeFilterTab === "IN_PROGRESS") {
       if (
         job.status !== "IN_PROGRESS" &&
@@ -84,6 +84,7 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "ASSIGNED":
+      case "REQUESTED":
         return (
           <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse whitespace-nowrap">
             {t("jobs.new_requests", "New Request")}
@@ -125,7 +126,7 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
   };
 
   const renderActionButtons = (job: Booking, isMobile = false) => {
-    if (job.status === "ASSIGNED") {
+    if (job.status === "ASSIGNED" || job.status === "REQUESTED") {
       return (
         <div className={`flex items-center ${isMobile ? "gap-2 w-full" : "justify-end gap-1.5"}`}>
           <button

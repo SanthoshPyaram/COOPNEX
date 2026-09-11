@@ -166,9 +166,10 @@ export async function getDocumentData(documentId: string): Promise<{
   filename: string;
 } | null> {
   const sanitizedId = path.basename(documentId).trim();
+  const baseId = sanitizedId.replace(/\.[a-zA-Z0-9]+$/, "");
 
   // 1. Try local disk cache
-  const localFile = getDocumentFilePath(sanitizedId);
+  const localFile = getDocumentFilePath(sanitizedId) || getDocumentFilePath(baseId);
   if (localFile && fs.existsSync(localFile.filePath)) {
     try {
       const buffer = fs.readFileSync(localFile.filePath);
@@ -190,7 +191,9 @@ export async function getDocumentData(documentId: string): Promise<{
   // 2. Query MongoDB StoredDocument collection
   if (mongoose.connection.readyState === 1) {
     try {
-      const stored = await StoredDocument.findOne({ documentId: sanitizedId });
+      const stored = await StoredDocument.findOne({
+        $or: [{ documentId: sanitizedId }, { documentId: baseId }]
+      });
       if (stored && stored.data) {
         let buffer: Buffer;
         if (stored.data.startsWith("data:")) {
@@ -206,7 +209,7 @@ export async function getDocumentData(documentId: string): Promise<{
           try {
             const ext = ALLOWED_MIME_TYPES[stored.mimeType.toLowerCase()] || "bin";
             const targetDir = stored.isAvatar ? AVATARS_DIR : DOCUMENTS_DIR;
-            const filePath = path.join(targetDir, `${sanitizedId}.${ext}`);
+            const filePath = path.join(targetDir, `${stored.documentId}.${ext}`);
             fs.writeFileSync(filePath, buffer);
           } catch (cacheErr) {
             // Non-fatal cache failure
@@ -215,7 +218,7 @@ export async function getDocumentData(documentId: string): Promise<{
           return {
             buffer,
             mimeType: stored.mimeType || "application/octet-stream",
-            filename: stored.originalName || `${sanitizedId}.bin`
+            filename: stored.originalName || `${stored.documentId}.bin`
           };
         } else {
           console.warn(`Ignoring synthetic SVG in StoredDocument for ${sanitizedId}`);
@@ -231,15 +234,15 @@ export async function getDocumentData(documentId: string): Promise<{
     try {
       const worker = await Worker.findOne({
         $or: [
-          { "kycDocuments.fileUrl": { $regex: sanitizedId } },
-          { "kycDocuments.storageReference": { $regex: sanitizedId } }
+          { "kycDocuments.fileUrl": { $regex: baseId } },
+          { "kycDocuments.storageReference": { $regex: baseId } }
         ]
       });
 
       if (worker) {
         const doc = Array.isArray(worker.kycDocuments)
           ? worker.kycDocuments.find(
-              (d) => d.fileUrl?.includes(sanitizedId) || (d as any).storageReference?.includes(sanitizedId)
+              (d) => d.fileUrl?.includes(baseId) || (d as any).storageReference?.includes(baseId)
             )
           : null;
 
