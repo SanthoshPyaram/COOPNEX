@@ -771,7 +771,16 @@ export const workerLogin = async (req: Request, res: Response): Promise<void> =>
 
     let user = null;
     if (workerProfile) {
-      user = await User.findById(workerProfile.userId);
+      if (workerProfile.userId) {
+        user = await User.findById(workerProfile.userId);
+      }
+      if (!user && workerProfile.email) {
+        user = await User.findOne({ email: workerProfile.email.toLowerCase() });
+        if (user && !workerProfile.userId) {
+          workerProfile.userId = user._id;
+          await workerProfile.save();
+        }
+      }
     } else {
       // Also check User document directly by employeeId, email, or phone
       user = await User.findOne({
@@ -783,7 +792,18 @@ export const workerLogin = async (req: Request, res: Response): Promise<void> =>
         ]
       });
       if (user) {
-        workerProfile = await Worker.findOne({ userId: user._id });
+        workerProfile = await Worker.findOne({
+          $or: [
+            { userId: user._id },
+            { email: user.email },
+            ...(user.employeeId ? [{ employeeId: user.employeeId }, { workerIdNumber: user.employeeId }] : []),
+            ...(user.phone ? [{ phone: user.phone }] : [])
+          ]
+        });
+        if (workerProfile && !workerProfile.userId) {
+          workerProfile.userId = user._id;
+          await workerProfile.save();
+        }
       }
     }
 
@@ -945,7 +965,19 @@ export const getMe = async (req: AuthenticatedRequest, res: Response): Promise<v
 
     let workerProfile = null;
     if (req.user.role === USER_ROLES.WORKER) {
-      workerProfile = await Worker.findOne({ userId: req.user._id });
+      workerProfile = await Worker.findOne({
+        $or: [
+          { userId: req.user._id },
+          ...(req.user.email ? [{ email: req.user.email.toLowerCase() }] : []),
+          ...(req.user.employeeId ? [{ employeeId: req.user.employeeId }, { workerIdNumber: req.user.employeeId }] : []),
+          ...(req.user.phone ? [{ phone: req.user.phone }] : [])
+        ]
+      });
+
+      if (workerProfile && !workerProfile.userId) {
+        workerProfile.userId = req.user._id;
+        await workerProfile.save();
+      }
     }
 
     res.json({
@@ -958,6 +990,7 @@ export const getMe = async (req: AuthenticatedRequest, res: Response): Promise<v
         email: req.user.email,
         phone: req.user.phone,
         role: req.user.role,
+        status: req.user.status || "ACTIVE",
         gender: req.user.gender,
         address: req.user.address,
         city: req.user.city,

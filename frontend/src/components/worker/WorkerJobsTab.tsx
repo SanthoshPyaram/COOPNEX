@@ -46,6 +46,8 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
   const { t } = useTranslation();
   const [activeFilterTab, setActiveFilterTab] = useState<JobFilterTab>("ALL");
   const [filterQuery, setFilterQuery] = useState("");
+  const [rejectingJob, setRejectingJob] = useState<Booking | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const filteredJobs = jobs.filter((job) => {
     if (activeFilterTab === "ASSIGNED") {
@@ -141,7 +143,10 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => onUpdateStatus(job._id, "CANCELLED")}
+            onClick={() => {
+              setRejectingJob(job);
+              setRejectReason("");
+            }}
             className={`${
               isMobile ? "flex-1 justify-center" : ""
             } px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 font-bold text-xs transition cursor-pointer`}
@@ -305,29 +310,28 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
                     </td>
                     <td className="py-3.5 px-3 font-bold text-slate-900 truncate">
                       <span className="truncate block">{job.customerName || "Citizen Customer"}</span>
-                      <span className="block text-[10px] text-slate-400 font-normal truncate">
-                        {job.customerPhone || "+91 98480 22341"}
-                      </span>
+                      {job.customerPhone && (
+                        <span className="block text-[10px] text-slate-400 font-normal truncate">
+                          {job.customerPhone}
+                        </span>
+                      )}
                     </td>
                     <td className="py-3.5 px-3 truncate">
                       <span className="font-extrabold text-slate-800 block truncate">
-                        {job.serviceCategory || "Electrical"}
+                        {job.serviceCategory || "Trade Service"}
                       </span>
                       <p className="text-[11px] text-slate-500 truncate">
-                        {job.requirementDescription || "Standard maintenance"}
+                        {job.requirementDescription || "Service dispatch"}
                       </p>
                     </td>
                     <td className="py-3.5 px-3 text-slate-600 truncate">
                       <div className="flex items-center gap-1 truncate">
                         <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                        <span className="truncate">{job.serviceLocation?.address || "Benz Circle, Vijayawada"}</span>
+                        <span className="truncate">{job.serviceLocation?.address || "—"}</span>
                       </div>
-                      <span className="text-[10px] text-emerald-700 font-bold ml-4">
-                        2.4 km {t("jobs.away", "away")}
-                      </span>
                     </td>
                     <td className="py-3.5 px-3 text-right font-black text-slate-900 text-sm truncate">
-                      ₹{job.fairWageBreakdown?.workerEarning || 650}
+                      ₹{job.fairWageBreakdown?.workerEarning ?? 0}
                       <span className="block text-[9px] text-slate-400 font-normal truncate">
                         {t("jobs.direct_dbt", "Direct DBT")}
                       </span>
@@ -355,7 +359,7 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 min-w-0 gap-2">
                   <div className="min-w-0">
                     <span className="font-mono font-bold text-xs text-slate-800 block truncate">
-                      #{job.bookingNumber || "BK-VJA-2026"}
+                      #{job.bookingNumber}
                     </span>
                     <span className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
                       <Clock className="w-3 h-3" />
@@ -375,10 +379,10 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
                 {/* Service & Customer Details */}
                 <div className="space-y-1.5 min-w-0 text-xs">
                   <h4 className="font-black text-slate-900 text-sm truncate">
-                    {job.serviceCategory || "Electrical Repair"}
+                    {job.serviceCategory || "Trade Service"}
                   </h4>
                   <p className="text-slate-500 line-clamp-2 text-[11px]">
-                    {job.requirementDescription || "General maintenance and inspection"}
+                    {job.requirementDescription || "Standard service request"}
                   </p>
 
                   <div className="pt-1 text-[11px] space-y-0.5 text-slate-600">
@@ -386,17 +390,20 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
                       <span className="font-bold text-slate-800">
                         {job.customerName || "Citizen Customer"}
                       </span>
-                      <span className="text-slate-400">&bull;</span>
-                      <span className="text-slate-500">{job.customerPhone || "+91 98480 22341"}</span>
+                      {job.customerPhone && (
+                        <>
+                          <span className="text-slate-400">&bull;</span>
+                          <span className="text-slate-500">{job.customerPhone}</span>
+                        </>
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-1 text-slate-500 truncate">
-                      <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                      <span className="truncate">{job.serviceLocation?.address || "Benz Circle, Vijayawada"}</span>
-                      <span className="font-bold text-emerald-700 shrink-0 ml-1">
-                        (2.4 km)
-                      </span>
-                    </div>
+                    {job.serviceLocation?.address && (
+                      <div className="flex items-center gap-1 text-slate-500 truncate">
+                        <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                        <span className="truncate">{job.serviceLocation.address}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -407,7 +414,7 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
                       {t("jobs.col_net_wage", "Net Wage")}
                     </span>
                     <span className="font-black text-slate-900 text-base">
-                      ₹{job.fairWageBreakdown?.workerEarning || 650}
+                      ₹{job.fairWageBreakdown?.workerEarning ?? 0}
                     </span>
                   </div>
 
@@ -417,6 +424,79 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* REJECTION CONFIRMATION MODAL */}
+      {rejectingJob && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-rose-600">
+                <XCircle className="w-5 h-5" />
+                <h3 className="text-base font-black text-slate-900">Decline Booking #{rejectingJob.bookingNumber}</h3>
+              </div>
+              <button
+                onClick={() => setRejectingJob(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <XCircle className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Are you sure you want to decline this job request for <strong>{rejectingJob.serviceCategory}</strong> from <strong>{rejectingJob.customerName}</strong>? This dispatch will be released back to the cooperative network.
+            </p>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 block">
+                Reason for declining (optional):
+              </label>
+              <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                {["Workload conflict", "Out of service zone", "Special tools required", "Emergency personal issue"].map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRejectReason(r)}
+                    className={`p-2 rounded-xl border text-left font-medium transition cursor-pointer ${
+                      rejectReason === r
+                        ? "bg-rose-50 border-rose-300 text-rose-800 font-bold"
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Or specify another reason..."
+                className="w-full mt-2 px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-rose-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setRejectingJob(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onUpdateStatus(rejectingJob._id, "CANCELLED");
+                  setRejectingJob(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer shadow-xs"
+              >
+                Confirm Decline
+              </button>
+            </div>
           </div>
         </div>
       )}

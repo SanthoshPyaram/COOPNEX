@@ -85,6 +85,17 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
         }
       ];
 
+  const primarySkill = skills[0] || "Artisan";
+  const primaryTrade = primarySkill.toLowerCase().includes("plumb")
+    ? "plumber"
+    : primarySkill.toLowerCase().includes("carpent")
+    ? "carpenter"
+    : primarySkill.toLowerCase().includes("paint")
+    ? "painter"
+    : "electrician";
+
+  const badgeText = `${primarySkill} • ${isVerified ? "Level 4 Certified" : "Level 1 Enrolled"}`;
+
   return (
     <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-5 sm:p-8 space-y-6">
       {/* 2-COLUMN PROFILE HEADER */}
@@ -92,12 +103,12 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
         {/* Left: Large Professional Human Visual */}
         <div className="shrink-0">
           <HumanVisual
-            role="electrician"
+            role={primaryTrade}
             size="xl"
             animation="breathe"
             background="glow"
             showStatusBadge
-            badgeText="Level 4 Master Electrician"
+            badgeText={badgeText}
           />
         </div>
 
@@ -105,22 +116,26 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
         <div className="flex-1 space-y-3 text-center md:text-left">
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
             <h2 className="text-2xl font-black text-slate-900">{name}</h2>
-            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Government Verified</span>
+            <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+              isVerified
+                ? "text-emerald-700 bg-emerald-100 border-emerald-300"
+                : "text-amber-700 bg-amber-100 border-amber-300"
+            }`}>
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>{isVerified ? "Government Verified" : "Review Pending"}</span>
             </span>
           </div>
 
           <p className="text-xs text-slate-600 flex flex-wrap items-center justify-center md:justify-start gap-2">
             <span className="font-mono font-bold text-blue-600">ID: {employeeId}</span>
             <span>&bull;</span>
-            <span className="font-bold text-slate-800">{skills[0] || "Electrician (Level 4)"}</span>
+            <span className="font-bold text-slate-800">{primarySkill}</span>
             <span>&bull;</span>
             <span>{district}</span>
           </p>
 
           <p className="text-xs text-slate-500 max-w-xl leading-relaxed">
-            Registered master artisan affiliated with <strong className="text-slate-800">{societyName}</strong>. Specializing in high-voltage industrial circuits, residential MCB diagnostic repairs, and solar inverter installations.
+            Registered artisan affiliated with <strong className="text-slate-800">{societyName}</strong> in {district}. Certified in {skills.join(", ") || primarySkill} with {experienceYears} years of verified field craftsmanship.
           </p>
 
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-1 text-xs">

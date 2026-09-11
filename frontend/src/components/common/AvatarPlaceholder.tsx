@@ -76,19 +76,27 @@ export const AvatarPlaceholder: React.FC<AvatarPlaceholderProps> = ({
 
   const initials = getInitials(name);
 
-  const genderFallbackSrc = React.useMemo(() => {
-    if (!gender) return null;
-    const g = gender.trim().toUpperCase();
-    if (g === "FEMALE" || g.startsWith("FEM")) {
-      return "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80";
+  // Deterministic color palette derived from worker's name or alt
+  const palette = React.useMemo(() => {
+    const palettes = [
+      "bg-gradient-to-tr from-blue-600 to-indigo-700 text-white border-blue-500",
+      "bg-gradient-to-tr from-emerald-600 to-teal-700 text-white border-emerald-500",
+      "bg-gradient-to-tr from-amber-600 to-orange-700 text-white border-amber-500",
+      "bg-gradient-to-tr from-purple-600 to-violet-700 text-white border-purple-500",
+      "bg-gradient-to-tr from-cyan-600 to-blue-700 text-white border-cyan-500",
+      "bg-gradient-to-tr from-teal-600 to-emerald-700 text-white border-teal-500",
+      "bg-gradient-to-tr from-rose-600 to-pink-700 text-white border-rose-500",
+      "bg-gradient-to-tr from-indigo-600 to-purple-700 text-white border-indigo-500"
+    ];
+    const key = (name || alt || "worker").trim();
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) {
+      hash = (hash << 5) - hash + key.charCodeAt(i);
     }
-    if (g === "MALE" || g === "MAN") {
-      return "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80";
-    }
-    return "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&q=80";
-  }, [gender]);
+    return palettes[Math.abs(hash) % palettes.length];
+  }, [name, alt]);
 
-  const activeImageSrc = (hasValidSrc && resolvedSrc) ? resolvedSrc : (!imgError && genderFallbackSrc ? genderFallbackSrc : null);
+  const activeImageSrc = (hasValidSrc && resolvedSrc) ? resolvedSrc : null;
 
   if (activeImageSrc) {
     return (
@@ -103,13 +111,13 @@ export const AvatarPlaceholder: React.FC<AvatarPlaceholderProps> = ({
 
   return (
     <div
-      className={`${sizeClasses[size]} ${roundedClass} bg-gradient-to-tr from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 text-slate-600 dark:text-slate-300 flex flex-col items-center justify-center font-black border border-slate-200 dark:border-slate-700 shrink-0 shadow-xs ${className}`}
+      className={`${sizeClasses[size]} ${roundedClass} ${palette} flex flex-col items-center justify-center font-black border shrink-0 shadow-xs ${className}`}
       title={name || "Member Avatar"}
     >
       {initials ? (
         <span className="font-mono tracking-tighter leading-none">{initials}</span>
       ) : (
-        <User className={`${iconSizes[size]} text-slate-400 dark:text-slate-500`} />
+        <User className={`${iconSizes[size]} text-white/80`} />
       )}
     </div>
   );

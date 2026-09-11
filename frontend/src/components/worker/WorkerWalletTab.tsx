@@ -34,39 +34,9 @@ export const WorkerWalletTab: React.FC<WorkerWalletTabProps> = ({
   const [withdrawalProcessing, setWithdrawalProcessing] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [currentWithdrawalRecord, setCurrentWithdrawalRecord] = useState<any | null>(null);
-
-  const pastWithdrawals = [
-    {
-      id: "w-1",
-      txId: "COOP-DBT-942801-4192",
-      amount: 4500,
-      date: "05 Sep 2026, 18:20",
-      bank: "Andhra Pragathi Grameena Bank",
-      account: "APGB-0021-99821",
-      ifsc: "APGB0001042",
-      status: "SETTLED"
-    },
-    {
-      id: "w-2",
-      txId: "COOP-DBT-881204-1920",
-      amount: 3200,
-      date: "28 Aug 2026, 17:45",
-      bank: "Andhra Pragathi Grameena Bank",
-      account: "APGB-0021-99821",
-      ifsc: "APGB0001042",
-      status: "SETTLED"
-    },
-    {
-      id: "w-3",
-      txId: "COOP-DBT-772910-8201",
-      amount: 5800,
-      date: "20 Aug 2026, 19:10",
-      bank: "Andhra Pragathi Grameena Bank",
-      account: "APGB-0021-99821",
-      ifsc: "APGB0001042",
-      status: "SETTLED"
-    }
-  ];
+  const [withdrawals, setWithdrawals] = useState<any[]>(() => {
+    return lastWithdrawal ? [lastWithdrawal] : [];
+  });
 
   const handleWithdrawClick = () => {
     if (walletBalance <= 0) return;
@@ -78,10 +48,11 @@ export const WorkerWalletTab: React.FC<WorkerWalletTabProps> = ({
         amount: walletBalance,
         txId: `COOP-DBT-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`,
         timestamp: new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
-        bank: "Andhra Pragathi Grameena Bank",
-        ifsc: "APGB0001042",
-        account: "APGB-0021-99821"
+        bank: "Direct Bank DBT",
+        ifsc: "COOP0001042",
+        account: "Aadhaar Linked Bank A/C"
       };
+      setWithdrawals((prev) => [record, ...prev]);
       setCurrentWithdrawalRecord(record);
       setWithdrawalProcessing(false);
       setSuccessModalOpen(true);
@@ -190,29 +161,37 @@ export const WorkerWalletTab: React.FC<WorkerWalletTabProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {pastWithdrawals.map((w) => (
-                <tr key={w.id} className="hover:bg-slate-50/70 transition">
-                  <td className="py-3.5 px-3 font-mono font-bold text-slate-700">
-                    {w.txId}
-                  </td>
-                  <td className="py-3.5 px-3 text-slate-600 font-medium">
-                    {w.date}
-                  </td>
-                  <td className="py-3.5 px-3 text-slate-800">
-                    {w.bank}
-                    <span className="block text-[10px] text-slate-400 font-mono">{w.account}</span>
-                  </td>
-                  <td className="py-3.5 px-3 text-right font-black text-slate-900 text-sm">
-                    ₹{w.amount.toLocaleString()}
-                  </td>
-                  <td className="py-3.5 px-3 text-center">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                      <CheckCircle2 className="w-3 h-3" />
-                      Settled
-                    </span>
+              {withdrawals.length > 0 ? (
+                withdrawals.map((w, i) => (
+                  <tr key={w.id || w.txId || i} className="hover:bg-slate-50/70 transition">
+                    <td className="py-3.5 px-3 font-mono font-bold text-slate-700">
+                      {w.txId}
+                    </td>
+                    <td className="py-3.5 px-3 text-slate-600 font-medium">
+                      {w.timestamp || w.date}
+                    </td>
+                    <td className="py-3.5 px-3 text-slate-800">
+                      {w.bank}
+                      <span className="block text-[10px] text-slate-400 font-mono">{w.account}</span>
+                    </td>
+                    <td className="py-3.5 px-3 text-right font-black text-slate-900 text-sm">
+                      ₹{w.amount.toLocaleString()}
+                    </td>
+                    <td className="py-3.5 px-3 text-center">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Settled
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-slate-400">
+                    No previous withdrawals on record. When you initiate an instant DBT transfer, your settlement vouchers will appear here.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

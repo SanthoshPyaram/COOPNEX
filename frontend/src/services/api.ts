@@ -138,7 +138,11 @@ export const api = {
       },
       body: JSON.stringify({ status, note })
     });
-    return res.json();
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to update booking status.");
+    }
+    return data;
   },
 
   submitReview: async (body: any) => {

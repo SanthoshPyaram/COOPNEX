@@ -48,6 +48,7 @@ interface AuthContextType {
   registerWorker: (data: any) => Promise<{ success: boolean; message?: string; employeeId?: string }>;
   logout: () => void;
   setAdminSession: (user: UserData, token: string) => void;
+  refreshUser: () => Promise<UserData | null>;
   // Demo helper for the isolated /demo testing hub only
   switchDemoRoleForTesting: (role: UserRole) => Promise<UserRole>;
 }
@@ -67,6 +68,7 @@ const AuthContext = createContext<AuthContextType>({
   registerWorker: async () => ({ success: false }),
   logout: () => {},
   setAdminSession: () => {},
+  refreshUser: async () => null,
   switchDemoRoleForTesting: async () => "CUSTOMER"
 });
 
@@ -814,6 +816,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return targetRole;
   };
 
+  const refreshUser = async (): Promise<UserData | null> => {
+    const savedToken = localStorage.getItem("sahakari_token");
+    if (!savedToken) return null;
+    try {
+      const res = await fetch(`${API_BASE}/auth/me`, {
+        headers: { Authorization: `Bearer ${savedToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.user) {
+          setUser(data.user);
+          localStorage.setItem("sahakari_user", JSON.stringify(data.user));
+          if (data.user.workerProfile?.verificationStatus) {
+            localStorage.setItem("sahakari_worker_status", data.user.workerProfile.verificationStatus);
+          }
+          return data.user;
+        }
+      }
+    } catch (e) {
+      console.warn("refreshUser warning:", e);
+    }
+    return null;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -831,6 +857,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         registerWorker,
         logout,
         setAdminSession,
+        refreshUser,
         switchDemoRoleForTesting
       }}
     >

@@ -11,67 +11,54 @@ import {
   Building2
 } from "lucide-react";
 
-export const WorkerEarningsTab: React.FC = () => {
-  const earningsLedger = [
-    {
-      id: "e-1",
-      bookingId: "BK-VJA-2026-801",
-      customer: "Smt. Priya Sharma",
-      service: "Emergency MCB Main Line Tripping",
-      date: "Today, 14:30",
-      grossPaid: 800,
-      coopDeduction: 80, // 10% statutory welfare & admin
-      platformCut: 0, // 0% middleman cut
-      netEarning: 720,
-      status: "CREDITED_VIA_DBT"
-    },
-    {
-      id: "e-2",
-      bookingId: "BK-VJA-2026-794",
-      customer: "Sri K. Venkat Rao",
-      service: "Inverter Backfeed Circuit Installation",
-      date: "08 Sep 2026",
-      grossPaid: 750,
-      coopDeduction: 75,
-      platformCut: 0,
-      netEarning: 675,
-      status: "CREDITED_VIA_DBT"
-    },
-    {
-      id: "e-3",
-      bookingId: "BK-VJA-2026-778",
-      customer: "Sri T. Nageswara Rao",
-      service: "Heavy Appliance Earthing Spike Check",
-      date: "06 Sep 2026",
-      grossPaid: 600,
-      coopDeduction: 60,
-      platformCut: 0,
-      netEarning: 540,
-      status: "CREDITED_VIA_DBT"
-    },
-    {
-      id: "e-4",
-      bookingId: "BK-VJA-2026-742",
-      customer: "Smt. L. Madhavi",
-      service: "Distribution Box Health Inspection",
-      date: "04 Sep 2026",
-      grossPaid: 500,
-      coopDeduction: 50,
-      platformCut: 0,
-      netEarning: 450,
-      status: "CREDITED_VIA_DBT"
-    }
-  ];
+import { Booking } from "../../types";
 
-  const weeklyDays = [
-    { day: "Mon", amount: 650, height: "45%" },
-    { day: "Tue", amount: 900, height: "65%" },
-    { day: "Wed", amount: 550, height: "38%" },
-    { day: "Thu", amount: 1200, height: "85%" },
-    { day: "Fri", amount: 750, height: "52%" },
-    { day: "Sat", amount: 1400, height: "100%", isPeak: true },
-    { day: "Sun", amount: 650, height: "45%" }
-  ];
+interface WorkerEarningsTabProps {
+  activeJobs?: Booking[];
+  workerProfile?: any;
+}
+
+export const WorkerEarningsTab: React.FC<WorkerEarningsTabProps> = ({
+  activeJobs = [],
+  workerProfile
+}) => {
+  const completedJobs = activeJobs.filter((j) => j.status === "COMPLETED");
+
+  const isToday = (dateStr?: Date | string) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    const today = new Date();
+    return d.toDateString() === today.toDateString();
+  };
+
+  const todaysEarnings = completedJobs
+    .filter((j) => isToday(j.completedAt) || isToday(j.updatedAt))
+    .reduce((sum, j) => sum + (j.fairWageBreakdown?.workerEarning || 0), 0);
+
+  const totalEarnings = workerProfile?.totalEarnings ?? completedJobs.reduce((sum, j) => sum + (j.fairWageBreakdown?.workerEarning || 0), 0);
+  const totalJobsCount = workerProfile?.jobsCompletedCount ?? completedJobs.length;
+
+  const earningsLedger = completedJobs.map((job) => ({
+    id: job._id,
+    bookingId: job.bookingNumber,
+    customer: job.customerName || "Citizen Customer",
+    service: job.requirementDescription || job.serviceCategory,
+    date: job.completedAt ? new Date(job.completedAt).toLocaleDateString("en-IN") : "Recent",
+    grossPaid: job.fairWageBreakdown?.customerPaid || 0,
+    coopDeduction: job.fairWageBreakdown?.cooperativeContribution || 0,
+    platformCut: 0,
+    netEarning: job.fairWageBreakdown?.workerEarning || 0,
+    status: "CREDITED_VIA_DBT"
+  }));
+
+  const primarySkill = (workerProfile?.skills && workerProfile.skills[0]) || workerProfile?.trade || "Artisan";
+  const primaryTrade = primarySkill.toLowerCase().includes("plumb")
+    ? "plumber"
+    : primarySkill.toLowerCase().includes("carpent")
+    ? "carpenter"
+    : primarySkill.toLowerCase().includes("paint")
+    ? "painter"
+    : "electrician";
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-5 sm:p-6 space-y-6">
@@ -80,10 +67,10 @@ export const WorkerEarningsTab: React.FC = () => {
         <div>
           <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-emerald-600" />
-            <span>Fair Wage & Earnings Ledger</span>
+            <span>Fair Wage &amp; Earnings Ledger</span>
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Transparent breakdown: 90% direct to artisan DBT, 10% cooperative welfare fund, 0% platform profit.
+            Transparent breakdown: 100% direct to artisan DBT escrow, 0% platform commission deductions.
           </p>
         </div>
 
@@ -92,7 +79,7 @@ export const WorkerEarningsTab: React.FC = () => {
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
             <span>0% Commission Cooperative Guarantee</span>
           </span>
-          <HumanVisual role="electrician" size="xs" animation="subtle" background="none" />
+          <HumanVisual role={primaryTrade} size="xs" animation="subtle" background="none" />
         </div>
       </div>
 
@@ -100,51 +87,26 @@ export const WorkerEarningsTab: React.FC = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
           <span className="text-xs text-slate-500 font-bold block">Today's Earnings</span>
-          <div className="text-2xl font-black text-slate-900 mt-1">₹650</div>
-          <span className="text-[10px] text-emerald-600 font-bold">1 job completed today</span>
+          <div className="text-2xl font-black text-slate-900 mt-1">₹{todaysEarnings.toLocaleString("en-IN")}</div>
+          <span className="text-[10px] text-emerald-600 font-bold">100% Direct DBT Pay</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-          <span className="text-xs text-slate-500 font-bold block">This Week</span>
-          <div className="text-2xl font-black text-slate-900 mt-1">₹4,200</div>
-          <span className="text-[10px] text-emerald-600 font-bold">↑ 8% vs last week</span>
+          <span className="text-xs text-slate-500 font-bold block">Completed Dispatches</span>
+          <div className="text-2xl font-black text-slate-900 mt-1">{completedJobs.length}</div>
+          <span className="text-[10px] text-blue-600 font-bold">Active in current period</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-          <span className="text-xs text-slate-500 font-bold block">This Month (September)</span>
-          <div className="text-2xl font-black text-[#2563EB] mt-1">₹24,800</div>
-          <span className="text-[10px] text-blue-600 font-bold">36 jobs completed</span>
+          <span className="text-xs text-slate-500 font-bold block">Total Lifetime Earnings</span>
+          <div className="text-2xl font-black text-[#2563EB] mt-1">₹{(totalEarnings || 0).toLocaleString("en-IN")}</div>
+          <span className="text-[10px] text-emerald-600 font-bold">Direct to Bank Escrow</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-          <span className="text-xs text-slate-500 font-bold block">Lifetime Escrow DBT</span>
-          <div className="text-2xl font-black text-emerald-600 mt-1">₹68,400</div>
-          <span className="text-[10px] text-slate-400">184 total platform jobs</span>
-        </div>
-      </div>
-
-      {/* WEEKLY REVENUE CHART */}
-      <div className="p-5 rounded-3xl bg-slate-50/70 border border-slate-200 space-y-4">
-        <div className="flex items-center justify-between">
-          <h4 className="text-xs font-black uppercase tracking-wider text-slate-700">
-            Weekly Earnings Distribution
-          </h4>
-          <span className="text-xs font-bold text-slate-500">Weekly Total: ₹6,100</span>
-        </div>
-
-        <div className="grid grid-cols-7 gap-2 h-44 items-end pt-4">
-          {weeklyDays.map((d, i) => (
-            <div key={i} className="flex flex-col items-center gap-2 h-full justify-end">
-              <span className="text-[10px] font-mono font-bold text-slate-700">₹{d.amount}</span>
-              <div
-                style={{ height: d.height }}
-                className={`w-full max-w-[42px] rounded-t-xl transition-all ${
-                  d.isPeak ? "bg-blue-600 shadow-sm" : "bg-blue-200 hover:bg-blue-300"
-                }`}
-              />
-              <span className="text-xs font-bold text-slate-600">{d.day}</span>
-            </div>
-          ))}
+          <span className="text-xs text-slate-500 font-bold block">All-Time Platform Jobs</span>
+          <div className="text-2xl font-black text-emerald-600 mt-1">{totalJobsCount}</div>
+          <span className="text-[10px] text-slate-400">Total verified deliveries</span>
         </div>
       </div>
 
@@ -166,35 +128,43 @@ export const WorkerEarningsTab: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {earningsLedger.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50/70 transition">
-                  <td className="py-3.5 px-3 font-mono font-bold text-slate-700">
-                    {item.bookingId}
-                  </td>
-                  <td className="py-3.5 px-3">
-                    <span className="font-bold text-slate-900 block">{item.customer}</span>
-                    <span className="text-[10px] text-slate-500">{item.service}</span>
-                  </td>
-                  <td className="py-3.5 px-3 text-slate-600 font-medium">
-                    {item.date}
-                  </td>
-                  <td className="py-3.5 px-3 text-right font-black text-slate-900">
-                    ₹{item.grossPaid}
-                  </td>
-                  <td className="py-3.5 px-3 text-right font-bold text-amber-700">
-                    -₹{item.coopDeduction}
-                  </td>
-                  <td className="py-3.5 px-3 text-right font-black text-emerald-600 text-sm">
-                    ₹{item.netEarning}
-                  </td>
-                  <td className="py-3.5 px-3 text-center">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                      <ShieldCheck className="w-3 h-3" />
-                      Direct DBT
-                    </span>
+              {earningsLedger.length > 0 ? (
+                earningsLedger.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50/70 transition">
+                    <td className="py-3.5 px-3 font-mono font-bold text-slate-700">
+                      {item.bookingId}
+                    </td>
+                    <td className="py-3.5 px-3">
+                      <span className="font-bold text-slate-900 block">{item.customer}</span>
+                      <span className="text-[10px] text-slate-500">{item.service}</span>
+                    </td>
+                    <td className="py-3.5 px-3 text-slate-600 font-medium">
+                      {item.date}
+                    </td>
+                    <td className="py-3.5 px-3 text-right font-black text-slate-900">
+                      ₹{item.grossPaid}
+                    </td>
+                    <td className="py-3.5 px-3 text-right font-bold text-amber-700">
+                      -₹{item.coopDeduction}
+                    </td>
+                    <td className="py-3.5 px-3 text-right font-black text-emerald-600 text-sm">
+                      ₹{item.netEarning}
+                    </td>
+                    <td className="py-3.5 px-3 text-center">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                        <ShieldCheck className="w-3 h-3" />
+                        Direct DBT
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-slate-400">
+                    No completed service payouts yet. Payouts for completed jobs with citizen OTP will be credited via direct DBT and displayed here.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

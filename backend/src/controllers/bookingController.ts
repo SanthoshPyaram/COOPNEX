@@ -195,6 +195,8 @@ export const updateBookingStatus = async (req: AuthenticatedRequest, res: Respon
       const worker = await Worker.findOne({
         $or: [
           { userId: req.user._id },
+          ...(req.user.email ? [{ email: req.user.email.toLowerCase() }] : []),
+          ...(req.user.employeeId ? [{ employeeId: req.user.employeeId }, { workerIdNumber: req.user.employeeId }] : []),
           ...(mongoose.Types.ObjectId.isValid(req.user._id) ? [{ _id: req.user._id }] : []),
           ...(req.user.phone ? [{ phone: req.user.phone }] : [])
         ]
@@ -225,24 +227,39 @@ export const updateBookingStatus = async (req: AuthenticatedRequest, res: Respon
       }
 
       // Check for duplicate acceptance / race condition
-      if (status === BOOKING_STATUS.ACCEPTED && booking.status === BOOKING_STATUS.ACCEPTED) {
-        res.status(409).json({
-          success: false,
-          message: "Booking is already accepted.",
-          booking
-        });
-        return;
+      if (status === BOOKING_STATUS.ACCEPTED) {
+        if (booking.status === BOOKING_STATUS.ACCEPTED) {
+          res.status(409).json({
+            success: false,
+            message: "This booking is no longer available (already accepted).",
+            booking
+          });
+          return;
+        }
+        if (
+          booking.status !== BOOKING_STATUS.REQUESTED &&
+          booking.status !== BOOKING_STATUS.ASSIGNED &&
+          booking.status !== BOOKING_STATUS.MATCHING
+        ) {
+          res.status(409).json({
+            success: false,
+            message: "This booking is no longer available.",
+            booking
+          });
+          return;
+        }
       }
     }
 
-    booking.status = status;
+    const effectiveStatus = (status === "REJECTED" ? BOOKING_STATUS.CANCELLED : status);
+    booking.status = effectiveStatus;
     booking.statusTimeline.push({
-      status,
+      status: effectiveStatus,
       timestamp: new Date(),
-      note: note || `Status updated to ${status}`
+      note: note || (status === "REJECTED" ? "Rejected by worker" : `Status updated to ${status}`)
     });
 
-    if (status === BOOKING_STATUS.COMPLETED) {
+    if (effectiveStatus === BOOKING_STATUS.COMPLETED) {
       booking.completedAt = new Date();
       booking.paymentStatus = "PAID";
 
@@ -257,7 +274,8 @@ export const updateBookingStatus = async (req: AuthenticatedRequest, res: Respon
         });
       }
 
-      // Generate Invoice
+      // Generate Invoice with real worker data
+      const realWorker = booking.workerId ? await Worker.findById(booking.workerId) : null;
       const invNumber = `INV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
       await Invoice.create({
         invoiceNumber: invNumber,
@@ -268,11 +286,11 @@ export const updateBookingStatus = async (req: AuthenticatedRequest, res: Respon
           address: booking.serviceLocation.address
         },
         workerDetails: {
-          workerIdNumber: "SS-AP-2026-104",
-          name: booking.workerName || "Verified Worker",
-          phone: booking.workerPhone || "+919876543210",
-          verificationLevel: 4,
-          societyName: "Vijayawada Central Labour Cooperative"
+          workerIdNumber: realWorker?.employeeId || realWorker?.workerIdNumber || "COOP-WRK",
+          name: realWorker?.name || booking.workerName || "Verified Worker",
+          phone: realWorker?.phone || booking.workerPhone || "+919876543210",
+          verificationLevel: realWorker?.verificationLevel || 1,
+          societyName: realWorker?.societyName || "Vijayawada Central Labour Cooperative"
         },
         serviceCategory: booking.serviceCategory,
         itemizedBreakdown: {

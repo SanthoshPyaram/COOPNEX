@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 
 export const WorkerPage: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -74,6 +74,9 @@ export const WorkerPage: React.FC = () => {
     const token = localStorage.getItem("sahakari_token");
     if (token) {
       try {
+        if (refreshUser) {
+          await refreshUser();
+        }
         const res = await fetch(`${API_BASE}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -150,11 +153,20 @@ export const WorkerPage: React.FC = () => {
     };
   }, [user]);
 
+  const wp = (user as any)?.workerProfile;
+  const isVerified = workerStatus === "VERIFIED";
+
   const [activeJobs, setActiveJobs] = useState<Booking[]>([]);
   const [isAvailable, setIsAvailable] = useState(true);
-  const [walletBalance, setWalletBalance] = useState(5500);
+  const [walletBalance, setWalletBalance] = useState<number>(() => wp?.walletBalance ?? 0);
   const [searchQuery, setSearchQuery] = useState("");
   const [payoutSuccessMsg, setPayoutSuccessMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (wp?.walletBalance !== undefined && wp?.walletBalance !== null) {
+      setWalletBalance(wp.walletBalance);
+    }
+  }, [wp?.walletBalance]);
 
   // Silent Withdrawal State
   const [lastWithdrawal, setLastWithdrawal] = useState<{
@@ -174,10 +186,6 @@ export const WorkerPage: React.FC = () => {
 
   // Selected Job for inspection
   const [inspectJob, setInspectJob] = useState<Booking | null>(null);
-
-  // Dynamic Smart ID Card Data
-  const wp = (user as any)?.workerProfile;
-  const isVerified = workerStatus === "VERIFIED";
 
   const workerCardData: WorkerIdCardData = {
     employeeId: (user as any)?.employeeId || wp?.employeeId || wp?.workerIdNumber || "COOP-WRK-MEMBER",
@@ -472,7 +480,7 @@ export const WorkerPage: React.FC = () => {
           )}
 
           {activeTab === "earnings" && (
-            <WorkerEarningsTab />
+            <WorkerEarningsTab activeJobs={activeJobs} workerProfile={wp} />
           )}
 
           {activeTab === "wallet" && (
@@ -528,6 +536,12 @@ export const WorkerPage: React.FC = () => {
               skills={workerCardData.skills}
               district={workerCardData.district}
               societyName={workerCardData.societyName}
+              verificationStatus={workerStatus}
+              kycDocuments={wp?.kycDocuments || []}
+              experienceYears={wp?.experienceYears || (user as any)?.experienceYears || 3}
+              rating={wp?.rating || 5.0}
+              reviewCount={wp?.reviewCount || 0}
+              jobsCompletedCount={wp?.jobsCompletedCount || activeJobs.filter((j) => j.status === "COMPLETED").length}
             />
           )}
 

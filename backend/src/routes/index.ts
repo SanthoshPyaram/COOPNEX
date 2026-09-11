@@ -57,6 +57,7 @@ apiRouter.patch(
   requireRoles(USER_ROLES.SOCIETY_ADMIN, USER_ROLES.FEDERATION_ADMIN, USER_ROLES.SUPER_ADMIN),
   workerCtrl.updateVerification
 );
+apiRouter.get("/workers/me", authenticateJwt, workerCtrl.getWorkerMe);
 apiRouter.patch("/workers/me/availability", authenticateJwt, workerCtrl.updateAvailability);
 
 // --- BOOKINGS ---

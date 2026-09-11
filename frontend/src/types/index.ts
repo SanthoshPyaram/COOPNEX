@@ -122,6 +122,9 @@ export interface Booking {
     welfareFundINR?: number;
   };
   createdAt: string;
+  updatedAt?: string;
+  completedAt?: string;
+  district?: string;
 }
 
 export interface WorkforceExchangeProposal {

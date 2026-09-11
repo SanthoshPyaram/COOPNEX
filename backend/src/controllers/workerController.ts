@@ -272,7 +272,12 @@ export const updateVerification = async (req: AuthenticatedRequest, res: Respons
 export const updateAvailability = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { isAvailable, emergencyReady } = req.body;
-    const worker = await Worker.findOne({ userId: req.user?._id });
+    const worker = await Worker.findOne({
+      $or: [
+        { userId: req.user?._id },
+        ...(req.user?.email ? [{ email: req.user.email.toLowerCase() }] : [])
+      ]
+    });
 
     if (!worker) {
       res.status(404).json({ success: false, message: "Worker profile not found for this account." });
@@ -294,4 +299,42 @@ export const updateAvailability = async (req: AuthenticatedRequest, res: Respons
     res.status(500).json({ success: false, message: "Error updating availability." });
   }
 };
+
+export const getWorkerMe = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, message: "Not authenticated." });
+      return;
+    }
+
+    const worker = await Worker.findOne({
+      $or: [
+        { userId: req.user._id },
+        ...(req.user.email ? [{ email: req.user.email.toLowerCase() }] : []),
+        ...(req.user.employeeId ? [{ employeeId: req.user.employeeId }, { workerIdNumber: req.user.employeeId }] : []),
+        ...(req.user.phone ? [{ phone: req.user.phone }] : [])
+      ]
+    })
+      .populate("societyId", "name district officeLocation serviceRadiusKm contactPhone")
+      .populate("federationId", "name headquarters state");
+
+    if (!worker) {
+      res.status(404).json({ success: false, message: "Worker profile not found in cooperative records." });
+      return;
+    }
+
+    if (!worker.userId) {
+      worker.userId = req.user._id;
+      await worker.save();
+    }
+
+    res.json({
+      success: true,
+      worker
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: "Error retrieving worker profile.", error: error.message });
+  }
+};
+
 

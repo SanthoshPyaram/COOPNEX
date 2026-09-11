@@ -17,7 +17,8 @@ export const BOOKING_STATUS = {
   ARRIVED: "ARRIVED",
   IN_PROGRESS: "IN_PROGRESS",
   COMPLETED: "COMPLETED",
-  CANCELLED: "CANCELLED"
+  CANCELLED: "CANCELLED",
+  REJECTED: "REJECTED"
 } as const;
 
 export type BookingStatus = keyof typeof BOOKING_STATUS;
