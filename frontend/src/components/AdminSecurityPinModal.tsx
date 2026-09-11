@@ -95,7 +95,8 @@ export const AdminSecurityPinModal: React.FC<AdminSecurityPinModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-fadeIn"
+      className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-fadeIn"
+      style={{ transformStyle: "flat", perspective: "none" }}
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >
@@ -119,6 +120,7 @@ export const AdminSecurityPinModal: React.FC<AdminSecurityPinModalProps> = ({
         initial={{ opacity: 0, scale: 0.9, y: 15 }}
         animate={isShaking ? { x: [-12, 12, -8, 8, -4, 4, 0] } : { opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.35 }}
+        style={{ transformStyle: "flat", WebkitTransformStyle: "flat", backfaceVisibility: "visible" }}
         className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden relative"
       >
         {/* Top Header Strip */}

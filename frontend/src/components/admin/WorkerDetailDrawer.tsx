@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -41,18 +41,26 @@ export interface WorkerDetailDrawerProps {
   onApprove?: (workerId: string, level: number) => void;
   onReject?: (workerId: string, reason: string) => void;
   onRequestInfo?: (workerId: string) => void;
+  onWorkerUpdated?: (updatedWorker: any) => void;
   initialTab?: "overview" | "kyc" | "jobs" | "welfare";
 }
 
 export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
-  worker,
+  worker: initialWorker,
   isOpen,
   onClose,
   onApprove,
   onReject,
   onRequestInfo,
+  onWorkerUpdated,
   initialTab = "overview"
 }) => {
+  const [worker, setWorker] = useState<any>(initialWorker);
+
+  useEffect(() => {
+    setWorker(initialWorker);
+  }, [initialWorker]);
+
   const [activeTab, setActiveTab] = useState<"overview" | "kyc" | "jobs" | "welfare">(initialTab);
   const [selectedLevel, setSelectedLevel] = useState<number>(worker?.verificationLevel || 1);
   const [rejectReason, setRejectReason] = useState<string>("");
@@ -201,7 +209,177 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
     });
   };
 
-  const handleActionWithPin = (actionFn: () => void) => {
+  const handleAuthorizeWorker = async (level: number) => {
+    const token = localStorage.getItem("sahakari_token");
+    const targetId = worker?._id || worker?.id || worker?.employeeId;
+    if (!targetId) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/admin/kyc/${encodeURIComponent(targetId)}/review`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ action: "APPROVE", newLevel: level })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert(data.message || "Failed to certify worker in MongoDB Atlas.");
+        return;
+      }
+
+      const updated = data.worker || {
+        ...worker,
+        verificationStatus: "VERIFIED",
+        verificationLevel: level,
+        isAvailable: true,
+        riskScore: "LOW",
+        riskNum: 0
+      };
+
+      setWorker(updated);
+      onWorkerUpdated?.(updated);
+      if (onApprove) onApprove(targetId, level);
+    } catch (err: any) {
+      alert(`Network error certifying worker: ${err.message}`);
+    }
+  };
+
+  const handleRejectWorker = async (reason: string) => {
+    const token = localStorage.getItem("sahakari_token");
+    const targetId = worker?._id || worker?.id || worker?.employeeId;
+    if (!targetId) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/admin/kyc/${encodeURIComponent(targetId)}/review`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ action: "BLACKLIST", rejectionReason: reason })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert(data.message || "Failed to suspend worker in MongoDB Atlas.");
+        return;
+      }
+
+      const updated = data.worker || {
+        ...worker,
+        verificationStatus: "REJECTED",
+        rejectionReason: reason,
+        isAvailable: false
+      };
+
+      setWorker(updated);
+      onWorkerUpdated?.(updated);
+      if (onReject) onReject(targetId, reason);
+    } catch (err: any) {
+      alert(`Network error suspending worker: ${err.message}`);
+    }
+  };
+
+  const handleApproveDocument = async (docType: string) => {
+    const token = localStorage.getItem("sahakari_token");
+    const targetId = worker?._id || worker?.id || worker?.employeeId;
+    if (!targetId) return;
+
+    const res = await fetch(`${API_BASE}/admin/kyc/${encodeURIComponent(targetId)}/review`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ action: "APPROVE", documentType: docType })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || "Failed to approve document in MongoDB Atlas.");
+    }
+
+    const updated = data.worker || {
+      ...worker,
+      kycDocuments: (worker.kycDocuments || []).map((d: any) =>
+        d.documentType === docType ? { ...d, verificationStatus: "VERIFIED" } : d
+      )
+    };
+
+    setWorker(updated);
+    if (previewDoc) {
+      setPreviewDoc((prev) => (prev ? { ...prev, verificationStatus: "VERIFIED" } : null));
+    }
+    onWorkerUpdated?.(updated);
+  };
+
+  const handleRejectDocument = async (docType: string, reason: string) => {
+    const token = localStorage.getItem("sahakari_token");
+    const targetId = worker?._id || worker?.id || worker?.employeeId;
+    if (!targetId) return;
+
+    const res = await fetch(`${API_BASE}/admin/kyc/${encodeURIComponent(targetId)}/review`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ action: "REJECT", documentType: docType, rejectionReason: reason })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || "Failed to reject document in MongoDB Atlas.");
+    }
+
+    const updated = data.worker || {
+      ...worker,
+      kycDocuments: (worker.kycDocuments || []).map((d: any) =>
+        d.documentType === docType ? { ...d, verificationStatus: "REJECTED", rejectionReason: reason } : d
+      )
+    };
+
+    setWorker(updated);
+    if (previewDoc) {
+      setPreviewDoc((prev) => (prev ? { ...prev, verificationStatus: "REJECTED" } : null));
+    }
+    onWorkerUpdated?.(updated);
+  };
+
+  const handleRequestReupload = async (docType: string, feedback: string) => {
+    const token = localStorage.getItem("sahakari_token");
+    const targetId = worker?._id || worker?.id || worker?.employeeId;
+    if (!targetId) return;
+
+    const res = await fetch(`${API_BASE}/admin/kyc/${encodeURIComponent(targetId)}/review`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ action: "REUPLOAD", documentType: docType, rejectionReason: feedback })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || "Failed to request re-upload in MongoDB Atlas.");
+    }
+
+    const updated = data.worker || {
+      ...worker,
+      kycDocuments: (worker.kycDocuments || []).map((d: any) =>
+        d.documentType === docType ? { ...d, verificationStatus: "REUPLOAD_REQUESTED", aiVerificationNotes: feedback } : d
+      )
+    };
+
+    setWorker(updated);
+    if (previewDoc) {
+      setPreviewDoc((prev) =>
+        prev ? { ...prev, verificationStatus: "REUPLOAD_REQUESTED", aiVerificationNotes: feedback } : null
+      );
+    }
+    onWorkerUpdated?.(updated);
+  };
+
+  const handleActionWithPin = (actionFn: () => void | Promise<void>) => {
     setPendingAction(() => actionFn);
     setPinModalOpen(true);
   };
@@ -321,6 +499,14 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 280 }}
+            style={{
+              transformStyle: "flat",
+              WebkitTransformStyle: "flat",
+              perspective: "none",
+              WebkitPerspective: "none",
+              backfaceVisibility: "visible",
+              WebkitBackfaceVisibility: "visible"
+            }}
             className="relative w-full max-w-2xl bg-white dark:bg-[#101828] h-full shadow-2xl border-l border-[#E4E9F0] dark:border-slate-800 flex flex-col z-10"
           >
             {/* 1. HEADER */}
@@ -830,10 +1016,9 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => {
-                        handleActionWithPin(() => {
-                          if (onReject) onReject(worker._id, rejectReason || "Administrative decision");
+                        handleActionWithPin(async () => {
+                          await handleRejectWorker(rejectReason || "Administrative decision");
                           setIsRejecting(false);
-                          onClose();
                         });
                       }}
                       className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-xs transition"
@@ -900,48 +1085,24 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
           onClose={() => setPreviewDoc(null)}
           worker={worker}
           document={previewDoc}
-          onApproveDocument={(docType) => {
-            if (worker.kycDocuments) {
-              worker.kycDocuments = worker.kycDocuments.map((d: any) =>
-                d.documentType === docType ? { ...d, verificationStatus: "VERIFIED" } : d
-              );
-            }
-            if (previewDoc) {
-              setPreviewDoc((prev) => prev ? { ...prev, verificationStatus: "VERIFIED" } : null);
-            }
-          }}
-          onRejectDocument={(docType, reason) => {
-            if (worker.kycDocuments) {
-              worker.kycDocuments = worker.kycDocuments.map((d: any) =>
-                d.documentType === docType
-                  ? { ...d, verificationStatus: "REJECTED", rejectionReason: reason }
-                  : d
-              );
-            }
-            if (previewDoc) {
-              setPreviewDoc((prev) => prev ? { ...prev, verificationStatus: "REJECTED" } : null);
-            }
-          }}
-          onRequestReupload={(docType, feedback) => {
-            if (worker.kycDocuments) {
-              worker.kycDocuments = worker.kycDocuments.map((d: any) =>
-                d.documentType === docType
-                  ? { ...d, verificationStatus: "REUPLOAD_REQUESTED", aiVerificationNotes: feedback }
-                  : d
-              );
-            }
-            if (previewDoc) {
-              setPreviewDoc((prev) =>
-                prev ? { ...prev, verificationStatus: "REUPLOAD_REQUESTED", aiVerificationNotes: feedback } : null
-              );
-            }
-          }}
+          onApproveDocument={handleApproveDocument}
+          onRejectDocument={handleRejectDocument}
+          onRequestReupload={handleRequestReupload}
         />
       )}
 
       {/* SUPER ADMIN SCRUTINY ATTESTATION CONFIRMATION */}
       {showApprovalConfirmModal && (
-        <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+        <div
+          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+          style={{
+            transformStyle: "flat",
+            WebkitTransformStyle: "flat",
+            perspective: "none",
+            WebkitPerspective: "none",
+            backfaceVisibility: "visible"
+          }}
+        >
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center">
@@ -984,9 +1145,8 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
                 disabled={!confirmedManualReview}
                 onClick={() => {
                   setShowApprovalConfirmModal(false);
-                  handleActionWithPin(() => {
-                    if (onApprove) onApprove(worker._id, selectedLevel);
-                    onClose();
+                  handleActionWithPin(async () => {
+                    await handleAuthorizeWorker(selectedLevel);
                   });
                 }}
                 className="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-40 transition shadow-md cursor-pointer"
@@ -1001,12 +1161,16 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
       {/* 6-DIGIT ADMIN PIN MODAL */}
       <AdminSecurityPinModal
         isOpen={pinModalOpen}
-        onClose={() => setPinModalOpen(false)}
+        onClose={() => {
+          setPinModalOpen(false);
+          setPendingAction(null);
+        }}
         onSuccess={() => {
           setPinModalOpen(false);
           if (pendingAction) {
-            pendingAction();
+            const act = pendingAction;
             setPendingAction(null);
+            act();
           }
         }}
         title="Admin Security Verification"

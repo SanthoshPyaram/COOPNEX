@@ -783,8 +783,8 @@ export const SuperAdminPage: React.FC = () => {
   }, []);
 
 
-  const handleApproveWorkerKyc = (workerId: string, level: number) => {
-    // 1. Update React state immediately
+  const handleApproveWorkerKyc = async (workerId: string, level: number) => {
+    // 1. Update React state immediately for fast feedback
     setWorkforceData((prev) =>
       prev.map((w) =>
         w._id === workerId || w.employeeId === workerId
@@ -832,21 +832,34 @@ export const SuperAdminPage: React.FC = () => {
       console.error(e);
     }
 
-    // 4. Actively notify MongoDB backend if online
+    // 4. Actively update MongoDB Atlas backend
     const token = localStorage.getItem("sahakari_token");
-    if (token && workerId && !workerId.startsWith("WRK-COOP")) {
-      fetch(`${API_BASE}/admin/kyc/${workerId}/review`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ action: "APPROVE", newLevel: level })
-      }).catch((err) => console.warn("Backend KYC review approval notice:", err));
+    if (token && workerId) {
+      try {
+        const res = await fetch(`${API_BASE}/admin/kyc/${encodeURIComponent(workerId)}/review`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ action: "APPROVE", newLevel: level })
+        });
+        const data = await res.json();
+        if (data.success && data.worker) {
+          setSelectedWorkerForDrawer((prev: any) =>
+            prev ? { ...prev, ...data.worker, verificationStatus: "VERIFIED", verificationLevel: level } : null
+          );
+        }
+      } catch (err) {
+        console.warn("Backend KYC review approval notice:", err);
+      }
     }
+
+    // 5. Re-fetch fresh database records to update all lists and counts
+    await fetchBackendAndLocalWorkforce();
   };
 
-  const handleRejectWorkerKyc = (workerId: string, reason: string) => {
+  const handleRejectWorkerKyc = async (workerId: string, reason: string) => {
     setWorkforceData((prev) =>
       prev.map((w) =>
         w._id === workerId || w.employeeId === workerId
@@ -877,16 +890,28 @@ export const SuperAdminPage: React.FC = () => {
     }
 
     const token = localStorage.getItem("sahakari_token");
-    if (token && workerId && !workerId.startsWith("WRK-COOP")) {
-      fetch(`${API_BASE}/admin/kyc/${workerId}/review`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ action: "BLACKLIST", rejectionReason: reason })
-      }).catch((err) => console.warn("Backend KYC review rejection notice:", err));
+    if (token && workerId) {
+      try {
+        const res = await fetch(`${API_BASE}/admin/kyc/${encodeURIComponent(workerId)}/review`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ action: "BLACKLIST", rejectionReason: reason })
+        });
+        const data = await res.json();
+        if (data.success && data.worker) {
+          setSelectedWorkerForDrawer((prev: any) =>
+            prev ? { ...prev, ...data.worker, verificationStatus: "REJECTED", rejectionReason: reason } : null
+          );
+        }
+      } catch (err) {
+        console.warn("Backend KYC review rejection notice:", err);
+      }
     }
+
+    await fetchBackendAndLocalWorkforce();
   };
 
   const pendingCount = workforceData.filter((k) => k.verificationStatus === "PENDING" || k.verificationStatus === "UNDER_REVIEW").length;
@@ -2142,6 +2167,10 @@ export const SuperAdminPage: React.FC = () => {
           onClose={() => setSelectedWorkerForDrawer(null)}
           onApprove={handleApproveWorkerKyc}
           onReject={handleRejectWorkerKyc}
+          onWorkerUpdated={(updated) => {
+            setSelectedWorkerForDrawer(updated);
+            fetchBackendAndLocalWorkforce();
+          }}
           initialTab={activeTab === "kyc" ? "kyc" : "overview"}
         />
       )}

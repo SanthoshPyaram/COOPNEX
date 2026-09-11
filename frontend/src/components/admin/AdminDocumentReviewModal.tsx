@@ -23,7 +23,8 @@ import {
   Ban,
   Loader2,
   Shield,
-  FileCheck2
+  FileCheck2,
+  AlertCircle
 } from "lucide-react";
 import { AvatarPlaceholder } from "../common/AvatarPlaceholder";
 import { API_BASE } from "../../services/api";
@@ -68,9 +69,9 @@ export interface AdminDocumentReviewModalProps {
     };
   } | null;
   document: ReviewDocumentData | null;
-  onApproveDocument?: (documentType: string) => void;
-  onRejectDocument?: (documentType: string, reason: string) => void;
-  onRequestReupload?: (documentType: string, feedback: string) => void;
+  onApproveDocument?: (documentType: string) => void | Promise<void>;
+  onRejectDocument?: (documentType: string, reason: string) => void | Promise<void>;
+  onRequestReupload?: (documentType: string, feedback: string) => void | Promise<void>;
 }
 
 export const AdminDocumentReviewModal: React.FC<AdminDocumentReviewModalProps> = ({
@@ -87,6 +88,8 @@ export const AdminDocumentReviewModal: React.FC<AdminDocumentReviewModalProps> =
   const [reuploadPromptOpen, setReuploadPromptOpen] = useState(false);
   const [actionReason, setActionReason] = useState("");
   const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
+  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
+  const [isProcessingAction, setIsProcessingAction] = useState<boolean>(false);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [imgError, setImgError] = useState<boolean>(false);
   const [isLoadingDoc, setIsLoadingDoc] = useState<boolean>(false);
@@ -218,40 +221,64 @@ export const AdminDocumentReviewModal: React.FC<AdminDocumentReviewModalProps> =
   const handleZoomOut = () => setZoomLevel((prev) => Math.max(prev - 0.25, 0.5));
   const handleZoomReset = () => setZoomLevel(1);
 
-  const handleApprove = () => {
-    if (onApproveDocument) {
-      onApproveDocument(doc.documentType);
+  const handleApprove = async () => {
+    setIsProcessingAction(true);
+    setActionErrorMessage(null);
+    try {
+      if (onApproveDocument) {
+        await onApproveDocument(doc.documentType);
+      }
+      setActionSuccessMessage("Document officially marked verified in MongoDB Atlas & audit record.");
+      setTimeout(() => {
+        setActionSuccessMessage(null);
+      }, 3000);
+    } catch (err: any) {
+      setActionErrorMessage(err?.message || "Failed to approve document on server.");
+    } finally {
+      setIsProcessingAction(false);
     }
-    setActionSuccessMessage("Document officially marked verified in the audit record.");
-    setTimeout(() => {
-      setActionSuccessMessage(null);
-    }, 2500);
   };
 
-  const handleConfirmReject = () => {
+  const handleConfirmReject = async () => {
+    setIsProcessingAction(true);
+    setActionErrorMessage(null);
     const reason = actionReason.trim() || "Document scan is unclear or does not match identity details.";
-    if (onRejectDocument) {
-      onRejectDocument(doc.documentType, reason);
+    try {
+      if (onRejectDocument) {
+        await onRejectDocument(doc.documentType, reason);
+      }
+      setRejectPromptOpen(false);
+      setActionReason("");
+      setActionSuccessMessage("Document rejected and recorded in MongoDB Atlas.");
+      setTimeout(() => {
+        setActionSuccessMessage(null);
+      }, 3000);
+    } catch (err: any) {
+      setActionErrorMessage(err?.message || "Failed to reject document on server.");
+    } finally {
+      setIsProcessingAction(false);
     }
-    setRejectPromptOpen(false);
-    setActionReason("");
-    setActionSuccessMessage("Document rejected with statutory explanation.");
-    setTimeout(() => {
-      setActionSuccessMessage(null);
-    }, 2500);
   };
 
-  const handleConfirmReupload = () => {
+  const handleConfirmReupload = async () => {
+    setIsProcessingAction(true);
+    setActionErrorMessage(null);
     const feedback = actionReason.trim() || "Uploaded scan has glare or low resolution. Please upload a high-clarity original scan.";
-    if (onRequestReupload) {
-      onRequestReupload(doc.documentType, feedback);
+    try {
+      if (onRequestReupload) {
+        await onRequestReupload(doc.documentType, feedback);
+      }
+      setReuploadPromptOpen(false);
+      setActionReason("");
+      setActionSuccessMessage("Re-upload request dispatched and recorded in MongoDB Atlas.");
+      setTimeout(() => {
+        setActionSuccessMessage(null);
+      }, 3000);
+    } catch (err: any) {
+      setActionErrorMessage(err?.message || "Failed to request re-upload on server.");
+    } finally {
+      setIsProcessingAction(false);
     }
-    setReuploadPromptOpen(false);
-    setActionReason("");
-    setActionSuccessMessage("Re-upload request dispatched to artisan mobile terminal.");
-    setTimeout(() => {
-      setActionSuccessMessage(null);
-    }, 2500);
   };
 
   return (
@@ -321,6 +348,21 @@ export const AdminDocumentReviewModal: React.FC<AdminDocumentReviewModalProps> =
             <button
               onClick={() => setActionSuccessMessage(null)}
               className="text-emerald-700 hover:text-emerald-900 dark:text-emerald-300"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {actionErrorMessage && (
+          <div className="bg-rose-50 dark:bg-rose-950/70 border-b border-rose-200 dark:border-rose-800 px-4 py-2 text-xs font-bold text-rose-800 dark:text-rose-300 flex items-center justify-between animate-fadeIn shrink-0">
+            <span className="flex items-center gap-1.5">
+              <AlertCircle className="w-4 h-4 text-rose-600" />
+              {actionErrorMessage}
+            </span>
+            <button
+              onClick={() => setActionErrorMessage(null)}
+              className="text-rose-700 hover:text-rose-900 dark:text-rose-300"
             >
               <X className="w-3.5 h-3.5" />
             </button>
