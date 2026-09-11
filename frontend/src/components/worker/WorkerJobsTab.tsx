@@ -17,12 +17,13 @@ import {
   ShieldCheck,
   AlertCircle,
   Phone,
-  Calendar
+  Calendar,
+  Loader2
 } from "lucide-react";
 
 interface WorkerJobsTabProps {
   jobs: Booking[];
-  onUpdateStatus: (bookingId: string, status: BookingStatus) => void;
+  onUpdateStatus: (bookingId: string, status: BookingStatus, note?: string) => Promise<void> | void;
   onOpenCompleteModal: (job: Booking) => void;
   onSelectJobDetails: (job: Booking) => void;
 }
@@ -48,14 +49,24 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
   const [filterQuery, setFilterQuery] = useState("");
   const [rejectingJob, setRejectingJob] = useState<Booking | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [processingBookingId, setProcessingBookingId] = useState<string | null>(null);
+
+  const handleStatusUpdate = async (bookingId: string, status: BookingStatus, note?: string) => {
+    setProcessingBookingId(bookingId);
+    try {
+      await onUpdateStatus(bookingId, status, note);
+    } finally {
+      setProcessingBookingId(null);
+    }
+  };
 
   const filteredJobs = jobs.filter((job) => {
     if (activeFilterTab === "ASSIGNED") {
-      if (job.status !== "ASSIGNED" && job.status !== "REQUESTED") return false;
+      if (job.status !== "ASSIGNED" && job.status !== "REQUESTED" && job.status !== "MATCHING") return false;
     } else if (activeFilterTab === "ACCEPTED") {
       if (job.status !== "ACCEPTED") return false;
     } else if (activeFilterTab === "SCHEDULED") {
-      if (job.status !== "ACCEPTED" && job.status !== "ASSIGNED" && job.status !== "REQUESTED") return false;
+      if (job.status !== "ACCEPTED" && job.status !== "ASSIGNED" && job.status !== "REQUESTED" && job.status !== "MATCHING") return false;
     } else if (activeFilterTab === "IN_PROGRESS") {
       if (
         job.status !== "IN_PROGRESS" &&
@@ -66,9 +77,9 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
     } else if (activeFilterTab === "COMPLETED") {
       if (job.status !== "COMPLETED") return false;
     } else if (activeFilterTab === "CANCELLED") {
-      if (job.status !== "CANCELLED") return false;
+      if (job.status !== "CANCELLED" && job.status !== "REJECTED") return false;
     } else if (activeFilterTab === "HISTORY") {
-      if (job.status !== "COMPLETED" && job.status !== "CANCELLED") return false;
+      if (job.status !== "COMPLETED" && job.status !== "CANCELLED" && job.status !== "REJECTED") return false;
     }
 
     if (filterQuery.trim()) {
@@ -87,6 +98,7 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
     switch (status) {
       case "ASSIGNED":
       case "REQUESTED":
+      case "MATCHING":
         return (
           <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse whitespace-nowrap">
             {t("jobs.new_requests", "New Request")}
@@ -118,6 +130,12 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
             {t("jobs.cancelled", "Cancelled")}
           </span>
         );
+      case "REJECTED":
+        return (
+          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200 whitespace-nowrap">
+            {t("jobs.rejected", "Declined")}
+          </span>
+        );
       default:
         return (
           <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 whitespace-nowrap">
@@ -128,30 +146,56 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
   };
 
   const renderActionButtons = (job: Booking, isMobile = false) => {
-    if (job.status === "ASSIGNED" || job.status === "REQUESTED") {
+    const isNew = job.status === "ASSIGNED" || job.status === "REQUESTED" || job.status === "MATCHING";
+
+    if (isNew) {
       return (
-        <div className={`flex items-center ${isMobile ? "gap-2 w-full" : "justify-end gap-1.5"}`}>
+        <div className={`flex items-center ${isMobile ? "flex-wrap gap-2 w-full pt-1" : "justify-end gap-1.5"}`}>
           <button
             type="button"
-            onClick={() => onUpdateStatus(job._id, "ACCEPTED")}
-            className={`${
-              isMobile ? "flex-1 justify-center" : ""
-            } px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1 shadow-2xs`}
+            onClick={(e) => {
+              e.preventDefault();
+              onSelectJobDetails(job);
+            }}
+            className="px-2.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs transition cursor-pointer flex items-center gap-1 shadow-2xs"
+            title="View full booking requirements & customer dossier"
           >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>{t("jobs.action_accept", "Accept")}</span>
+            <Eye className="w-3.5 h-3.5 text-slate-500" />
+            <span>{t("jobs.action_view_details", "View Details")}</span>
           </button>
           <button
             type="button"
-            onClick={() => {
+            disabled={processingBookingId === job._id}
+            onClick={(e) => {
+              e.preventDefault();
               setRejectingJob(job);
               setRejectReason("");
             }}
-            className={`${
-              isMobile ? "flex-1 justify-center" : ""
-            } px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 font-bold text-xs transition cursor-pointer`}
+            className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 font-bold text-xs transition cursor-pointer flex items-center gap-1"
           >
-            {t("jobs.action_reject", "Reject")}
+            <XCircle className="w-3.5 h-3.5" />
+            <span>{t("jobs.action_reject", "Reject")}</span>
+          </button>
+          <button
+            type="button"
+            disabled={processingBookingId === job._id}
+            onClick={async (e) => {
+              e.preventDefault();
+              await handleStatusUpdate(job._id, "ACCEPTED");
+            }}
+            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1 shadow-2xs"
+          >
+            {processingBookingId === job._id ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Accepting...</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>{t("jobs.action_accept", "Accept")}</span>
+              </>
+            )}
           </button>
         </div>
       );
@@ -159,43 +203,74 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
 
     if (job.status === "ACCEPTED") {
       return (
-        <button
-          type="button"
-          onClick={() => onUpdateStatus(job._id, "IN_PROGRESS")}
-          className={`${
-            isMobile ? "w-full justify-center" : ""
-          } px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1 shadow-2xs`}
-        >
-          <Navigation className="w-3.5 h-3.5" />
-          <span>{t("jobs.action_start", "Start Job")}</span>
-        </button>
+        <div className={`flex items-center ${isMobile ? "flex-wrap gap-2 w-full pt-1" : "justify-end gap-1.5"}`}>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              onSelectJobDetails(job);
+            }}
+            className="px-2.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs transition cursor-pointer flex items-center gap-1 shadow-2xs"
+          >
+            <Eye className="w-3.5 h-3.5 text-slate-500" />
+            <span>{t("jobs.action_view_details", "View Details")}</span>
+          </button>
+          <button
+            type="button"
+            disabled={processingBookingId === job._id}
+            onClick={async (e) => {
+              e.preventDefault();
+              await handleStatusUpdate(job._id, "IN_PROGRESS");
+            }}
+            className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1 shadow-2xs"
+          >
+            <Navigation className="w-3.5 h-3.5" />
+            <span>{t("jobs.action_start", "Start Job")}</span>
+          </button>
+        </div>
       );
     }
 
     if (job.status === "IN_PROGRESS" || job.status === "ARRIVED" || job.status === "ON_THE_WAY") {
       return (
-        <button
-          type="button"
-          onClick={() => onOpenCompleteModal(job)}
-          className={`${
-            isMobile ? "w-full justify-center" : ""
-          } px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1 shadow-2xs`}
-        >
-          <KeyRound className="w-3.5 h-3.5" />
-          <span>{t("jobs.action_complete_otp", "Complete (OTP)")}</span>
-        </button>
+        <div className={`flex items-center ${isMobile ? "flex-wrap gap-2 w-full pt-1" : "justify-end gap-1.5"}`}>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              onSelectJobDetails(job);
+            }}
+            className="px-2.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs transition cursor-pointer flex items-center gap-1 shadow-2xs"
+          >
+            <Eye className="w-3.5 h-3.5 text-slate-500" />
+            <span>{t("jobs.action_view_details", "View Details")}</span>
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              onOpenCompleteModal(job);
+            }}
+            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1 shadow-2xs"
+          >
+            <KeyRound className="w-3.5 h-3.5" />
+            <span>{t("jobs.action_complete_otp", "Complete (OTP)")}</span>
+          </button>
+        </div>
       );
     }
 
     return (
       <button
         type="button"
-        onClick={() => onSelectJobDetails(job)}
-        className={`${
-          isMobile ? "w-full justify-center" : ""
-        } px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer`}
+        onClick={(e) => {
+          e.preventDefault();
+          onSelectJobDetails(job);
+        }}
+        className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer flex items-center gap-1"
       >
-        {t("jobs.action_inspect", "Inspect")}
+        <Eye className="w-3.5 h-3.5 text-slate-500" />
+        <span>{t("jobs.action_inspect", "Inspect")}</span>
       </button>
     );
   };
@@ -207,7 +282,7 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
     { id: "SCHEDULED", labelKey: "jobs.scheduled", fallback: "Scheduled" },
     { id: "IN_PROGRESS", labelKey: "jobs.in_progress", fallback: "In Progress" },
     { id: "COMPLETED", labelKey: "jobs.completed", fallback: "Completed" },
-    { id: "CANCELLED", labelKey: "jobs.cancelled", fallback: "Cancelled" },
+    { id: "CANCELLED", labelKey: "jobs.cancelled", fallback: "Cancelled / Declined" },
     { id: "HISTORY", labelKey: "jobs.history", fallback: "History" }
   ];
 
@@ -250,7 +325,30 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              {t(tab.labelKey, tab.fallback)}
+              <span>{t(tab.labelKey, tab.fallback)}</span>
+              <span
+                className={`ml-1.5 px-1.5 py-0.2 rounded-full text-[10px] ${
+                  activeFilterTab === tab.id
+                    ? "bg-white/20 text-white"
+                    : "bg-slate-200 text-slate-700"
+                }`}
+              >
+                {tab.id === "ALL"
+                  ? jobs.length
+                  : tab.id === "ASSIGNED"
+                  ? jobs.filter((j) => j.status === "ASSIGNED" || j.status === "REQUESTED" || j.status === "MATCHING").length
+                  : tab.id === "ACCEPTED"
+                  ? jobs.filter((j) => j.status === "ACCEPTED").length
+                  : tab.id === "SCHEDULED"
+                  ? jobs.filter((j) => j.status === "ACCEPTED" || j.status === "ASSIGNED" || j.status === "REQUESTED" || j.status === "MATCHING").length
+                  : tab.id === "IN_PROGRESS"
+                  ? jobs.filter((j) => j.status === "IN_PROGRESS" || j.status === "ON_THE_WAY" || j.status === "ARRIVED").length
+                  : tab.id === "COMPLETED"
+                  ? jobs.filter((j) => j.status === "COMPLETED").length
+                  : tab.id === "CANCELLED"
+                  ? jobs.filter((j) => j.status === "CANCELLED" || j.status === "REJECTED").length
+                  : jobs.filter((j) => j.status === "COMPLETED" || j.status === "CANCELLED" || j.status === "REJECTED").length}
+              </span>
             </button>
           ))}
         </div>
@@ -281,17 +379,17 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
       ) : (
         <div className="w-full min-w-0">
           {/* DESKTOP TABLE VIEW (Screens >= 1200px / xl) */}
-          <div className="hidden xl:block w-full min-w-0 overflow-hidden">
-            <table className="table-fixed w-full text-left text-xs border-collapse">
+          <div className="hidden xl:block w-full min-w-0 overflow-x-auto">
+            <table className="table-fixed min-w-[1020px] w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
                   <th className="py-3 px-3 w-[140px] truncate">{t("jobs.col_booking_id", "Booking ID")}</th>
-                  <th className="py-3 px-3 w-[180px] truncate">{t("jobs.col_customer", "Customer")}</th>
-                  <th className="py-3 px-3 w-[260px] truncate">{t("jobs.col_service", "Service & Requirement")}</th>
-                  <th className="py-3 px-3 w-[220px] truncate">{t("jobs.col_location", "Location & Distance")}</th>
-                  <th className="py-3 px-3 w-[110px] text-right truncate">{t("jobs.col_net_wage", "Net Wage")}</th>
-                  <th className="py-3 px-3 w-[120px] text-center truncate">{t("jobs.col_status", "Status")}</th>
-                  <th className="py-3 px-3 w-[150px] text-right truncate">{t("jobs.col_actions", "Actions")}</th>
+                  <th className="py-3 px-3 w-[160px] truncate">{t("jobs.col_customer", "Customer")}</th>
+                  <th className="py-3 px-3 w-[240px] truncate">{t("jobs.col_service", "Service & Requirement")}</th>
+                  <th className="py-3 px-3 w-[200px] truncate">{t("jobs.col_location", "Location & Distance")}</th>
+                  <th className="py-3 px-3 w-[100px] text-right truncate">{t("jobs.col_net_wage", "Net Wage")}</th>
+                  <th className="py-3 px-3 w-[110px] text-center truncate">{t("jobs.col_status", "Status")}</th>
+                  <th className="py-3 px-3 w-[280px] min-w-[280px] text-right truncate">{t("jobs.col_actions", "Actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -339,7 +437,7 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
                     <td className="py-3.5 px-3 text-center truncate">
                       {getStatusBadge(job.status)}
                     </td>
-                    <td className="py-3.5 px-3 text-right whitespace-nowrap">
+                    <td className="py-3.5 px-3 text-right whitespace-nowrap min-w-[280px]">
                       {renderActionButtons(job)}
                     </td>
                   </tr>
@@ -407,18 +505,20 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
                   </div>
                 </div>
 
-                {/* Bottom Row: Net Wage & Actions */}
-                <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-3 min-w-0">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block uppercase font-bold">
-                      {t("jobs.col_net_wage", "Net Wage")}
-                    </span>
-                    <span className="font-black text-slate-900 text-base">
-                      ₹{job.fairWageBreakdown?.workerEarning ?? 0}
-                    </span>
+                {/* Bottom Row: Net Wage, Status & Actions */}
+                <div className="pt-2 border-t border-slate-200/60 space-y-2.5 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block uppercase font-bold">
+                        {t("jobs.col_net_wage", "Net Wage")}
+                      </span>
+                      <span className="font-black text-slate-900 text-base">
+                        ₹{job.fairWageBreakdown?.workerEarning ?? 0}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="shrink-0 flex items-center">
+                  <div className="w-full">
                     {renderActionButtons(job, true)}
                   </div>
                 </div>
@@ -438,6 +538,7 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
                 <h3 className="text-base font-black text-slate-900">Decline Booking #{rejectingJob.bookingNumber}</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setRejectingJob(null)}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
               >
@@ -488,13 +589,23 @@ export const WorkerJobsTab: React.FC<WorkerJobsTabProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  onUpdateStatus(rejectingJob._id, "CANCELLED");
+                disabled={processingBookingId === rejectingJob._id}
+                onClick={async () => {
+                  const targetJob = rejectingJob;
+                  const reason = rejectReason.trim() || "Declined by worker";
                   setRejectingJob(null);
+                  await handleStatusUpdate(targetJob._id, "REJECTED", reason);
                 }}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer shadow-xs"
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold text-xs transition cursor-pointer shadow-xs flex items-center gap-1.5"
               >
-                Confirm Decline
+                {processingBookingId === rejectingJob._id ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Declining...</span>
+                  </>
+                ) : (
+                  <span>Confirm Decline</span>
+                )}
               </button>
             </div>
           </div>

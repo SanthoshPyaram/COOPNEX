@@ -34,43 +34,34 @@ export const WorkerPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const activeTab = searchParams.get("tab") || "dashboard";
-  const setActiveTab = (tab: string) => setSearchParams({ tab });
+  const [activeTab, setActiveTabState] = useState<string>(() => searchParams.get("tab") || "dashboard");
 
-  // Worker Gatekeeper Status: checks user, local registered workers, and admin status
+  const setActiveTab = (tab: string) => {
+    setActiveTabState(tab);
+    setSearchParams({ tab }, { replace: true, preventScrollReset: true });
+  };
+
+  useEffect(() => {
+    const tabFromUrl = searchParams.get("tab");
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTabState(tabFromUrl);
+    }
+  }, [searchParams]);
+
+  // Worker Gatekeeper Status: checks authentic user status from MongoDB
   const getInitialWorkerStatus = (): string => {
-    if (user?.verificationStatus) {
-      return user.verificationStatus;
-    }
-    try {
-      const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
-      const matched = localWorkers.find(
-        (w: any) =>
-          (user?.email && w.email?.toLowerCase() === user.email.toLowerCase()) ||
-          ((user as any)?.employeeId && w.employeeId === (user as any).employeeId) ||
-          (user?.id && (w.id === user.id || w._id === user.id))
-      );
-      if (matched?.verificationStatus) {
-        return matched.verificationStatus;
-      }
-    } catch {}
-
-    const flag = localStorage.getItem("sahakari_worker_status");
-    if (flag) return flag;
-
-    // Demo account COOP-EMP-0001 is pre-verified
-    if ((user as any)?.employeeId === "COOP-EMP-0001" || user?.email === "arjun.kumar@coopnex.worker.in") {
-      return "VERIFIED";
-    }
-
+    const raw = (user as any)?.workerProfile?.verificationStatus || user?.verificationStatus;
+    if (raw === "VERIFIED" || raw === "APPROVED") return "VERIFIED";
+    if (raw === "REJECTED") return "REJECTED";
+    if (raw === "UNDER_REVIEW") return "UNDER_REVIEW";
     return "PENDING";
   };
 
   const [workerStatus, setWorkerStatus] = useState<string>(getInitialWorkerStatus);
   const [statusCheckMsg, setStatusCheckMsg] = useState<string | null>(null);
 
-  const refreshWorkerStatus = async () => {
-    // 1. Query live MongoDB backend via /auth/me with JWT
+  const refreshWorkerStatus = async (isManualClick = false) => {
+    // Query live MongoDB backend via /auth/me with JWT
     const token = localStorage.getItem("sahakari_token");
     if (token) {
       try {
@@ -83,17 +74,19 @@ export const WorkerPage: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           if (data && data.user) {
-            const status = data.user.workerProfile?.verificationStatus || data.user.verificationStatus || "PENDING";
-            setWorkerStatus(status);
-            localStorage.setItem("sahakari_worker_status", status);
-            if (status === "VERIFIED") {
-              setStatusCheckMsg("Congratulations! Your credentials have been officially approved by the Super Administrator.");
-            } else if (status === "REJECTED") {
-              setStatusCheckMsg("Your application was reviewed and rejected. Please contact your society administrator.");
-            } else {
-              setStatusCheckMsg("Identity documents are currently queued for Super Admin manual review.");
+            const raw = data.user.workerProfile?.verificationStatus || data.user.verificationStatus;
+            const newStatus = (raw === "VERIFIED" || raw === "APPROVED") ? "VERIFIED" : (raw || "PENDING");
+            setWorkerStatus(newStatus);
+            if (isManualClick) {
+              if (newStatus === "VERIFIED") {
+                setStatusCheckMsg("Your credentials are officially verified by the Super Administrator.");
+              } else if (newStatus === "REJECTED") {
+                setStatusCheckMsg("Your application was reviewed and rejected. Please contact your society administrator.");
+              } else {
+                setStatusCheckMsg("Application is under review by the Super Administrator.");
+              }
+              setTimeout(() => setStatusCheckMsg(null), 4000);
             }
-            setTimeout(() => setStatusCheckMsg(null), 5000);
             return;
           }
         }
@@ -101,57 +94,11 @@ export const WorkerPage: React.FC = () => {
         console.warn("Status refresh error:", e);
       }
     }
-
-    // 2. Fallback check local registered workers
-    try {
-      const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
-      const matched = localWorkers.find(
-        (w: any) =>
-          (user?.email && w.email?.toLowerCase() === user.email.toLowerCase()) ||
-          ((user as any)?.employeeId && w.employeeId === (user as any).employeeId) ||
-          (user?.id && (w.id === user.id || w._id === user.id))
-      );
-      if (matched?.verificationStatus) {
-        setWorkerStatus(matched.verificationStatus);
-        localStorage.setItem("sahakari_worker_status", matched.verificationStatus);
-        if (matched.verificationStatus === "VERIFIED") {
-          setStatusCheckMsg("Congratulations! Your credentials have been officially approved by the Super Administrator.");
-        } else {
-          setStatusCheckMsg("Application is still pending Super Administrator manual verification.");
-        }
-        setTimeout(() => setStatusCheckMsg(null), 4000);
-        return;
-      }
-    } catch {}
-
-    const flag = localStorage.getItem("sahakari_worker_status") || "PENDING";
-    setWorkerStatus(flag);
-    if (flag === "VERIFIED") {
-      setStatusCheckMsg("Your account is verified! All worker features are unlocked.");
-    } else {
-      setStatusCheckMsg("Application is pending Super Administrator review.");
-    }
-    setTimeout(() => setStatusCheckMsg(null), 4000);
   };
 
   useEffect(() => {
-    refreshWorkerStatus();
-    const handleStorage = () => refreshWorkerStatus();
-    window.addEventListener("storage", handleStorage);
-
-    // Auto-poll every 8 seconds if worker status is not verified yet
-    const interval = setInterval(() => {
-      const currentFlag = localStorage.getItem("sahakari_worker_status");
-      if (currentFlag !== "VERIFIED") {
-        refreshWorkerStatus();
-      }
-    }, 8000);
-
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      clearInterval(interval);
-    };
-  }, [user]);
+    refreshWorkerStatus(false);
+  }, [user?.verificationStatus, (user as any)?.workerProfile?.verificationStatus]);
 
   const wp = (user as any)?.workerProfile;
   const isVerified = workerStatus === "VERIFIED";
@@ -222,23 +169,29 @@ export const WorkerPage: React.FC = () => {
     fetchData();
   }, []);
 
-  const handleUpdateStatus = async (bookingId: string, nextStatus: BookingStatus) => {
+  const handleUpdateStatus = async (bookingId: string, nextStatus: BookingStatus, note?: string) => {
     try {
-      const res = await api.updateBookingStatus(bookingId, nextStatus, `Worker updated status to ${nextStatus}`);
+      const res = await api.updateBookingStatus(bookingId, nextStatus, note || `Worker updated status to ${nextStatus}`);
       if (res && res.booking) {
         setActiveJobs((prev) =>
           prev.map((job) => (job._id === bookingId ? res.booking : job))
         );
+        // Refresh server state to ensure 100% database consistency
+        const refreshed = await api.getMyBookings();
+        if (Array.isArray(refreshed)) {
+          setActiveJobs(refreshed);
+        }
         return;
       }
     } catch (err: any) {
-      console.warn("Booking update warning:", err);
+      console.warn("Booking update error:", err);
       alert(err.message || "Failed to update booking status.");
+      const refreshed = await api.getMyBookings();
+      if (Array.isArray(refreshed)) {
+        setActiveJobs(refreshed);
+      }
       return;
     }
-    setActiveJobs((prev) =>
-      prev.map((job) => (job._id === bookingId ? { ...job, status: nextStatus } : job))
-    );
   };
 
   const handleOpenCompleteModal = (job: Booking) => {
@@ -257,18 +210,25 @@ export const WorkerPage: React.FC = () => {
     }
     const earning = selectedJobForComplete.fairWageBreakdown?.workerEarning || 720;
     try {
-      await api.updateBookingStatus(selectedJobForComplete._id, "COMPLETED", "Completed with citizen OTP");
-    } catch {
-      // safe fallback
+      const res = await api.updateBookingStatus(selectedJobForComplete._id, "COMPLETED", "Completed with citizen OTP");
+      if (res && res.booking) {
+        setActiveJobs((prev) =>
+          prev.map((j) => (j._id === selectedJobForComplete._id ? res.booking : j))
+        );
+      }
+      setWalletBalance((prev) => prev + earning);
+      setCompleteOtpModalOpen(false);
+      setSelectedJobForComplete(null);
+      setPayoutSuccessMsg(`Job #${selectedJobForComplete.bookingNumber} completed! ₹${earning} credited to worker wallet.`);
+      setTimeout(() => setPayoutSuccessMsg(null), 5000);
+
+      const refreshed = await api.getMyBookings();
+      if (Array.isArray(refreshed)) {
+        setActiveJobs(refreshed);
+      }
+    } catch (err: any) {
+      setCompletionOtpError(err.message || "Failed to complete job in database.");
     }
-    setActiveJobs((prev) =>
-      prev.map((j) => (j._id === selectedJobForComplete._id ? { ...j, status: "COMPLETED" } : j))
-    );
-    setWalletBalance((prev) => prev + earning);
-    setCompleteOtpModalOpen(false);
-    setSelectedJobForComplete(null);
-    setPayoutSuccessMsg(`Job #${selectedJobForComplete.bookingNumber} completed! ₹${earning} credited to worker wallet.`);
-    setTimeout(() => setPayoutSuccessMsg(null), 5000);
   };
 
   // 100% Silent Instant Payout — No Audio
@@ -369,7 +329,8 @@ export const WorkerPage: React.FC = () => {
 
             <div className="flex flex-wrap items-center gap-2">
               <button
-                onClick={refreshWorkerStatus}
+                type="button"
+                onClick={() => refreshWorkerStatus(true)}
                 className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition flex items-center gap-1.5 cursor-pointer shadow-md"
               >
                 <Radio className="w-3.5 h-3.5 animate-pulse" />

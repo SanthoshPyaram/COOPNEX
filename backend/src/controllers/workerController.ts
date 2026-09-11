@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import { Worker } from "../models/Worker";
+import { User } from "../models/User";
 import { GeoService } from "../services/geoService";
 import { AiService } from "../services/aiService";
 import { AuthenticatedRequest } from "../middleware/auth";
@@ -33,7 +35,7 @@ export const getWorkers = async (req: Request, res: Response): Promise<void> => 
     }
 
     if (req.query.includeUnverified !== "true") {
-      filter.verificationStatus = "VERIFIED";
+      filter.verificationStatus = { $in: ["VERIFIED", "APPROVED"] };
     }
 
     let workers = await Worker.find(filter).sort({ rating: -1, verificationLevel: -1 }).limit(50);
@@ -238,7 +240,30 @@ export const updateVerification = async (req: AuthenticatedRequest, res: Respons
     const { workerId } = req.params;
     const { level, status, notes } = req.body;
 
-    const worker = await Worker.findById(workerId);
+    let worker = null;
+    if (mongoose.Types.ObjectId.isValid(workerId)) {
+      worker = await Worker.findById(workerId);
+    }
+    if (!worker) {
+      const cleanId = String(workerId).replace(/^WRK-/, "");
+      if (mongoose.Types.ObjectId.isValid(cleanId)) {
+        worker = await Worker.findById(cleanId);
+      }
+    }
+    if (!worker) {
+      const cleanId = String(workerId).replace(/^WRK-/, "");
+      worker = await Worker.findOne({
+        $or: [
+          { employeeId: workerId },
+          { employeeId: cleanId },
+          { workerIdNumber: workerId },
+          { workerIdNumber: cleanId },
+          { phone: workerId },
+          { email: workerId }
+        ]
+      });
+    }
+
     if (!worker) {
       res.status(404).json({ success: false, message: "Worker not found." });
       return;
@@ -247,11 +272,20 @@ export const updateVerification = async (req: AuthenticatedRequest, res: Respons
     if (level !== undefined) worker.verificationLevel = level;
     if (status !== undefined) worker.verificationStatus = status;
 
+    if (status === "VERIFIED" || status === "APPROVED") {
+      worker.verificationStatus = "VERIFIED";
+      worker.approvedBy = req.user?._id;
+      worker.approvedAt = new Date();
+      if (worker.userId) {
+        await User.findByIdAndUpdate(worker.userId, { status: "ACTIVE" });
+      }
+    }
+
     if (notes) {
       worker.verificationTimeline.push({
         level: level || worker.verificationLevel,
         title: `Verification level updated to ${level || worker.verificationLevel}`,
-        verified: status === "VERIFIED",
+        verified: status === "VERIFIED" || status === "APPROVED",
         verifiedAt: new Date(),
         notes
       });

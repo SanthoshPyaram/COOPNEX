@@ -9,7 +9,8 @@ export type BookingStatus =
   | "ARRIVED"
   | "IN_PROGRESS"
   | "COMPLETED"
-  | "CANCELLED";
+  | "CANCELLED"
+  | "REJECTED";
 
 export interface FairWageBreakdown {
   customerPaid: number;

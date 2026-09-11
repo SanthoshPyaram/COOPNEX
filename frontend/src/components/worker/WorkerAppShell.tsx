@@ -148,12 +148,14 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
             </p>
             <div className="mt-6 flex gap-3">
               <button
+                type="button"
                 onClick={() => setShowLogoutConfirm(false)}
                 className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-xs text-slate-700 hover:bg-slate-50 transition cursor-pointer"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleConfirmLogout}
                 className="flex-1 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 font-bold text-xs text-white shadow-sm transition cursor-pointer"
               >
@@ -170,6 +172,7 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
           {/* Left: Mobile toggle + Brand */}
           <div className="flex items-center gap-3">
             <button
+              type="button"
               onClick={() => setMobileDrawerOpen(!mobileDrawerOpen)}
               className="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition"
               aria-label="Toggle navigation"
@@ -214,6 +217,7 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Online / Offline Availability Toggle */}
             <button
+              type="button"
               onClick={onToggleAvailability}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition shadow-2xs border cursor-pointer ${
                 isAvailable
@@ -233,6 +237,7 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
             {/* Notification Bell */}
             <div className="relative" ref={notifRef}>
               <button
+                type="button"
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
                 className="relative p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
                 aria-label="Notifications"
@@ -264,6 +269,7 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
                     </div>
                   </div>
                   <button
+                    type="button"
                     onClick={() => {
                       setNotificationsOpen(false);
                       onTabChange("notifications");
@@ -283,6 +289,7 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
 
             {/* Worker Profile Pill */}
             <button
+              type="button"
               onClick={() => onTabChange("profile")}
               className="flex items-center gap-2 p-1 sm:px-2.5 sm:py-1 rounded-xl hover:bg-slate-100 transition border border-slate-200 cursor-pointer"
             >
@@ -348,6 +355,7 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
                 const isActive = activeTab === item.id;
                 return (
                   <button
+                    type="button"
                     key={item.id}
                     onClick={() => onTabChange(item.id)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition text-left cursor-pointer ${
@@ -375,6 +383,7 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
             {/* Bottom Controls */}
             <div className="pt-3 border-t border-slate-100 space-y-1">
               <button
+                type="button"
                 onClick={() => setShowLogoutConfirm(true)}
                 className="w-full flex items-center gap-3 px-3 py-2 rounded-xl font-bold text-xs text-rose-600 hover:bg-rose-50 transition text-left cursor-pointer"
               >
@@ -396,6 +405,7 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
                     <span className="font-black text-sm text-slate-900">Worker Console</span>
                   </div>
                   <button
+                    type="button"
                     onClick={() => setMobileDrawerOpen(false)}
                     className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"
                   >
@@ -433,6 +443,7 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
                     const isActive = activeTab === item.id;
                     return (
                       <button
+                        type="button"
                         key={item.id}
                         onClick={() => {
                           onTabChange(item.id);
@@ -462,6 +473,7 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
                   <LanguageDropdown />
                 </div>
                 <button
+                  type="button"
                   onClick={() => {
                     setMobileDrawerOpen(false);
                     setShowLogoutConfirm(true);
@@ -489,6 +501,7 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
           const isActive = activeTab === item.id;
           return (
             <button
+              type="button"
               key={item.id}
               onClick={() => onTabChange(item.id)}
               className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition cursor-pointer ${

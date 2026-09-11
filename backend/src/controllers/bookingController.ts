@@ -123,16 +123,32 @@ export const getMyBookings = async (req: AuthenticatedRequest, res: Response): P
       const worker = await Worker.findOne({
         $or: [
           { userId },
+          ...(req.user?.email ? [{ email: req.user.email.toLowerCase() }] : []),
+          ...(req.user?.employeeId ? [{ employeeId: req.user.employeeId }, { workerIdNumber: req.user.employeeId }] : []),
           ...(mongoose.Types.ObjectId.isValid(userId) ? [{ _id: userId }] : []),
           ...(req.user?.phone ? [{ phone: req.user.phone }] : [])
         ]
       });
+
       if (worker) {
+        const workerSkills = (worker.skills || []).map((s: string) => new RegExp(`^${s}$`, "i"));
+        if ((worker as any).trade) {
+          workerSkills.push(new RegExp(`^${(worker as any).trade}$`, "i"));
+        }
+
         query = {
           $or: [
             { workerId: worker._id },
             { workerId: worker.userId },
-            { workerPhone: worker.phone }
+            ...(worker.phone ? [{ workerPhone: worker.phone }] : []),
+            ...(req.user?.phone ? [{ workerPhone: req.user.phone }] : []),
+            ...(worker.name ? [{ workerName: worker.name }] : []),
+            // Unassigned customer bookings in this worker's trade category
+            {
+              status: { $in: [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.MATCHING] },
+              ...(workerSkills.length > 0 ? { serviceCategory: { $in: workerSkills } } : {}),
+              workerId: { $in: [null, undefined] }
+            }
           ]
         };
       } else {
@@ -251,12 +267,12 @@ export const updateBookingStatus = async (req: AuthenticatedRequest, res: Respon
       }
     }
 
-    const effectiveStatus = (status === "REJECTED" ? BOOKING_STATUS.CANCELLED : status);
+    const effectiveStatus = (status === "REJECTED" ? BOOKING_STATUS.REJECTED : status);
     booking.status = effectiveStatus;
     booking.statusTimeline.push({
       status: effectiveStatus,
       timestamp: new Date(),
-      note: note || (status === "REJECTED" ? "Rejected by worker" : `Status updated to ${status}`)
+      note: note || (status === "REJECTED" ? "Declined by worker" : `Status updated to ${status}`)
     });
 
     if (effectiveStatus === BOOKING_STATUS.COMPLETED) {
@@ -310,10 +326,14 @@ export const updateBookingStatus = async (req: AuthenticatedRequest, res: Respon
 
     await booking.save();
 
+    const populated = await Booking.findById(booking._id)
+      .populate("workerId", "name phone avatarUrl rating verificationLevel workerIdNumber societyName")
+      .populate("societyId", "name contactPhone address");
+
     res.json({
       success: true,
-      message: `Booking status updated to ${status}`,
-      booking
+      message: `Booking status updated to ${effectiveStatus}`,
+      booking: populated || booking
     });
   } catch (error: any) {
     console.error("updateBookingStatus error:", error);
