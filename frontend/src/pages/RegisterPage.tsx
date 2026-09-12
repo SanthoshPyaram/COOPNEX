@@ -24,14 +24,16 @@ import {
   Check,
   Info,
   Sparkles,
-  Shield
+  Shield,
+  Calendar
 } from "lucide-react";
 import { FormField } from "../components/common/FormField";
 import { PasswordRequirements } from "../components/common/PasswordRequirements";
 import { FormHumanCompanion } from "../components/common/FormHumanCompanion";
 import {
   validateName,
-  validateAge,
+  validateDateOfBirth,
+  calculateExactAge,
   validateEmailFormat,
   validatePhone,
   validatePincode,
@@ -60,8 +62,34 @@ export const RegisterPage: React.FC = () => {
   const [lastNameError, setLastNameError] = useState<string | null>(null);
   const [gender, setGender] = useState("");
   const [genderError, setGenderError] = useState<string | null>(null);
-  const [age, setAge] = useState<string>("");
-  const [ageError, setAgeError] = useState<string | null>(null);
+  const [dateOfBirth, setDateOfBirth] = useState<string>("");
+  const [dobError, setDobError] = useState<string | null>(null);
+  const [calculatedAge, setCalculatedAge] = useState<number | null>(null);
+  const [dobSuccessMsg, setDobSuccessMsg] = useState<string | null>(null);
+
+  // Maximum selectable date is today (no future DOB), minimum is 120 years ago
+  const todayObj = new Date();
+  const todayFormatted = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, "0")}-${String(todayObj.getDate()).padStart(2, "0")}`;
+  const minDobFormatted = `${todayObj.getFullYear() - 120}-${String(todayObj.getMonth() + 1).padStart(2, "0")}-${String(todayObj.getDate()).padStart(2, "0")}`;
+
+  const handleDobChange = (val: string) => {
+    setDateOfBirth(val);
+    if (!val) {
+      setDobError("❌ Please enter your date of birth. 📅");
+      setCalculatedAge(null);
+      setDobSuccessMsg(null);
+      return;
+    }
+    const result = validateDateOfBirth(val);
+    setCalculatedAge(result.age);
+    if (result.isValid) {
+      setDobError(null);
+      setDobSuccessMsg(result.successMsg || "✅ Age verified — you are eligible to register. 🎉");
+    } else {
+      setDobError(result.error || "🔴 Sorry! You must be at least 18 years old to register. 🎂");
+      setDobSuccessMsg(null);
+    }
+  };
 
   // Phone Field & Pre-Check State
   const [phone, setPhone] = useState("");
@@ -347,9 +375,9 @@ export const RegisterPage: React.FC = () => {
       setGenderError("❌ Please select your gender. 👤");
       return;
     }
-    const ageCheck = validateAge(age, 1, 120);
-    if (!ageCheck.isValid) {
-      setAgeError(ageCheck.error || null);
+    const dobCheck = validateDateOfBirth(dateOfBirth);
+    if (!dobCheck.isValid) {
+      setDobError(dobCheck.error || "🔴 Sorry! You must be at least 18 years old to register. 🎂");
       return;
     }
 
@@ -399,7 +427,8 @@ export const RegisterPage: React.FC = () => {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       gender,
-      age: Number(age),
+      dateOfBirth,
+      age: dobCheck.age,
       phone: cleanPhoneDigits.slice(-10),
       email: email.trim().toLowerCase(),
       password,
@@ -428,8 +457,10 @@ export const RegisterPage: React.FC = () => {
     lastName.trim().length > 0 &&
     !lastNameError &&
     gender.trim().length > 0 &&
-    age.trim().length > 0 &&
-    !ageError &&
+    dateOfBirth.trim().length > 0 &&
+    !dobError &&
+    calculatedAge !== null &&
+    calculatedAge >= 18 &&
     phone.replace(/\D/g, "").length === 10 &&
     !phoneError &&
     !phoneDuplicateError &&
@@ -447,6 +478,7 @@ export const RegisterPage: React.FC = () => {
 
   const getCompanionState = () => {
     if (accountCreatedUser) return "SUCCESS";
+    if (calculatedAge !== null && calculatedAge < 18) return "UNDER_18";
     if (emailVerified) return "EMAIL_VERIFIED";
     if (emailOtpWrong) return "WRONG_OTP";
     if (emailOtpSent) return "OTP_SENT";
@@ -456,7 +488,7 @@ export const RegisterPage: React.FC = () => {
     if (firstNameError || lastNameError) return "INVALID_NAME";
     if (passwordHasMin8 && passwordHasNumber && passwordHasUpper && passwordHasSpecial) return "STRONG_PASSWORD";
     if (isFormValid) return "VALID_FORM";
-    if (firstName || lastName || email || phone) return "TYPING";
+    if (firstName || lastName || email || phone || dateOfBirth) return "TYPING";
     return "IDLE";
   };
 
@@ -686,31 +718,60 @@ export const RegisterPage: React.FC = () => {
                 </FormField>
 
                 <FormField
-                  id="reg-age"
-                  label="Age (1-120)"
+                  id="reg-dob"
+                  label="Date of Birth *"
                   required
-                  error={ageError}
+                  error={dobError}
                 >
-                  <input
-                    id="reg-age"
-                    type="number"
-                    min="1"
-                    max="120"
-                    required
-                    placeholder="Enter age (e.g. 28)"
-                    value={age}
-                    onChange={(e) => {
-                      const clean = e.target.value.replace(/\D/g, "").slice(0, 3);
-                      setAge(clean);
-                      const res = validateAge(clean, 1, 120);
-                      setAgeError(res.isValid ? null : (res.error || null));
-                    }}
-                    onBlur={() => {
-                      const res = validateAge(age, 1, 120);
-                      setAgeError(res.isValid ? null : (res.error || null));
-                    }}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"
-                  />
+                  <div className="space-y-1.5">
+                    <div className="relative">
+                      <Calendar className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
+                      <input
+                        id="reg-dob"
+                        type="date"
+                        required
+                        max={todayFormatted}
+                        min={minDobFormatted}
+                        value={dateOfBirth}
+                        onChange={(e) => handleDobChange(e.target.value)}
+                        onBlur={() => handleDobChange(dateOfBirth)}
+                        aria-invalid={Boolean(dobError)}
+                        aria-describedby={dobError ? "reg-dob-error" : undefined}
+                        className={`w-full bg-slate-50 dark:bg-slate-800 border ${
+                          dobError
+                            ? "border-rose-500 bg-rose-50/20 text-rose-900 dark:text-rose-200"
+                            : calculatedAge !== null && calculatedAge >= 18
+                            ? "border-emerald-500 bg-emerald-50/30 text-emerald-900 dark:text-emerald-200"
+                            : "border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white"
+                        } rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition`}
+                      />
+                    </div>
+
+                    {/* Calculated Age Read-Only Display */}
+                    {calculatedAge !== null && (
+                      <div className="flex items-center justify-between px-1">
+                        <span
+                          className={`text-xs font-bold inline-flex items-center gap-1 ${
+                            calculatedAge >= 18
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-rose-600 dark:text-rose-400"
+                          }`}
+                        >
+                          <span>Age: {calculatedAge} years</span>
+                          {calculatedAge >= 18 ? <span>✓</span> : null}
+                        </span>
+                        {calculatedAge >= 18 ? (
+                          <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                            Eligible (18+)
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400">
+                            Under 18
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </FormField>
               </div>
 
@@ -770,7 +831,7 @@ export const RegisterPage: React.FC = () => {
                         setEmailError(fmtRes.isValid ? null : (fmtRes.error || null));
                       }}
                       className={`w-full bg-white dark:bg-slate-800 border ${
-                        emailError || emailDuplicateError
+                        emailError || emailDuplicateError || emailErrorMsg
                           ? "border-rose-500 bg-rose-50/20 text-rose-900 dark:text-rose-200"
                           : emailVerified
                           ? "border-emerald-500 bg-emerald-50/30 text-emerald-900 dark:text-emerald-200"
@@ -779,8 +840,9 @@ export const RegisterPage: React.FC = () => {
                     />
                   </div>
 
-                  {/* Clearly Visible Verify Button */}
-                  <button
+                  {/* Clearly Visible Verify Button with Micro-Animation */}
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
                     type="button"
                     onClick={handleSendEmailOtp}
                     disabled={
@@ -818,10 +880,12 @@ export const RegisterPage: React.FC = () => {
                         <RotateCcw className="w-3.5 h-3.5" />
                         <span>{emailCountdown > 0 ? `Resend OTP in ${emailCountdown}s` : "Resend OTP"}</span>
                       </>
+                    ) : emailErrorMsg ? (
+                      <span>Try Again</span>
                     ) : (
                       <span>Verify</span>
                     )}
-                  </button>
+                  </motion.button>
                 </div>
 
                 {/* Email Feedback Messages directly underneath with smooth animation */}
@@ -846,10 +910,19 @@ export const RegisterPage: React.FC = () => {
                       animate={{ opacity: 1, height: "auto", y: 0 }}
                       exit={{ opacity: 0, height: 0, y: -6 }}
                       transition={{ duration: 0.2 }}
-                      className="text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 mt-1.5"
+                      className="text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center justify-between gap-2 mt-1.5 p-2.5 bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 rounded-xl"
                     >
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                      <span>{emailErrorMsg}</span>
+                      <div className="flex items-center gap-1.5">
+                        <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                        <span>{emailErrorMsg}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSendEmailOtp}
+                        className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[11px] font-bold transition shrink-0 cursor-pointer"
+                      >
+                        Try Again
+                      </button>
                     </motion.div>
                   )}
                   {emailDuplicateError && !emailError && (
@@ -1160,7 +1233,7 @@ export const RegisterPage: React.FC = () => {
                 <motion.button
                   type="submit"
                   whileHover={isFormValid && !isSubmitting ? { scale: 1.01 } : {}}
-                  whileTap={isFormValid && !isSubmitting ? { scale: 0.99 } : {}}
+                  whileTap={isFormValid && !isSubmitting ? { scale: 0.97 } : {}}
                   disabled={!isFormValid || isSubmitting}
                   className={`w-full py-3.5 px-5 rounded-xl font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
                     isFormValid
@@ -1184,7 +1257,9 @@ export const RegisterPage: React.FC = () => {
                 {/* Helpful Validation Hint */}
                 {!isFormValid && (
                   <p className="text-[11px] text-center text-slate-400 mt-2">
-                    {!emailVerified
+                    {calculatedAge !== null && calculatedAge < 18
+                      ? "🔴 You must be at least 18 years old to register a customer account."
+                      : !emailVerified
                       ? "⚠️ Please verify your Email Address using the 'Verify' button above to continue."
                       : "⚠️ Please complete all required fields and ensure passwords match."}
                   </p>

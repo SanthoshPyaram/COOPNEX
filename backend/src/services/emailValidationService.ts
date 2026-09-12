@@ -448,9 +448,17 @@ async function executeEmailValidationInternal(
   };
 }
 
+interface CacheEntry {
+  result: EmailValidationResult;
+  timestamp: number;
+}
+
+const emailValidationCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache
+
 /**
  * Public Server-Side Email Validation Engine
- * Enforces a strict 3500ms safety timeout so backend returns promptly
+ * Enforces in-memory caching and a strict 3500ms safety timeout so backend returns promptly
  */
 export async function validateEmailAddress(
   rawEmail: string,
@@ -459,7 +467,13 @@ export async function validateEmailAddress(
   const email = (rawEmail || "").trim();
   const normalized = email.toLowerCase();
 
-  return Promise.race([
+  // Check cache first for instant sub-millisecond response
+  const cached = emailValidationCache.get(normalized);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.result;
+  }
+
+  const result = await Promise.race([
     executeEmailValidationInternal(rawEmail, clientIp),
     new Promise<EmailValidationResult>((resolve) =>
       setTimeout(() => {
@@ -474,5 +488,14 @@ export async function validateEmailAddress(
       }, 3500)
     )
   ]);
+
+  if (result.status !== "unknown" || result.reason !== "timeout") {
+    emailValidationCache.set(normalized, {
+      result,
+      timestamp: Date.now()
+    });
+  }
+
+  return result;
 }
 

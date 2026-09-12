@@ -62,7 +62,7 @@ export function validateName(name: string, fieldLabel = "name"): ValidationResul
  * Age Validation:
  * Integer only, reject decimals, reject letters, range 1 - 120.
  */
-export function validateAge(age: number | string, min = 1, max = 120): ValidationResult {
+export function validateAge(age: number | string, min = 18, max = 100): ValidationResult {
   const str = String(age ?? "").trim();
   if (!str) {
     return {
@@ -90,6 +90,129 @@ export function validateAge(age: number | string, min = 1, max = 120): Validatio
   return {
     isValid: true,
     successMsg: "✅ Age verified. 🎂"
+  };
+}
+
+/**
+ * Calculates exact age in full years from date of birth against a reference date.
+ * Accurately handles whether the birthday has occurred yet in the current calendar year.
+ */
+export function calculateExactAge(dob: string | Date, referenceDate: Date = new Date()): number | null {
+  if (!dob) return null;
+  const birthDate = typeof dob === "string" ? new Date(dob) : dob;
+  if (isNaN(birthDate.getTime())) return null;
+
+  const today = referenceDate;
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+
+  return age;
+}
+
+export interface DateOfBirthValidationResult {
+  isValid: boolean;
+  age: number | null;
+  error?: string;
+  successMsg?: string;
+}
+
+/**
+ * Comprehensive Date of Birth Validation:
+ * - Rejects empty input
+ * - Rejects malformed/impossible dates
+ * - Rejects future dates
+ * - Rejects dates older than 120 years
+ * - Enforces the strict 18+ eligibility rule using exact birth date
+ */
+export function validateDateOfBirth(
+  dobString: string,
+  referenceDate: Date = new Date()
+): DateOfBirthValidationResult {
+  const trimmed = (dobString || "").trim();
+  if (!trimmed) {
+    return {
+      isValid: false,
+      age: null,
+      error: "❌ Please enter your date of birth. 📅"
+    };
+  }
+
+  const parts = trimmed.split("-");
+  if (parts.length !== 3) {
+    return {
+      isValid: false,
+      age: null,
+      error: "❌ Please enter a valid date of birth. 📅"
+    };
+  }
+
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  const day = parseInt(parts[2], 10);
+
+  if (isNaN(year) || isNaN(month) || isNaN(day) || month < 1 || month > 12 || day < 1 || day > 31) {
+    return {
+      isValid: false,
+      age: null,
+      error: "❌ Please enter a valid date of birth. 📅"
+    };
+  }
+
+  const birthDate = new Date(year, month - 1, day);
+  if (
+    isNaN(birthDate.getTime()) ||
+    birthDate.getFullYear() !== year ||
+    birthDate.getMonth() !== month - 1 ||
+    birthDate.getDate() !== day
+  ) {
+    return {
+      isValid: false,
+      age: null,
+      error: "❌ Please enter a valid date of birth. 📅"
+    };
+  }
+
+  const today = referenceDate;
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if (birthDate > todayStart) {
+    return {
+      isValid: false,
+      age: null,
+      error: "❌ Date of birth cannot be in the future. 📅"
+    };
+  }
+
+  const minYear = today.getFullYear() - 120;
+  if (year < minYear) {
+    return {
+      isValid: false,
+      age: null,
+      error: "❌ Please enter a valid date of birth. 📅"
+    };
+  }
+
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+
+  if (age < 18) {
+    return {
+      isValid: false,
+      age,
+      error: "🔴 Sorry! You must be at least 18 years old to register. 🎂"
+    };
+  }
+
+  return {
+    isValid: true,
+    age,
+    successMsg: "✅ Age verified — you are eligible to register. 🎉"
   };
 }
 

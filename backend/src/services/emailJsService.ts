@@ -85,7 +85,7 @@ export async function sendEmailJsOtp(
           "Content-Type": "application/json",
           "User-Agent": "COOPNEX-Server/1.0"
         },
-        timeout: 10000
+        timeout: 4000
       }
     );
 

@@ -16,6 +16,7 @@ export type FormCompanionEmotion =
   | "EMAIL_VERIFIED"
   | "STRONG_PASSWORD"
   | "WEAK_PASSWORD"
+  | "UNDER_18"
   | "SUCCESS";
 
 interface FormHumanCompanionProps {
@@ -90,6 +91,11 @@ const EMOTION_MAP: Record<FormCompanionEmotion, { emoji: string; text: string; r
     emoji: "🔐",
     text: "Let's make this password a bit stronger.",
     role: "technician"
+  },
+  UNDER_18: {
+    emoji: "😕",
+    text: "Looks like you're not eligible yet. You must be 18 or older.",
+    role: "customer-rep"
   },
   SUCCESS: {
     emoji: "🎉",

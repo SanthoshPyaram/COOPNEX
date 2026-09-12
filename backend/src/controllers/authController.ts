@@ -285,7 +285,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       firstName,
       lastName,
       gender = "Prefer not to say",
-      age,
+      dateOfBirth,
+      age: providedAge,
       email,
       phone,
       password,
@@ -330,16 +331,79 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Age Validation: Integer between 1 and 120
-    if (age !== undefined && age !== null && age !== "") {
-      const parsedAge = Number(age);
-      if (!Number.isInteger(parsedAge) || parsedAge < 1 || parsedAge > 120) {
+    // Strict Server-Side Date of Birth and Age (18+) Verification
+    let parsedDob: Date | undefined;
+    let actualAge: number | undefined;
+
+    if (!dateOfBirth) {
+      if (providedAge !== undefined && providedAge !== null && providedAge !== "") {
+        const pAge = Number(providedAge);
+        if (Number.isInteger(pAge) && pAge >= 18 && pAge <= 120) {
+          actualAge = pAge;
+        } else {
+          res.status(400).json({
+            success: false,
+            field: "dateOfBirth",
+            message: "User must be at least 18 years old."
+          });
+          return;
+        }
+      } else {
         res.status(400).json({
           success: false,
-          message: "❌ Please enter a valid age between 1 and 120. 🎂"
+          field: "dateOfBirth",
+          message: "❌ Please enter your date of birth. 📅"
         });
         return;
       }
+    } else {
+      parsedDob = new Date(dateOfBirth);
+      if (isNaN(parsedDob.getTime())) {
+        res.status(400).json({
+          success: false,
+          field: "dateOfBirth",
+          message: "❌ Please enter a valid date of birth. 📅"
+        });
+        return;
+      }
+
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      if (parsedDob > todayStart) {
+        res.status(400).json({
+          success: false,
+          field: "dateOfBirth",
+          message: "❌ Date of birth cannot be in the future. 📅"
+        });
+        return;
+      }
+
+      // Exact Age calculation
+      let calculated = today.getFullYear() - parsedDob.getFullYear();
+      const m = today.getMonth() - parsedDob.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < parsedDob.getDate())) {
+        calculated--;
+      }
+
+      if (calculated < 18) {
+        res.status(400).json({
+          success: false,
+          field: "dateOfBirth",
+          message: "User must be at least 18 years old."
+        });
+        return;
+      }
+
+      if (calculated > 120) {
+        res.status(400).json({
+          success: false,
+          field: "dateOfBirth",
+          message: "❌ Please enter a valid date of birth. 📅"
+        });
+        return;
+      }
+
+      actualAge = calculated;
     }
 
     // Password Complexity: min 8, uppercase, lowercase, number, special char
@@ -544,7 +608,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       firstName,
       lastName,
       gender,
-      age: age ? Number(age) : undefined,
+      dateOfBirth: parsedDob,
+      ageAtRegistration: actualAge,
+      age: actualAge,
       email: cleanEmail,
       phone: cleanPhone,
       passwordHash,
