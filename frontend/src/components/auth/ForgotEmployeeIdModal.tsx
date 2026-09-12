@@ -37,6 +37,7 @@ export const ForgotEmployeeIdModal: React.FC<ForgotEmployeeIdModalProps> = ({
   const [otpDigits, setOtpDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
   const [copied, setCopied] = useState(false);
 
@@ -64,6 +65,7 @@ export const ForgotEmployeeIdModal: React.FC<ForgotEmployeeIdModalProps> = ({
       setStep("ENTER_EMAIL");
       setOtpDigits(["", "", "", "", "", ""]);
       setErrorMessage(null);
+      setSuccessMessage(null);
       setEmailError(null);
       setCopied(false);
       setRecoveredWorker(null);
@@ -92,35 +94,25 @@ export const ForgotEmployeeIdModal: React.FC<ForgotEmployeeIdModalProps> = ({
     // Stage 1: Format Validation
     const formatCheck = validateEmailFormat(cleanEmail);
     if (!formatCheck.isValid) {
-      setEmailError(formatCheck.error || "❌ Please enter a valid email address. 📧");
+      setEmailError("❌ Please enter a valid email address. 📧");
       return;
     }
 
     setIsLoading(true);
     setErrorMessage(null);
     setEmailError(null);
+    setSuccessMessage(null);
 
-    // Stage 2: Database Existence Check
-    try {
-      const chkRes = await fetch(`${API_BASE}/auth/check-email?email=${encodeURIComponent(cleanEmail)}`);
-      const chkData = await chkRes.json();
-      if (chkData.success && chkData.exists === false) {
-        setIsLoading(false);
-        setEmailError("❌ This email is not registered. Please use a registered email address. 📧");
-        return;
-      }
-    } catch (err) {
-      console.warn("Pre-check email error:", err);
-    }
-
+    // sendOtp calls /api/auth/check-email and enforces database existence before EmailJS
     const res = await sendOtp(cleanEmail, "RECOVER_EMPLOYEE_ID", "COOPNEX Specialist");
     setIsLoading(false);
 
     if (res.success) {
+      setSuccessMessage("✅ OTP sent successfully! Check your email. 📩");
       setStep("ENTER_OTP");
       setCountdown(res.retryAfterSeconds || 60);
     } else {
-      setEmailError(res.message || "❌ Failed to dispatch verification code. Please check your email. 📧");
+      setEmailError(res.message || "❌ This email address is not registered. Please check your email and try again. 📧");
     }
   };
 
@@ -129,7 +121,7 @@ export const ForgotEmployeeIdModal: React.FC<ForgotEmployeeIdModalProps> = ({
     e.preventDefault();
     const code = otpDigits.join("").trim();
     if (code.length !== 6) {
-      setErrorMessage("Please enter all 6 digits of the verification code.");
+      setErrorMessage("❌ Incorrect OTP. Please check the code and try again. 🔐");
       return;
     }
 
@@ -139,6 +131,11 @@ export const ForgotEmployeeIdModal: React.FC<ForgotEmployeeIdModalProps> = ({
 
     const res = await verifyOtp(cleanEmail, code, "RECOVER_EMPLOYEE_ID");
     setIsLoading(false);
+
+    if (!res.success) {
+      setErrorMessage(res.message || "❌ Incorrect OTP. Please check the code and try again. 🔐");
+      return;
+    }
 
     if (res.success) {
       // Look up worker in local storage or fallback to demo
@@ -257,9 +254,15 @@ export const ForgotEmployeeIdModal: React.FC<ForgotEmployeeIdModalProps> = ({
           {/* Body */}
           <div className="p-6 space-y-4">
             {errorMessage && (
-              <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-start gap-2 animate-fadeIn">
+              <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-start gap-2 animate-fadeIn font-semibold">
                 <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                 <span>{errorMessage}</span>
+              </div>
+            )}
+            {successMessage && step === "ENTER_OTP" && (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-start gap-2 animate-fadeIn font-semibold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span>{successMessage}</span>
               </div>
             )}
 

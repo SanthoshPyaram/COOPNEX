@@ -50,6 +50,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
 
   // Sync default identifier
@@ -74,6 +75,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
       setNewPassword("");
       setConfirmPassword("");
       setErrorMessage(null);
+      setSuccessMessage(null);
     }
   }, [isOpen]);
 
@@ -123,22 +125,24 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
 
     const emailCheck = validateEmailFormat(clean);
     if (!emailCheck.isValid) {
-      setEmailError(emailCheck.error || "❌ Please enter a valid email address. 📧");
+      setEmailError("❌ Please enter a valid email address. 📧");
       return;
     }
 
     setIsLoading(true);
     setErrorMessage(null);
     setEmailError(null);
+    setSuccessMessage(null);
 
     const res = await forgotPasswordSendOtp(clean);
     setIsLoading(false);
 
     if (res.success) {
+      setSuccessMessage("✅ OTP sent successfully! Check your email. 📩");
       setStep("ENTER_OTP");
       setCountdown(60);
     } else {
-      setEmailError(res.message || "❌ This email is not registered. Please use a registered email address. 📧");
+      setEmailError(res.message || "❌ This email address is not registered. Please check your email and try again. 📧");
     }
   };
 
@@ -148,15 +152,17 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     setIsLoading(true);
     setErrorMessage(null);
     setEmailError(null);
+    setSuccessMessage(null);
 
     const res = await forgotPasswordSendOtp(identifier.trim());
     setIsLoading(false);
 
     if (res.success) {
+      setSuccessMessage("✅ OTP sent successfully! Check your email. 📩");
       setCountdown(60);
       setOtpDigits(["", "", "", "", "", ""]);
     } else {
-      setErrorMessage(res.message || "Failed to resend code. Please try again shortly.");
+      setErrorMessage(res.message || "❌ We couldn't send the verification code. Please try again. 📩");
     }
   };
 
@@ -184,7 +190,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
 
     const code = otpDigits.join("");
     if (code.length !== 6) {
-      setErrorMessage("Please enter the complete 6-digit verification code.");
+      setErrorMessage("❌ Incorrect OTP. Please check the code and try again. 🔐");
       return;
     }
 
@@ -200,7 +206,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
         onSuccess(newPassword, identifier.trim());
       }
     } else {
-      setErrorMessage(res.message || "Failed to update password. Code may have expired.");
+      setErrorMessage(res.message || "❌ Incorrect OTP. Please check the code and try again. 🔐");
     }
   };
 
@@ -263,10 +269,21 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
-                className="mb-5 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2.5 shadow-xs"
+                className="mb-5 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2.5 shadow-xs font-semibold"
               >
                 <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                 <span className="flex-1">{errorMessage}</span>
+              </motion.div>
+            )}
+            {successMessage && step === "ENTER_OTP" && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                className="mb-5 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-2.5 shadow-xs font-semibold"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span className="flex-1">{successMessage}</span>
               </motion.div>
             )}
           </AnimatePresence>

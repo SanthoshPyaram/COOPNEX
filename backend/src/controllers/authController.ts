@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import dns from "dns";
 import { User } from "../models/User";
 import { Worker } from "../models/Worker";
 import { Admin } from "../models/Admin";
@@ -26,33 +27,110 @@ const signToken = (userId: string, role: UserRole) => {
 
 /**
  * Safe Pre-Check: Checks if an email is already registered without revealing user details
+ * Response: { success: true, exists: boolean, message: string }
  */
 export const checkEmail = async (req: Request, res: Response): Promise<void> => {
   try {
-    const rawEmail = (req.query.email || req.body.email || "").toString().trim().toLowerCase();
-    if (!rawEmail || !rawEmail.includes("@")) {
-      res.status(400).json({ success: false, message: "Valid email address is required." });
-      return;
-    }
-    if (mongoose.connection.readyState !== 1) {
-      res.json({
-        success: true,
+    const rawEmail = (req.body.email || req.query.email || "").toString().trim().toLowerCase();
+    const mode = (req.body.mode || req.query.mode || "").toString().trim().toUpperCase();
+
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+    if (!rawEmail || !emailRegex.test(rawEmail) || rawEmail.startsWith("@") || rawEmail.endsWith("@") || rawEmail.includes("..")) {
+      res.status(400).json({
+        success: false,
         exists: false,
-        message: "Email is available."
+        message: "❌ Please enter a valid email address. 📧"
       });
       return;
     }
-    const existingUser = await User.findOne({ email: rawEmail });
-    const existingWorker = existingUser ? null : await Worker.findOne({ email: rawEmail });
-    const existingAdmin = (existingUser || existingWorker) ? null : await Admin.findOne({ email: rawEmail });
-    const exists = Boolean(existingUser || existingWorker || existingAdmin);
+
+    let exists = false;
+    if (mongoose.connection.readyState === 1) {
+      const existingUser = await User.findOne({ email: rawEmail });
+      const existingWorker = existingUser ? null : await Worker.findOne({ email: rawEmail });
+      const existingAdmin = (existingUser || existingWorker) ? null : await Admin.findOne({ email: rawEmail });
+      exists = Boolean(existingUser || existingWorker || existingAdmin);
+    } else {
+      // Demo accounts fallback when offline
+      const DEMO_EMAILS = [
+        "demo.customer@coopnex.in",
+        "demo.worker@coopnex.in",
+        "worker.demo@coopnex.in",
+        "arjun.kumar@coopnex.worker.in",
+        "admin@coopnex.in",
+        "superadmin@coopnex.in",
+        "priya.sharma@coopnex.customer.in"
+      ];
+      exists = DEMO_EMAILS.includes(rawEmail);
+    }
+
+    if (mode === "REGISTER") {
+      if (exists) {
+        res.json({
+          success: true,
+          exists: true,
+          available: false,
+          message: "❌ This email is already registered. Please sign in or use another email. 📧"
+        });
+        return;
+      }
+
+      // Check domain MX records to reject non-existent domains early
+      const domain = rawEmail.split("@")[1];
+      if (domain) {
+        try {
+          const mx = await Promise.race([
+            dns.promises.resolveMx(domain),
+            new Promise<any[]>((_, reject) => setTimeout(() => reject(new Error("DNS timeout")), 2500))
+          ]);
+          if (!mx || mx.length === 0) {
+            res.json({
+              success: true,
+              exists: false,
+              available: false,
+              message: "❌ Please enter a valid email address. 📧"
+            });
+            return;
+          }
+        } catch (dnsErr: any) {
+          if (dnsErr?.code === "ENOTFOUND" || dnsErr?.code === "ENODATA") {
+            res.json({
+              success: true,
+              exists: false,
+              available: false,
+              message: "❌ Please enter a valid email address. 📧"
+            });
+            return;
+          }
+        }
+      }
+
+      res.json({
+        success: true,
+        exists: false,
+        available: true,
+        message: "Email is available for registration."
+      });
+      return;
+    }
+
+    // Default / Recovery Mode: check if account exists
+    if (!exists) {
+      res.json({
+        success: true,
+        exists: false,
+        message: "❌ This email address is not registered. Please check your email and try again. 📧"
+      });
+      return;
+    }
+
     res.json({
       success: true,
-      exists,
-      message: exists ? "Email already exists. Please use another email." : "Email is available."
+      exists: true,
+      message: "Email found in records."
     });
   } catch (error: any) {
-    res.status(500).json({ success: false, message: "Error checking email availability." });
+    res.status(500).json({ success: false, exists: false, message: "Error checking email availability." });
   }
 };
 
@@ -1426,6 +1504,26 @@ export const forgotPasswordSendOtp = async (req: Request, res: Response): Promis
     }
 
     // 1. Check if eligible account exists in User or Worker collection
+    if (mongoose.connection.readyState !== 1) {
+      const DEMO_EMAILS = [
+        "demo.customer@coopnex.in",
+        "demo.worker@coopnex.in",
+        "worker.demo@coopnex.in",
+        "arjun.kumar@coopnex.worker.in",
+        "admin@coopnex.in",
+        "superadmin@coopnex.in",
+        "priya.sharma@coopnex.customer.in"
+      ];
+      if (!DEMO_EMAILS.includes(cleanTarget)) {
+        res.status(404).json({
+          success: false,
+          exists: false,
+          message: "❌ This email address is not registered. Please check your email and try again. 📧"
+        });
+        return;
+      }
+    }
+
     let user = await User.findOne({
       $or: [
         { email: cleanTarget },
@@ -1446,12 +1544,12 @@ export const forgotPasswordSendOtp = async (req: Request, res: Response): Promis
       }
     }
 
-    // 2. Anti-enumeration security: If user DOES NOT exist or is inactive, DO NOT send OTP
+    // 2. Strict Check: If user DOES NOT exist or is inactive, DO NOT send OTP
     if (!user || user.status === "SUSPENDED" || user.isActive === false) {
-      res.json({
-        success: true,
-        message: "If an eligible account exists, a verification code will be sent to your registered contact.",
-        expiresInSeconds: 600
+      res.status(404).json({
+        success: false,
+        exists: false,
+        message: "❌ This email address is not registered. Please check your email and try again. 📧"
       });
       return;
     }
@@ -1459,10 +1557,10 @@ export const forgotPasswordSendOtp = async (req: Request, res: Response): Promis
     // Determine target recipient email
     const emailTarget = user.email || (cleanTarget.includes("@") ? cleanTarget : null);
     if (!emailTarget) {
-      res.json({
-        success: true,
-        message: "If an eligible account exists, a verification code will be sent to your registered contact.",
-        expiresInSeconds: 600
+      res.status(404).json({
+        success: false,
+        exists: false,
+        message: "❌ This email address is not registered. Please check your email and try again. 📧"
       });
       return;
     }

@@ -3,6 +3,7 @@ import emailjs from "@emailjs/browser";
 import { emailJsConfig, isEmailJsConfigured, isEmailJsResetConfigured, getEmailJsStatus } from "../config/emailjs";
 import { UserRole } from "../types";
 import { API_BASE } from "../services/api";
+import { validateEmailFormat } from "../utils/validation";
 
 export interface UserData {
   id: string;
@@ -281,30 +282,93 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     identifier: string,
     purpose: string = "REGISTER",
     name?: string
-  ): Promise<{ success: boolean; message?: string; emailDispatched?: boolean; retryAfterSeconds?: number }> => {
+  ): Promise<{ success: boolean; message?: string; emailDispatched?: boolean; retryAfterSeconds?: number; notRegistered?: boolean }> => {
     try {
       const cleanEmail = identifier.trim().toLowerCase();
-      if (!cleanEmail || !cleanEmail.includes("@")) {
+
+      // STEP 2: Validate email FORMAT locally
+      const formatCheck = validateEmailFormat(cleanEmail);
+      if (!formatCheck.isValid) {
         return { success: false, message: "❌ Please enter a valid email address. 📧" };
       }
 
-      // STAGE 2 — Email Existence Check: For registration, reject if already exists
+      // STEP 3: Database / Account Existence Check BEFORE EmailJS
       if (purpose === "REGISTER") {
+        let isTaken = false;
         try {
-          const chkRes = await fetch(`${API_BASE}/auth/check-email?email=${encodeURIComponent(cleanEmail)}`);
+          const chkRes = await fetch(`${API_BASE}/auth/check-email`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: cleanEmail, mode: "REGISTER" })
+          });
           const chkData = await chkRes.json();
-          if (chkData && chkData.success && chkData.exists) {
+          if (chkData) {
+            if (chkData.exists === true) {
+              return {
+                success: false,
+                notRegistered: false,
+                message: "❌ This email is already registered. Please sign in or use another email. 📧"
+              };
+            }
+            if (chkData.available === false && chkData.message) {
+              return {
+                success: false,
+                message: chkData.message
+              };
+            }
+          }
+        } catch (chkErr) {
+          // Offline local storage check
+          const localUsers = JSON.parse(localStorage.getItem("coopnex_registered_users") || "[]");
+          const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
+          isTaken = localUsers.some((u: any) => u.email?.toLowerCase() === cleanEmail) ||
+            localWorkers.some((w: any) => w.email?.toLowerCase() === cleanEmail);
+          if (isTaken) {
             return {
               success: false,
               message: "❌ This email is already registered. Please sign in or use another email. 📧"
             };
           }
+        }
+      } else {
+        // Recovery flow (e.g. RECOVER_EMPLOYEE_ID): Email MUST exist in database
+        let emailExists = false;
+        try {
+          const chkRes = await fetch(`${API_BASE}/auth/check-email`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: cleanEmail })
+          });
+          const chkData = await chkRes.json();
+          emailExists = Boolean(chkData && chkData.success && chkData.exists === true);
         } catch (chkErr) {
-          console.warn("Pre-registration email check warning:", chkErr);
+          const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
+          const localUsers = JSON.parse(localStorage.getItem("coopnex_registered_users") || "[]");
+          const demoEmails = [
+            "demo.customer@coopnex.in",
+            "demo.worker@coopnex.in",
+            "worker.demo@coopnex.in",
+            "arjun.kumar@coopnex.worker.in",
+            "admin@coopnex.in",
+            "superadmin@coopnex.in",
+            "priya.sharma@coopnex.customer.in"
+          ];
+          emailExists = localWorkers.some((w: any) => w.email?.toLowerCase() === cleanEmail) ||
+            localUsers.some((u: any) => u.email?.toLowerCase() === cleanEmail) ||
+            demoEmails.includes(cleanEmail);
+        }
+
+        // HARD BARRIER: If email does not exist, NEVER call EmailJS
+        if (!emailExists) {
+          return {
+            success: false,
+            notRegistered: true,
+            message: "❌ This email address is not registered. Please check your email and try again. 📧"
+          };
         }
       }
 
-      // Generate cryptographically secure 6-digit numeric OTP using Web Crypto API
+      // STEP 4: Generate secure 6-digit OTP & Dispatch via EmailJS
       const array = new Uint32Array(1);
       window.crypto.getRandomValues(array);
       const otpCode = (100000 + (array[0] % 900000)).toString();
@@ -326,7 +390,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })
       );
 
-      // Asynchronously record session with backend MongoDB if online (fully non-blocking)
+      // Asynchronously record session with backend MongoDB if online
       fetch(`${API_BASE}/auth/emailjs/record-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -337,12 +401,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })
       }).catch(() => null);
 
-      // Dispatch authentic verification email via EmailJS browser SDK (Template 1: Universal Verification)
+      // Dispatch authentic verification email via EmailJS browser SDK
       const status = getEmailJsStatus();
       if (!status.isConfigured && !emailJsConfig.serviceId) {
         return {
           success: false,
-          message: status.errorMessage || "❌ We couldn't send the OTP. Please check the email and try again. 📩"
+          message: "❌ We couldn't send the verification code. Please try again. 📩"
         };
       }
 
@@ -361,7 +425,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             expiry: "5",
             expiry_text: "5 minutes",
             app_name: "COOPNEX",
-            purpose: "Email Verification"
+            purpose: purpose === "RECOVER_EMPLOYEE_ID" ? "Employee ID Recovery" : "Email Verification"
           },
           emailJsConfig.publicKey
         );
@@ -369,20 +433,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error("EmailJS dispatch error:", emailErr);
         return {
           success: false,
-          message: "❌ We couldn't send the OTP. Please check the email and try again. 📩"
+          message: "❌ We couldn't send the verification code. Please try again. 📩"
         };
       }
 
       return {
         success: true,
-        message: "✅ OTP sent successfully to your email. 📩",
+        message: "✅ OTP sent successfully! Check your email. 📩",
         emailDispatched: true
       };
     } catch (err: any) {
       console.error("[Auth] sendOtp unexpected error:", err);
       return {
         success: false,
-        message: "Unable to complete email verification request. Please try again."
+        message: "❌ We couldn't send the verification code. Please try again. 📩"
       };
     }
   };
@@ -392,7 +456,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const cleanCode = otpCode.trim();
 
     if (!cleanCode || cleanCode.length !== 6) {
-      return { success: false, message: "Please enter a valid 6-digit verification code." };
+      return { success: false, message: "❌ Incorrect OTP. Please check the code and try again. 🔐" };
     }
 
     // 1. Verify against secure client-side cryptographic session first if present
@@ -404,19 +468,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const session = JSON.parse(rawSession);
         if (Date.now() > session.expiresAt) {
           sessionStorage.removeItem(sessionKey);
-          return { success: false, message: "Verification code has expired. Please request a new code." };
+          return { success: false, message: "❌ Incorrect OTP. Please check the code and try again. 🔐" };
         }
 
         session.attempts = (session.attempts || 0) + 1;
         if (session.attempts > 5) {
           sessionStorage.removeItem(sessionKey);
-          return { success: false, message: "Too many failed attempts. Please request a new code." };
+          return { success: false, message: "❌ Incorrect OTP. Please check the code and try again. 🔐" };
         }
         sessionStorage.setItem(sessionKey, JSON.stringify(session));
 
         const inputHash = await hashOtpClient(cleanId, cleanCode);
         if (inputHash !== session.hash) {
-          return { success: false, message: "Invalid verification code. Please check your email and try again." };
+          return { success: false, message: "❌ Incorrect OTP. Please check the code and try again. 🔐" };
         }
 
         // Mark verified in session
@@ -430,7 +494,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           body: JSON.stringify({ identifier: cleanId, otpCode: cleanCode, purpose })
         }).catch(() => null);
 
-        return { success: true, message: "Email successfully verified." };
+        return { success: true, message: "✅ Email verified successfully! 🎉" };
       } catch {
         // Fall through to backend verification
       }
@@ -455,36 +519,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.setItem("sahakari_user", JSON.stringify(parsed.data.user));
           localStorage.setItem("sahakari_token", parsed.data.token);
         }
-        return { success: true, role: parsed.data.user?.role };
+        return { success: true, role: parsed.data.user?.role, message: "✅ Email verified successfully! 🎉" };
       }
-      return { success: false, message: parsed.errorMessage || "Invalid or expired verification code." };
+      return { success: false, message: "❌ Incorrect OTP. Please check the code and try again. 🔐" };
     } catch {
-      return { success: false, message: "Verification session expired. Please request a new code." };
+      return { success: false, message: "❌ Incorrect OTP. Please check the code and try again. 🔐" };
     }
   };
 
   const forgotPasswordSendOtp = async (identifier: string): Promise<{ success: boolean; message?: string; otpCode?: string; retryAfterSeconds?: number; notRegistered?: boolean }> => {
     try {
       const cleanEmail = identifier.trim().toLowerCase();
-      if (!cleanEmail || !cleanEmail.includes("@")) {
+
+      // STEP 2: Validate email FORMAT locally
+      const formatCheck = validateEmailFormat(cleanEmail);
+      if (!formatCheck.isValid) {
         return { success: false, message: "❌ Please enter a valid email address. 📧" };
       }
 
-      // STAGE 2 — Email Existence Check: Must be registered in COOPNEX database
+      // STEP 3: Strict Email Existence Check BEFORE EmailJS
+      let emailExists = false;
       try {
-        const chkRes = await fetch(`${API_BASE}/auth/check-email?email=${encodeURIComponent(cleanEmail)}`);
+        const chkRes = await fetch(`${API_BASE}/auth/check-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: cleanEmail })
+        });
         const chkData = await chkRes.json();
-        if (chkData && chkData.success && !chkData.exists) {
-          return {
-            success: false,
-            notRegistered: true,
-            message: "❌ This email is not registered. Please use a registered email address. 📧"
-          };
-        }
+        emailExists = Boolean(chkData && chkData.success && chkData.exists === true);
       } catch (chkErr) {
-        console.warn("Pre-check error:", chkErr);
+        // Offline / fallback verification: check local registered accounts & demo emails
+        const localUsers = JSON.parse(localStorage.getItem("coopnex_registered_users") || "[]");
+        const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
+        const demoEmails = [
+          "demo.customer@coopnex.in",
+          "demo.worker@coopnex.in",
+          "worker.demo@coopnex.in",
+          "arjun.kumar@coopnex.worker.in",
+          "admin@coopnex.in",
+          "superadmin@coopnex.in",
+          "priya.sharma@coopnex.customer.in"
+        ];
+        emailExists = localUsers.some((u: any) => u.email?.toLowerCase() === cleanEmail) ||
+          localWorkers.some((w: any) => w.email?.toLowerCase() === cleanEmail) ||
+          demoEmails.includes(cleanEmail);
       }
 
+      // HARD BARRIER: If email does NOT exist, DO NOT call EmailJS under any circumstance
+      if (!emailExists) {
+        return {
+          success: false,
+          notRegistered: true,
+          message: "❌ This email address is not registered. Please check your email and try again. 📧"
+        };
+      }
+
+      // STEP 4: Only if email EXISTS in our database
       const array = new Uint32Array(1);
       window.crypto.getRandomValues(array);
       const otpCode = (100000 + (array[0] % 900000)).toString();
@@ -520,7 +610,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!status.isResetConfigured && !emailJsConfig.serviceId) {
         return {
           success: false,
-          message: status.errorMessage || "❌ We couldn't send the OTP. Please check the email and try again. 📩"
+          message: "❌ We couldn't send the verification code. Please try again. 📩"
         };
       }
 
@@ -547,17 +637,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error("EmailJS reset dispatch error:", emailErr);
         return {
           success: false,
-          message: "❌ We couldn't send the OTP. Please check the email and try again. 📩"
+          message: "❌ We couldn't send the verification code. Please try again. 📩"
         };
       }
 
       return {
         success: true,
-        message: "✅ OTP sent successfully to your email. 📩",
+        message: "✅ OTP sent successfully! Check your email. 📩",
         otpCode
       };
     } catch (err: any) {
-      return { success: false, message: "Unable to connect to password reset service. Please try again." };
+      return { success: false, message: "❌ We couldn't send the verification code. Please try again. 📩" };
     }
   };
 
@@ -583,7 +673,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           return { success: true, message: "Password updated successfully. Please log in with your new password." };
         } else {
-          return { success: false, message: "Invalid verification code. Please check your email and try again." };
+          return { success: false, message: "❌ Incorrect OTP. Please check the code and try again. 🔐" };
         }
       } catch {}
     }

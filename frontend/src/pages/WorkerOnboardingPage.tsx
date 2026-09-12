@@ -280,10 +280,12 @@ export const WorkerOnboardingPage: React.FC = () => {
   const handleSendEmailOtp = async () => {
     setEmailErrorMsg(null);
     setEmailStatusMsg(null);
+    setStep1Errors((prev) => ({ ...prev, email: undefined }));
 
     const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail || !cleanEmail.includes("@")) {
-      setError("Please enter a valid email address to verify.");
+    const fmtCheck = validateEmailFormat(cleanEmail);
+    if (!fmtCheck.isValid) {
+      setStep1Errors((prev) => ({ ...prev, email: "❌ Please enter a valid email address. 📧" }));
       return;
     }
 
@@ -296,22 +298,28 @@ export const WorkerOnboardingPage: React.FC = () => {
         setEmailOtpJustSent(true);
         setTimeout(() => setEmailOtpJustSent(false), 2000);
         setEmailCountdown(res.retryAfterSeconds || 60);
-        setEmailStatusMsg("Verification code sent to your email.");
+        setEmailStatusMsg("✅ OTP sent successfully! Check your email. 📩");
       } else {
         if (res.retryAfterSeconds) {
           setEmailCountdown(res.retryAfterSeconds);
         }
-        setError(res.message || "Failed to dispatch email verification code.");
+        setStep1Errors((prev) => ({
+          ...prev,
+          email: res.message || "❌ We couldn't send the verification code. Please try again. 📩"
+        }));
       }
     } catch {
       setIsSendingEmailOtp(false);
-      setError("Failed to connect to verification service. Please try again.");
+      setStep1Errors((prev) => ({
+        ...prev,
+        email: "❌ We couldn't send the verification code. Please try again. 📩"
+      }));
     }
   };
 
   const executeVerifyEmailOtp = async (code: string) => {
     if (code.length !== 6) {
-      setError("Please enter the complete 6-digit OTP code.");
+      setError("❌ Incorrect OTP. Please check the code and try again. 🔐");
       return;
     }
     setError(null);
@@ -323,13 +331,13 @@ export const WorkerOnboardingPage: React.FC = () => {
       if (res.success) {
         setEmailOtpVerified(true);
         setEmailOtpSent(false);
-        setEmailStatusMsg("Email successfully verified.");
+        setEmailStatusMsg("✅ Email verified successfully! 🎉");
       } else {
-        setError(res.message || "Invalid email verification code.");
+        setError(res.message || "❌ Incorrect OTP. Please check the code and try again. 🔐");
       }
     } catch {
       setIsVerifyingEmailOtp(false);
-      setError("Verification failed. Please try again.");
+      setError("❌ Incorrect OTP. Please check the code and try again. 🔐");
     }
   };
 

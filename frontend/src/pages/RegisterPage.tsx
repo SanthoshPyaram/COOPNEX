@@ -198,49 +198,43 @@ export const RegisterPage: React.FC = () => {
     setEmailDuplicateError(null);
 
     const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail || !cleanEmail.includes("@")) {
-      setEmailErrorMsg("Please enter a valid email address.");
+    const fmtCheck = validateEmailFormat(cleanEmail);
+    if (!fmtCheck.isValid) {
+      setEmailError("❌ Please enter a valid email address. 📧");
       return;
     }
 
     setIsSendingEmailOtp(true);
+    setIsCheckingEmail(true);
 
     try {
-      setIsCheckingEmail(true);
-      const chk = await fetch(`${API_BASE}/auth/check-email?email=${encodeURIComponent(cleanEmail)}`);
-      const chkData = await chk.json();
-      setIsCheckingEmail(false);
-      if (chkData.exists) {
-        setIsSendingEmailOtp(false);
-        setEmailDuplicateError(t("auth.emailAlreadyExists", "Email already exists. Please use another email."));
-        return;
-      }
-    } catch {
-      setIsCheckingEmail(false);
-    }
-
-    try {
-      // Dispatch real cryptographically secure OTP via EmailJS universal template
+      // Dispatch real cryptographically secure OTP via EmailJS with backend pre-check
       const res = await sendOtp(cleanEmail, "REGISTER", firstName.trim() || undefined);
 
       setIsSendingEmailOtp(false);
+      setIsCheckingEmail(false);
 
       if (res.success) {
         setEmailOtpSent(true);
         setEmailOtpJustSent(true);
         setTimeout(() => setEmailOtpJustSent(false), 2000);
         setEmailCountdown(res.retryAfterSeconds || 60);
-        setEmailStatusMsg("Verification code sent to your email.");
+        setEmailStatusMsg("✅ OTP sent successfully! Check your email. 📩");
         setTimeout(() => emailOtpInputs.current[0]?.focus(), 100);
       } else {
         if (res.retryAfterSeconds) {
           setEmailCountdown(res.retryAfterSeconds);
         }
-        setEmailErrorMsg(res.message || "Failed to dispatch email verification code.");
+        if (res.message?.includes("already registered")) {
+          setEmailDuplicateError(res.message);
+        } else {
+          setEmailErrorMsg(res.message || "❌ We couldn't send the verification code. Please try again. 📩");
+        }
       }
     } catch {
       setIsSendingEmailOtp(false);
-      setEmailErrorMsg("Failed to connect to verification service. Please try again.");
+      setIsCheckingEmail(false);
+      setEmailErrorMsg("❌ We couldn't send the verification code. Please try again. 📩");
     }
   };
 
@@ -285,7 +279,7 @@ export const RegisterPage: React.FC = () => {
 
   const executeVerifyEmailOtp = async (code: string) => {
     if (code.length !== 6) {
-      setEmailErrorMsg("Please enter the complete 6-digit OTP code.");
+      setEmailErrorMsg("❌ Incorrect OTP. Please check the code and try again. 🔐");
       return;
     }
 
@@ -294,7 +288,7 @@ export const RegisterPage: React.FC = () => {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    // Verify against SHA-256 hashed OTP in backend MongoDB
+    // Verify against SHA-256 hashed OTP in backend MongoDB / client session
     const res = await verifyOtp(cleanEmail, code, "REGISTER");
 
     setIsVerifyingEmailOtp(false);
@@ -302,9 +296,9 @@ export const RegisterPage: React.FC = () => {
     if (res.success) {
       setEmailVerified(true);
       setEmailOtpSent(false);
-      setEmailStatusMsg("Email successfully verified.");
+      setEmailStatusMsg("✅ Email verified successfully! 🎉");
     } else {
-      setEmailErrorMsg(res.message || "Invalid verification code. Please try again.");
+      setEmailErrorMsg(res.message || "❌ Incorrect OTP. Please check the code and try again. 🔐");
     }
   };
 
