@@ -3,7 +3,7 @@ import { WorkerProfile, Booking } from "../types";
 import { api } from "../services/api";
 import { resolveWorkerAvatar } from "../utils/workerAvatar";
 import { FormField } from "./common/FormField";
-import { validateRequired, validateMinLength } from "../utils/validation";
+import { validateRequired, validateMinLength, formatAddress } from "../utils/validation";
 import {
   X,
   ArrowLeft,
@@ -360,15 +360,17 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
                   id="booking-address"
                   value={address}
                   onChange={(e) => {
-                    const val = e.target.value;
+                    const val = formatAddress(e.target.value, true);
                     setAddress(val);
                     if (addressTouched) {
                       setAddressError(validateRequired(val, "Service address", "🏠").error || null);
                     }
                   }}
                   onBlur={() => {
+                    const trimmed = formatAddress(address, false);
+                    setAddress(trimmed);
                     setAddressTouched(true);
-                    setAddressError(validateRequired(address, "Service address", "🏠").error || null);
+                    setAddressError(validateRequired(trimmed, "Service address", "🏠").error || null);
                   }}
                   placeholder="e.g. Flat 402, Sri Sai Residency, Benz Circle"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"
@@ -387,15 +389,17 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
                   id="booking-landmark"
                   value={landmark}
                   onChange={(e) => {
-                    const val = e.target.value;
+                    const val = formatAddress(e.target.value, true);
                     setLandmark(val);
                     if (landmarkTouched) {
                       setLandmarkError(validateRequired(val, "Nearest landmark", "📍").error || null);
                     }
                   }}
                   onBlur={() => {
+                    const trimmed = formatAddress(landmark, false);
+                    setLandmark(trimmed);
                     setLandmarkTouched(true);
-                    setLandmarkError(validateRequired(landmark, "Nearest landmark", "📍").error || null);
+                    setLandmarkError(validateRequired(trimmed, "Nearest landmark", "📍").error || null);
                   }}
                   placeholder="e.g. Opposite Trendset Mall, Benz Circle"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"

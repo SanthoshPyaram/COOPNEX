@@ -48,7 +48,9 @@ import {
   validatePassword,
   validateConfirmPassword,
   validatePhone,
-  validateRequired
+  validateRequired,
+  formatName,
+  formatAddress
 } from "../utils/validation";
 import { WorkerSmartIdCard } from "../components/WorkerSmartIdCard";
 import { LanguageDropdown } from "../components/LanguageDropdown";
@@ -582,7 +584,7 @@ export const WorkerOnboardingPage: React.FC = () => {
       const emailCheck = validateEmailFormat(email);
       const passCheck = validatePassword(password);
       const confirmCheck = validateConfirmPassword(password, confirmPassword);
-      const ageCheck = validateAge(age, 18, 90);
+      const ageCheck = validateAge(age, 1, 120);
       const districtCheck = validateRequired(district, "District");
       const addressCheck = validateRequired(address, "Residential Address");
 
@@ -940,14 +942,16 @@ export const WorkerOnboardingPage: React.FC = () => {
                         placeholder="e.g. Rajesh Kumar"
                         value={name}
                         onChange={(e) => {
-                          const val = e.target.value;
+                          const val = formatName(e.target.value, true);
                           setName(val);
                           setError(null);
                           const check = validateName(val);
                           setStep1Errors((prev) => ({ ...prev, name: check.error }));
                         }}
                         onBlur={() => {
-                          const check = validateName(name);
+                          const trimmed = formatName(name, false);
+                          setName(trimmed);
+                          const check = validateName(trimmed);
                           setStep1Errors((prev) => ({ ...prev, name: check.error }));
                         }}
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
@@ -1357,15 +1361,15 @@ export const WorkerOnboardingPage: React.FC = () => {
                       <input
                         id="worker-onboarding-age"
                         type="number"
-                        min={18}
-                        max={70}
+                        min={1}
+                        max={120}
                         placeholder="e.g. 28"
                         value={age}
                         onChange={(e) => {
                           const val = e.target.value;
                           setAge(val);
                           setError(null);
-                          const check = validateAge(val, 18, 90);
+                          const check = validateAge(val, 1, 120);
                           setStep1Errors((prev) => ({ ...prev, age: check.error }));
                         }}
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
@@ -1525,10 +1529,16 @@ export const WorkerOnboardingPage: React.FC = () => {
                       placeholder="Door number, street, landmark, pincode"
                       value={address}
                       onChange={(e) => {
-                        const val = e.target.value;
+                        const val = formatAddress(e.target.value, true);
                         setAddress(val);
                         setError(null);
                         const check = validateRequired(val, "Residential Address");
+                        setStep1Errors((prev) => ({ ...prev, address: check.error }));
+                      }}
+                      onBlur={() => {
+                        const trimmed = formatAddress(address, false);
+                        setAddress(trimmed);
+                        const check = validateRequired(trimmed, "Residential Address");
                         setStep1Errors((prev) => ({ ...prev, address: check.error }));
                       }}
                       className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"

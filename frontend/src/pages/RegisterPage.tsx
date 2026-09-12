@@ -35,7 +35,8 @@ import {
   validateEmailFormat,
   validatePhone,
   validatePincode,
-  validateConfirmPassword
+  validateConfirmPassword,
+  formatName
 } from "../utils/validation";
 
 export const RegisterPage: React.FC = () => {
@@ -346,7 +347,7 @@ export const RegisterPage: React.FC = () => {
       setGenderError("❌ Please select your gender. 👤");
       return;
     }
-    const ageCheck = validateAge(age, 18, 90);
+    const ageCheck = validateAge(age, 1, 120);
     if (!ageCheck.isValid) {
       setAgeError(ageCheck.error || null);
       return;
@@ -615,12 +616,15 @@ export const RegisterPage: React.FC = () => {
                     placeholder="e.g. Ramesh"
                     value={firstName}
                     onChange={(e) => {
-                      setFirstName(e.target.value);
-                      const res = validateName(e.target.value, "First name");
+                      const formatted = formatName(e.target.value, true);
+                      setFirstName(formatted);
+                      const res = validateName(formatted, "first name");
                       setFirstNameError(res.isValid ? null : (res.error || null));
                     }}
                     onBlur={() => {
-                      const res = validateName(firstName, "First name");
+                      const trimmed = formatName(firstName, false);
+                      setFirstName(trimmed);
+                      const res = validateName(trimmed, "first name");
                       setFirstNameError(res.isValid ? null : (res.error || null));
                     }}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"
@@ -640,12 +644,15 @@ export const RegisterPage: React.FC = () => {
                     placeholder="e.g. Kumar"
                     value={lastName}
                     onChange={(e) => {
-                      setLastName(e.target.value);
-                      const res = validateName(e.target.value, "Last name");
+                      const formatted = formatName(e.target.value, true);
+                      setLastName(formatted);
+                      const res = validateName(formatted, "last name");
                       setLastNameError(res.isValid ? null : (res.error || null));
                     }}
                     onBlur={() => {
-                      const res = validateName(lastName, "Last name");
+                      const trimmed = formatName(lastName, false);
+                      setLastName(trimmed);
+                      const res = validateName(trimmed, "last name");
                       setLastNameError(res.isValid ? null : (res.error || null));
                     }}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"
@@ -680,25 +687,26 @@ export const RegisterPage: React.FC = () => {
 
                 <FormField
                   id="reg-age"
-                  label="Age (18-90)"
+                  label="Age (1-120)"
                   required
                   error={ageError}
                 >
                   <input
                     id="reg-age"
                     type="number"
-                    min="18"
-                    max="90"
+                    min="1"
+                    max="120"
                     required
                     placeholder="Enter age (e.g. 28)"
                     value={age}
                     onChange={(e) => {
-                      setAge(e.target.value);
-                      const res = validateAge(e.target.value, 18, 90);
+                      const clean = e.target.value.replace(/\D/g, "").slice(0, 3);
+                      setAge(clean);
+                      const res = validateAge(clean, 1, 120);
                       setAgeError(res.isValid ? null : (res.error || null));
                     }}
                     onBlur={() => {
-                      const res = validateAge(age, 18, 90);
+                      const res = validateAge(age, 1, 120);
                       setAgeError(res.isValid ? null : (res.error || null));
                     }}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"

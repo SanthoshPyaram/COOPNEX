@@ -111,13 +111,13 @@ export function validateEmailSyntax(email: string): { isValid: boolean; reason?:
 }
 
 /**
- * Checks DNS MX records for domain
+ * Checks DNS MX records for domain with strict 2000ms timeout
  */
 export async function checkMxRecords(domain: string): Promise<{ hasMx: boolean; mxRecords?: string[]; error?: string }> {
   try {
     const records = await Promise.race([
       dns.promises.resolveMx(domain),
-      new Promise<dns.MxRecord[]>((_, reject) => setTimeout(() => reject(new Error("DNS_TIMEOUT")), 3500))
+      new Promise<dns.MxRecord[]>((_, reject) => setTimeout(() => reject(new Error("DNS_TIMEOUT")), 2000))
     ]);
 
     if (!records || records.length === 0) {
@@ -137,7 +137,38 @@ export async function checkMxRecords(domain: string): Promise<{ hasMx: boolean; 
 }
 
 /**
- * Real-time ZeroBounce API validation call
+ * Real-time Abstract Email Validation API call
+ * Target endpoint: https://emailvalidation.abstractapi.com/v1/?api_key=...&email=...
+ * Strict 2500ms timeout for high-speed response
+ */
+async function callAbstractApi(email: string): Promise<any | null> {
+  const apiKey = (process.env.ABSTRACT_EMAIL_VALIDATION_API_KEY || process.env.ABSTRACT_API_KEY || "").trim();
+  if (!apiKey || apiKey.includes("xxxxxxx") || apiKey.startsWith("<")) {
+    return null;
+  }
+
+  try {
+    const url = "https://emailvalidation.abstractapi.com/v1/";
+    const res = await axios.get(url, {
+      params: {
+        api_key: apiKey,
+        email: email
+      },
+      timeout: 2500
+    });
+
+    if (res.status === 200 && res.data) {
+      return res.data;
+    }
+  } catch (err: any) {
+    console.warn("[AbstractAPI] API call warning/timeout:", err?.message || err);
+  }
+
+  return null;
+}
+
+/**
+ * Real-time ZeroBounce API validation call (fallback provider)
  */
 async function callZeroBounce(email: string, clientIp?: string): Promise<any | null> {
   const apiKey = (process.env.ZEROBOUNCE_API_KEY || "").trim();
@@ -153,7 +184,7 @@ async function callZeroBounce(email: string, clientIp?: string): Promise<any | n
         email: email,
         ip_address: clientIp || ""
       },
-      timeout: 6000
+      timeout: 2500
     });
 
     if (res.status === 200 && res.data) {
@@ -177,7 +208,7 @@ async function callZeroBounce(email: string, clientIp?: string): Promise<any | n
  * 5. ZeroBounce Real-Time API Validation (authoritative when configured)
  * 6. Safe decision classification (Fail-Safe: unknown/catch-all is NEVER valid)
  */
-export async function validateEmailAddress(
+async function executeEmailValidationInternal(
   rawEmail: string,
   clientIp?: string
 ): Promise<EmailValidationResult> {
@@ -227,7 +258,64 @@ export async function validateEmailAddress(
     };
   }
 
-  // STEP 4: Real-Time ZeroBounce API Validation
+  // STEP 4: Real-Time Abstract Email Validation API Check (Preferred Primary API)
+  const absData = await callAbstractApi(normalized);
+  if (absData) {
+    const deliverability = (absData.deliverability || "").toUpperCase();
+    const isDisposable = absData.is_disposable_email?.value === true;
+    const isMxFound = absData.is_mx_found?.value !== false;
+    const isSmtpValid = absData.is_smtp_valid?.value === true;
+    const isCatchAll = absData.is_catchall_email?.value === true;
+
+    if (isDisposable) {
+      return {
+        email,
+        normalizedEmail: normalized,
+        status: "disposable",
+        safeToSendOtp: false,
+        reason: "disposable",
+        message: "❌ Temporary/disposable email addresses are not allowed. 📧",
+        details: { domain, mxFound: true, disposable: true }
+      };
+    }
+
+    if (isCatchAll) {
+      return {
+        email,
+        normalizedEmail: normalized,
+        status: "catch_all",
+        safeToSendOtp: false,
+        reason: "catch_all",
+        message: "❌ This email address could not be verified. Please check it and try again. 📧",
+        details: { domain, mxFound: true }
+      };
+    }
+
+    // Only deliverability === "DELIVERABLE" with confirmed SMTP validity is accepted
+    if (deliverability === "DELIVERABLE" && isSmtpValid && isMxFound) {
+      return {
+        email,
+        normalizedEmail: normalized,
+        status: "valid",
+        safeToSendOtp: true,
+        message: "Email address is valid and deliverable.",
+        details: { domain, mxFound: true, provider: "AbstractAPI" }
+      };
+    }
+
+    // Explicit undeliverable, unknown, or SMTP invalid
+    return {
+      email,
+      normalizedEmail: normalized,
+      status: "invalid",
+      safeToSendOtp: false,
+      reason: deliverability === "UNDELIVERABLE" ? "undeliverable" : "uncertain_deliverability",
+      message: "❌ This email address could not be verified. Please check it and try again. 📧",
+      details: { domain, mxFound: isMxFound }
+    };
+  }
+
+  // STEP 5: Real-Time ZeroBounce API Validation (Fallback Provider)
   const zbData = await callZeroBounce(normalized, clientIp);
   if (zbData) {
     const status = (zbData.status || "").toLowerCase();
@@ -358,5 +446,33 @@ export async function validateEmailAddress(
       zeroBounceChecked: false
     }
   };
+}
+
+/**
+ * Public Server-Side Email Validation Engine
+ * Enforces a strict 3500ms safety timeout so backend returns promptly
+ */
+export async function validateEmailAddress(
+  rawEmail: string,
+  clientIp?: string
+): Promise<EmailValidationResult> {
+  const email = (rawEmail || "").trim();
+  const normalized = email.toLowerCase();
+
+  return Promise.race([
+    executeEmailValidationInternal(rawEmail, clientIp),
+    new Promise<EmailValidationResult>((resolve) =>
+      setTimeout(() => {
+        resolve({
+          email,
+          normalizedEmail: normalized,
+          status: "unknown",
+          safeToSendOtp: false,
+          reason: "timeout",
+          message: "⏱️ Email verification is taking too long. Please try again. 📧"
+        });
+      }, 3500)
+    )
+  ]);
 }
 

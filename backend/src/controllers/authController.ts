@@ -80,6 +80,24 @@ export const validateEmail = async (req: Request, res: Response): Promise<void> 
         });
         return;
       }
+    } else if (mode === "FORGOT_PASSWORD" || mode === "RECOVER_EMPLOYEE_ID") {
+      let isRegistered = false;
+      if (mongoose.connection.readyState === 1) {
+        const existingUser = await User.findOne({ email: result.normalizedEmail });
+        const existingWorker = existingUser ? null : await Worker.findOne({ email: result.normalizedEmail });
+        const existingAdmin = (existingUser || existingWorker) ? null : await Admin.findOne({ email: result.normalizedEmail });
+        isRegistered = Boolean(existingUser || existingWorker || existingAdmin);
+      }
+      if (!isRegistered) {
+        res.status(400).json({
+          success: false,
+          status: "not_registered",
+          safeToSendOtp: false,
+          reason: "not_registered",
+          message: "❌ This email address is not registered. Please check your email and try again. 📧"
+        });
+        return;
+      }
     }
 
     res.json({

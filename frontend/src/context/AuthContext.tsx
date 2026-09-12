@@ -296,27 +296,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4500);
+
     try {
-      const res = await fetch(`${API_BASE}/auth/validate-email`, {
+      let res = await fetch(`${API_BASE}/auth/validate-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: cleanEmail, mode })
+        body: JSON.stringify({ email: cleanEmail, mode }),
+        signal: controller.signal
       });
+
+      // Route Fallback if /auth/validate-email returns 404
+      if (res.status === 404) {
+        res = await fetch(`${API_BASE}/validate-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: cleanEmail, mode }),
+          signal: controller.signal
+        });
+      }
+
+      clearTimeout(timeoutId);
       const data = await res.json();
       return {
         success: Boolean(res.ok && data.success && data.safeToSendOtp === true),
         status: data.status || (res.ok ? "valid" : "invalid"),
         safeToSendOtp: Boolean(data.safeToSendOtp === true),
         reason: data.reason,
-        message: data.message || (res.ok ? "Email address is valid." : "❌ We couldn't verify this email address. Please check it and try again. 📧")
+        message: data.message || (res.ok ? "Email address is valid." : "❌ This email address could not be verified. Please check it and try again. 📧")
       };
-    } catch {
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err?.name === "AbortError") {
+        return {
+          success: false,
+          status: "timeout",
+          safeToSendOtp: false,
+          reason: "timeout",
+          message: "⏱️ Email verification is taking too long. Please try again. 📧"
+        };
+      }
       return {
         success: false,
         status: "unknown",
         safeToSendOtp: false,
         reason: "network_error",
-        message: "⚠️ We couldn't confirm this email address. Please use another email. 📧"
+        message: "❌ This email address could not be verified. Please check it and try again. 📧"
       };
     }
   };
@@ -336,16 +362,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // STEP 2: Dispatch through backend /auth/send-otp (Server-Side Real Validation + Cryptographic OTP)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+
       try {
-        const res = await fetch(`${API_BASE}/auth/send-otp`, {
+        let res = await fetch(`${API_BASE}/auth/send-otp`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             identifier: cleanEmail,
             purpose,
             name
-          })
+          }),
+          signal: controller.signal
         });
+
+        if (res.status === 404) {
+          res = await fetch(`${API_BASE}/send-otp`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              identifier: cleanEmail,
+              purpose,
+              name
+            }),
+            signal: controller.signal
+          });
+        }
+
+        clearTimeout(timeoutId);
         const data = await res.json();
 
         if (res.ok && data.success) {
@@ -363,7 +408,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           message: data.message || "❌ We couldn't send the verification code. Please try again. 📩",
           retryAfterSeconds: data.retryAfterSeconds
         };
-      } catch (netErr) {
+      } catch (netErr: any) {
+        clearTimeout(timeoutId);
+        if (netErr?.name === "AbortError") {
+          return {
+            success: false,
+            message: "⏱️ OTP dispatch is taking too long. Please try again. 📩"
+          };
+        }
         return {
           success: false,
           message: "❌ We couldn't connect to the verification server. Please try again. 📩"

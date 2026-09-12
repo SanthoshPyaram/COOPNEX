@@ -18,6 +18,8 @@ export interface PasswordBreakdown {
   isValid: boolean;
 }
 
+export * from "./formatting";
+
 /**
  * Name Validation:
  * Only alphabetic characters, single spaces, and optional periods (e.g. "Rahul Kumar", "A. Kumar").
@@ -25,10 +27,11 @@ export interface PasswordBreakdown {
  */
 export function validateName(name: string, fieldLabel = "name"): ValidationResult {
   const trimmed = (name || "").trim();
+  const label = fieldLabel === "name" ? "name" : fieldLabel.toLowerCase();
   if (!trimmed) {
     return {
       isValid: false,
-      error: `❌ Please enter a valid ${fieldLabel} using letters only. 👤`
+      error: `❌ Please enter a valid ${label} using letters only. 👤`
     };
   }
 
@@ -36,7 +39,7 @@ export function validateName(name: string, fieldLabel = "name"): ValidationResul
   if (/\d/.test(trimmed)) {
     return {
       isValid: false,
-      error: `❌ Please enter a valid ${fieldLabel} using letters only. 👤`
+      error: `❌ Please enter a valid ${label} using letters only. 👤`
     };
   }
 
@@ -45,7 +48,7 @@ export function validateName(name: string, fieldLabel = "name"): ValidationResul
   if (!nameRegex.test(trimmed) || trimmed.length < 2 || trimmed.length > 60) {
     return {
       isValid: false,
-      error: `❌ Please enter a valid ${fieldLabel} using letters only. 👤`
+      error: `❌ Please enter a valid ${label} using letters only. 👤`
     };
   }
 
@@ -168,7 +171,7 @@ export function validateConfirmPassword(password: string, confirmPassword: strin
   if (password !== confirmPassword) {
     return {
       isValid: false,
-      error: "❌ Passwords do not match. Please enter the same password. 🔐"
+      error: "❌ Passwords do not match. Please try again. 🔐"
     };
   }
 
@@ -189,7 +192,7 @@ export function validatePhone(phone: string): ValidationResult {
   if (!digits) {
     return {
       isValid: false,
-      error: "❌ Please enter a valid 10-digit mobile number. 📱"
+      error: "❌ Please enter a valid phone number. 📱"
     };
   }
 
@@ -197,7 +200,7 @@ export function validatePhone(phone: string): ValidationResult {
   if (last10.length !== 10 || !/^[6-9]\d{9}$/.test(last10)) {
     return {
       isValid: false,
-      error: "❌ Please enter a valid 10-digit mobile number starting with 6-9. 📱"
+      error: "❌ Please enter a valid phone number. 📱"
     };
   }
 
@@ -216,7 +219,7 @@ export function validatePincode(pincode: string): ValidationResult {
   if (clean.length !== 6 || clean.startsWith("0")) {
     return {
       isValid: false,
-      error: "❌ Please enter a valid 6-digit PIN code. 📍"
+      error: "❌ Please enter a valid PIN code. 📍"
     };
   }
 
