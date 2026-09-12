@@ -58,7 +58,7 @@ import { VoiceButton } from "../components/VoiceButton";
 import { ttsService } from "../services/tts";
 import { TiltCard3D } from "../components/3d/TiltCard3D";
 import { API_BASE } from "../services/api";
-import { resolveWorkerAvatar } from "../utils/workerAvatar";
+import { resolveWorkerAvatar, resolveHomePageWorkerAvatar, getArtisanSvgFallback } from "../utils/workerAvatar";
 
 // WebGL 3D Components
 import { HeroCoopNetwork3D } from "../components/3d/webgl/HeroCoopNetwork3D";
@@ -978,9 +978,14 @@ export const LandingPage: React.FC = () => {
                     <div className="flex items-start justify-between">
                       <div className="relative overflow-hidden rounded-xl border-2 border-rose-600/30 group-hover:border-rose-500 transition-colors shadow-xs">
                         <img
-                          src={resolveWorkerAvatar(worker)}
+                          src={resolveHomePageWorkerAvatar(worker)}
                           alt={worker.name}
                           className="w-16 h-16 object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            const trade = Array.isArray(worker.skills) ? worker.skills[0] : "";
+                            e.currentTarget.src = getArtisanSvgFallback(worker.name, trade);
+                          }}
                         />
                         <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-coop-navy flex items-center justify-center text-[9px] text-white font-black">
                           ✓
@@ -1043,7 +1048,7 @@ export const LandingPage: React.FC = () => {
                         rate: worker.baseHourlyRate || 380,
                         rating: worker.rating || 4.9,
                         society: worker.societyName || currentLocationInfo.cooperativeName,
-                        avatar: resolveWorkerAvatar(worker)
+                        avatar: resolveHomePageWorkerAvatar(worker)
                       })
                     }
                     className="w-full btn-accent !min-h-[42px] text-xs font-bold justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-hidden"
@@ -1614,10 +1619,14 @@ export const LandingPage: React.FC = () => {
                   <img
                     src={
                       trialWorker.avatar ||
-                      "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80"
+                      resolveHomePageWorkerAvatar(trialWorker)
                     }
                     alt={trialWorker.name}
                     className="w-20 h-20 rounded-xl object-cover border-2 border-blue-500/30 shadow-md mx-auto"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = getArtisanSvgFallback(trialWorker.name, trialWorker.trade);
+                    }}
                   />
                   <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900 flex items-center justify-center text-[10px] text-white font-black">
                     ✓
@@ -1861,9 +1870,16 @@ export const LandingPage: React.FC = () => {
               {pendingWorkerForAuth && (
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-left">
                   <img
-                    src={pendingWorkerForAuth.avatar || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80"}
+                    src={
+                      pendingWorkerForAuth.avatar ||
+                      resolveHomePageWorkerAvatar(pendingWorkerForAuth)
+                    }
                     alt={pendingWorkerForAuth.name}
                     className="w-12 h-12 rounded-lg object-cover border border-blue-500/20 shrink-0"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = getArtisanSvgFallback(pendingWorkerForAuth.name, pendingWorkerForAuth.trade);
+                    }}
                   />
                   <div className="min-w-0 flex-1">
                     <h4 className="font-bold text-xs text-slate-900 dark:text-white truncate">
