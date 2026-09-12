@@ -25,8 +25,11 @@ apiRouter.get("/location/check-pincode", locationCtrl.checkPincode);
 apiRouter.get("/location/states", locationCtrl.getStates);
 
 // --- AUTHENTICATION & REAL-TIME OTP ---
+apiRouter.post("/auth/validate-email", authCtrl.validateEmail);
 apiRouter.post("/auth/check-email", authCtrl.checkEmail);
 apiRouter.get("/auth/check-email", authCtrl.checkEmail);
+apiRouter.post("/webhooks/brevo", authCtrl.handleBrevoWebhook);
+apiRouter.post("/auth/email/webhook", authCtrl.handleBrevoWebhook);
 apiRouter.post("/auth/check-phone", authCtrl.checkPhone);
 apiRouter.get("/auth/check-phone", authCtrl.checkPhone);
 apiRouter.post("/auth/register", authCtrl.register);

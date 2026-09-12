@@ -40,10 +40,11 @@ interface AuthContextType {
   role: UserRole | null;
   isAuthenticated: boolean;
   login: (identifier: string, pass: string, expectedRole?: UserRole) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
-  workerLogin: (employeeId: string, pass: string) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
-  sendOtp: (identifier: string, purpose?: string, name?: string) => Promise<{ success: boolean; message?: string; emailDispatched?: boolean; retryAfterSeconds?: number }>;
+  workerLogin: (employeeIdOrEmail: string, pass: string) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
+  validateEmail: (email: string, mode?: string) => Promise<{ success: boolean; status: string; safeToSendOtp: boolean; message: string; reason?: string }>;
+  sendOtp: (identifier: string, purpose?: string, name?: string) => Promise<{ success: boolean; message?: string; emailDispatched?: boolean; retryAfterSeconds?: number; notRegistered?: boolean }>;
   verifyOtp: (identifier: string, otpCode: string, purpose?: string) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
-  forgotPasswordSendOtp: (identifier: string) => Promise<{ success: boolean; message?: string; otpCode?: string; emailDispatched?: boolean; previewUrl?: string }>;
+  forgotPasswordSendOtp: (identifier: string) => Promise<{ success: boolean; message?: string; otpCode?: string; emailDispatched?: boolean; previewUrl?: string; notRegistered?: boolean; retryAfterSeconds?: number }>;
   forgotPasswordReset: (identifier: string, otpCode: string, newPass: string) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
   registerCustomer: (data: any) => Promise<{ success: boolean; message?: string }>;
   registerWorker: (data: any) => Promise<{ success: boolean; message?: string; employeeId?: string }>;
@@ -61,6 +62,7 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   login: async () => ({ success: false }),
   workerLogin: async () => ({ success: false }),
+  validateEmail: async () => ({ success: false, status: "invalid", safeToSendOtp: false, message: "" }),
   sendOtp: async () => ({ success: false }),
   verifyOtp: async () => ({ success: false }),
   forgotPasswordSendOtp: async () => ({ success: false }),
@@ -278,6 +280,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const validateEmail = async (
+    email: string,
+    mode: string = "REGISTER"
+  ): Promise<{ success: boolean; status: string; safeToSendOtp: boolean; message: string; reason?: string }> => {
+    const cleanEmail = email.trim().toLowerCase();
+    const fmt = validateEmailFormat(cleanEmail);
+    if (!fmt.isValid) {
+      return {
+        success: false,
+        status: "invalid",
+        safeToSendOtp: false,
+        reason: "invalid_syntax",
+        message: "❌ Please enter a valid email address. 📧"
+      };
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/validate-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail, mode })
+      });
+      const data = await res.json();
+      return {
+        success: Boolean(res.ok && data.success && data.safeToSendOtp === true),
+        status: data.status || (res.ok ? "valid" : "invalid"),
+        safeToSendOtp: Boolean(data.safeToSendOtp === true),
+        reason: data.reason,
+        message: data.message || (res.ok ? "Email address is valid." : "❌ We couldn't verify this email address. Please check it and try again. 📧")
+      };
+    } catch {
+      return {
+        success: false,
+        status: "unknown",
+        safeToSendOtp: false,
+        reason: "network_error",
+        message: "⚠️ We couldn't confirm this email address. Please use another email. 📧"
+      };
+    }
+  };
+
   const sendOtp = async (
     identifier: string,
     purpose: string = "REGISTER",
@@ -286,162 +329,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const cleanEmail = identifier.trim().toLowerCase();
 
-      // STEP 2: Validate email FORMAT locally
+      // STEP 1: Client-Side Syntax Validation
       const formatCheck = validateEmailFormat(cleanEmail);
       if (!formatCheck.isValid) {
         return { success: false, message: "❌ Please enter a valid email address. 📧" };
       }
 
-      // STEP 3: Database / Account Existence Check BEFORE EmailJS
-      if (purpose === "REGISTER") {
-        let isTaken = false;
-        try {
-          const chkRes = await fetch(`${API_BASE}/auth/check-email`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: cleanEmail, mode: "REGISTER" })
-          });
-          const chkData = await chkRes.json();
-          if (chkData) {
-            if (chkData.exists === true) {
-              return {
-                success: false,
-                notRegistered: false,
-                message: "❌ This email is already registered. Please sign in or use another email. 📧"
-              };
-            }
-            if (chkData.available === false && chkData.message) {
-              return {
-                success: false,
-                message: chkData.message
-              };
-            }
-          }
-        } catch (chkErr) {
-          // Offline local storage check
-          const localUsers = JSON.parse(localStorage.getItem("coopnex_registered_users") || "[]");
-          const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
-          isTaken = localUsers.some((u: any) => u.email?.toLowerCase() === cleanEmail) ||
-            localWorkers.some((w: any) => w.email?.toLowerCase() === cleanEmail);
-          if (isTaken) {
-            return {
-              success: false,
-              message: "❌ This email is already registered. Please sign in or use another email. 📧"
-            };
-          }
-        }
-      } else {
-        // Recovery flow (e.g. RECOVER_EMPLOYEE_ID): Email MUST exist in database
-        let emailExists = false;
-        try {
-          const chkRes = await fetch(`${API_BASE}/auth/check-email`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: cleanEmail })
-          });
-          const chkData = await chkRes.json();
-          emailExists = Boolean(chkData && chkData.success && chkData.exists === true);
-        } catch (chkErr) {
-          const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
-          const localUsers = JSON.parse(localStorage.getItem("coopnex_registered_users") || "[]");
-          const demoEmails = [
-            "demo.customer@coopnex.in",
-            "demo.worker@coopnex.in",
-            "worker.demo@coopnex.in",
-            "arjun.kumar@coopnex.worker.in",
-            "admin@coopnex.in",
-            "superadmin@coopnex.in",
-            "priya.sharma@coopnex.customer.in"
-          ];
-          emailExists = localWorkers.some((w: any) => w.email?.toLowerCase() === cleanEmail) ||
-            localUsers.some((u: any) => u.email?.toLowerCase() === cleanEmail) ||
-            demoEmails.includes(cleanEmail);
-        }
+      // STEP 2: Dispatch through backend /auth/send-otp (Server-Side Real Validation + Cryptographic OTP)
+      try {
+        const res = await fetch(`${API_BASE}/auth/send-otp`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            identifier: cleanEmail,
+            purpose,
+            name
+          })
+        });
+        const data = await res.json();
 
-        // HARD BARRIER: If email does not exist, NEVER call EmailJS
-        if (!emailExists) {
+        if (res.ok && data.success) {
           return {
-            success: false,
-            notRegistered: true,
-            message: "❌ This email address is not registered. Please check your email and try again. 📧"
+            success: true,
+            emailDispatched: true,
+            message: data.message || "✅ OTP sent successfully! 📩",
+            retryAfterSeconds: data.retryAfterSeconds
           };
         }
-      }
 
-      // STEP 4: Generate secure 6-digit OTP & Dispatch via EmailJS
-      const array = new Uint32Array(1);
-      window.crypto.getRandomValues(array);
-      const otpCode = (100000 + (array[0] % 900000)).toString();
-
-      // Compute client-side SHA-256 hash for secure verification session
-      const clientHash = await hashOtpClient(cleanEmail, otpCode);
-      const sessionKey = `coopnex_otp_${purpose}_${cleanEmail}`;
-
-      // Save secure verification session in sessionStorage (300s TTL)
-      sessionStorage.setItem(
-        sessionKey,
-        JSON.stringify({
-          identifier: cleanEmail,
-          hash: clientHash,
-          expiresAt: Date.now() + 300 * 1000,
-          attempts: 0,
-          verified: false,
-          purpose
-        })
-      );
-
-      // Asynchronously record session with backend MongoDB if online
-      fetch(`${API_BASE}/auth/emailjs/record-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          identifier: cleanEmail,
-          otpCode,
-          purpose
-        })
-      }).catch(() => null);
-
-      // Dispatch authentic verification email via EmailJS browser SDK
-      const status = getEmailJsStatus();
-      if (!status.isConfigured && !emailJsConfig.serviceId) {
         return {
           success: false,
-          message: "❌ We couldn't send the verification code. Please try again. 📩"
+          notRegistered: res.status === 404,
+          message: data.message || "❌ We couldn't send the verification code. Please try again. 📩",
+          retryAfterSeconds: data.retryAfterSeconds
         };
-      }
-
-      try {
-        await emailjs.send(
-          emailJsConfig.serviceId,
-          emailJsConfig.verificationTemplateId,
-          {
-            name: name || "COOPNEX Member",
-            to_name: name || "COOPNEX Member",
-            email: cleanEmail,
-            to_email: cleanEmail,
-            otp: otpCode,
-            passcode: otpCode,
-            code: otpCode,
-            expiry: "5",
-            expiry_text: "5 minutes",
-            app_name: "COOPNEX",
-            purpose: purpose === "RECOVER_EMPLOYEE_ID" ? "Employee ID Recovery" : "Email Verification"
-          },
-          emailJsConfig.publicKey
-        );
-      } catch (emailErr: any) {
-        console.error("EmailJS dispatch error:", emailErr);
+      } catch (netErr) {
         return {
           success: false,
-          message: "❌ We couldn't send the verification code. Please try again. 📩"
+          message: "❌ We couldn't connect to the verification server. Please try again. 📩"
         };
       }
-
-      return {
-        success: true,
-        message: "✅ OTP sent successfully! Check your email. 📩",
-        emailDispatched: true
-      };
     } catch (err: any) {
       console.error("[Auth] sendOtp unexpected error:", err);
       return {
@@ -451,203 +378,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const verifyOtp = async (identifier: string, otpCode: string, purpose: string = "VERIFY_ACCOUNT"): Promise<{ success: boolean; role?: UserRole; message?: string }> => {
+  const verifyOtp = async (identifier: string, otpCode: string, purpose: string = "REGISTER"): Promise<{ success: boolean; role?: UserRole; message?: string }> => {
     const cleanId = identifier.trim().toLowerCase();
     const cleanCode = otpCode.trim();
 
     if (!cleanCode || cleanCode.length !== 6) {
-      return { success: false, message: "❌ Incorrect OTP. Please check the code and try again. 🔐" };
+      return { success: false, message: "❌ Incorrect OTP. Please try again. 🔐" };
     }
 
-    // 1. Verify against secure client-side cryptographic session first if present
-    const sessionKey = `coopnex_otp_${purpose}_${cleanId}`;
-    const rawSession = sessionStorage.getItem(sessionKey);
-
-    if (rawSession) {
-      try {
-        const session = JSON.parse(rawSession);
-        if (Date.now() > session.expiresAt) {
-          sessionStorage.removeItem(sessionKey);
-          return { success: false, message: "❌ Incorrect OTP. Please check the code and try again. 🔐" };
-        }
-
-        session.attempts = (session.attempts || 0) + 1;
-        if (session.attempts > 5) {
-          sessionStorage.removeItem(sessionKey);
-          return { success: false, message: "❌ Incorrect OTP. Please check the code and try again. 🔐" };
-        }
-        sessionStorage.setItem(sessionKey, JSON.stringify(session));
-
-        const inputHash = await hashOtpClient(cleanId, cleanCode);
-        if (inputHash !== session.hash) {
-          return { success: false, message: "❌ Incorrect OTP. Please check the code and try again. 🔐" };
-        }
-
-        // Mark verified in session
-        session.verified = true;
-        sessionStorage.setItem(sessionKey, JSON.stringify(session));
-
-        // Asynchronously notify backend if online (non-blocking)
-        fetch(`${API_BASE}/auth/verify-otp`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ identifier: cleanId, otpCode: cleanCode, purpose })
-        }).catch(() => null);
-
-        return { success: true, message: "✅ Email verified successfully! 🎉" };
-      } catch {
-        // Fall through to backend verification
-      }
-    }
-
-    // 2. Fallback: verify with backend API if no active client session
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
       const res = await fetch(`${API_BASE}/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier: cleanId, otpCode: cleanCode, purpose }),
-        signal: controller.signal
+        body: JSON.stringify({ identifier: cleanId, otpCode: cleanCode, purpose })
       });
-      clearTimeout(timeoutId);
-      const parsed = await parseApiResponse(res);
-      if (parsed.ok && parsed.data.success) {
-        if (parsed.data.user) {
-          setUser(parsed.data.user);
-          setToken(parsed.data.token);
-          localStorage.setItem("sahakari_user", JSON.stringify(parsed.data.user));
-          localStorage.setItem("sahakari_token", parsed.data.token);
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        if (data.user) {
+          setUser(data.user);
+          setToken(data.token);
+          localStorage.setItem("sahakari_user", JSON.stringify(data.user));
+          localStorage.setItem("sahakari_token", data.token);
         }
-        return { success: true, role: parsed.data.user?.role, message: "✅ Email verified successfully! 🎉" };
+        return { success: true, role: data.user?.role, message: data.message || "✅ Email verified successfully! 🎉" };
       }
-      return { success: false, message: "❌ Incorrect OTP. Please check the code and try again. 🔐" };
+
+      return {
+        success: false,
+        message: data.message || "❌ Incorrect OTP. Please try again. 🔐"
+      };
     } catch {
-      return { success: false, message: "❌ Incorrect OTP. Please check the code and try again. 🔐" };
+      return {
+        success: false,
+        message: "❌ Verification failed. Please check your connection and try again."
+      };
     }
   };
 
   const forgotPasswordSendOtp = async (identifier: string): Promise<{ success: boolean; message?: string; otpCode?: string; retryAfterSeconds?: number; notRegistered?: boolean }> => {
     try {
       const cleanEmail = identifier.trim().toLowerCase();
-
-      // STEP 2: Validate email FORMAT locally
       const formatCheck = validateEmailFormat(cleanEmail);
       if (!formatCheck.isValid) {
         return { success: false, message: "❌ Please enter a valid email address. 📧" };
       }
 
-      // STEP 3: Strict Email Existence Check BEFORE EmailJS
-      let emailExists = false;
-      try {
-        const chkRes = await fetch(`${API_BASE}/auth/check-email`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: cleanEmail })
-        });
-        const chkData = await chkRes.json();
-        emailExists = Boolean(chkData && chkData.success && chkData.exists === true);
-      } catch (chkErr) {
-        // Offline / fallback verification: check local registered accounts & demo emails
-        const localUsers = JSON.parse(localStorage.getItem("coopnex_registered_users") || "[]");
-        const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
-        const demoEmails = [
-          "demo.customer@coopnex.in",
-          "demo.worker@coopnex.in",
-          "worker.demo@coopnex.in",
-          "arjun.kumar@coopnex.worker.in",
-          "admin@coopnex.in",
-          "superadmin@coopnex.in",
-          "priya.sharma@coopnex.customer.in"
-        ];
-        emailExists = localUsers.some((u: any) => u.email?.toLowerCase() === cleanEmail) ||
-          localWorkers.some((w: any) => w.email?.toLowerCase() === cleanEmail) ||
-          demoEmails.includes(cleanEmail);
-      }
-
-      // HARD BARRIER: If email does NOT exist, DO NOT call EmailJS under any circumstance
-      if (!emailExists) {
-        return {
-          success: false,
-          notRegistered: true,
-          message: "❌ This email address is not registered. Please check your email and try again. 📧"
-        };
-      }
-
-      // STEP 4: Only if email EXISTS in our database
-      const array = new Uint32Array(1);
-      window.crypto.getRandomValues(array);
-      const otpCode = (100000 + (array[0] % 900000)).toString();
-
-      const clientHash = await hashOtpClient(cleanEmail, otpCode);
-      const sessionKey = `coopnex_otp_FORGOT_PASSWORD_${cleanEmail}`;
-
-      sessionStorage.setItem(
-        sessionKey,
-        JSON.stringify({
-          identifier: cleanEmail,
-          hash: clientHash,
-          expiresAt: Date.now() + 300 * 1000,
-          attempts: 0,
-          verified: false,
-          purpose: "FORGOT_PASSWORD"
-        })
-      );
-
-      // Record reset OTP session with backend MongoDB if reachable (non-blocking)
-      fetch(`${API_BASE}/auth/emailjs/record-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          identifier: cleanEmail,
-          otpCode,
-          purpose: "FORGOT_PASSWORD"
-        })
-      }).catch(() => null);
-
-      // Dispatch reset email via EmailJS browser SDK (Template 2: Password Reset)
-      const status = getEmailJsStatus();
-      if (!status.isResetConfigured && !emailJsConfig.serviceId) {
-        return {
-          success: false,
-          message: "❌ We couldn't send the verification code. Please try again. 📩"
-        };
-      }
-
-      try {
-        await emailjs.send(
-          emailJsConfig.serviceId,
-          emailJsConfig.resetTemplateId,
-          {
-            name: "COOPNEX Member",
-            to_name: "COOPNEX Member",
-            email: cleanEmail,
-            to_email: cleanEmail,
-            otp: otpCode,
-            passcode: otpCode,
-            code: otpCode,
-            expiry: "5",
-            expiry_text: "5 minutes",
-            app_name: "COOPNEX",
-            purpose: "Password Reset"
-          },
-          emailJsConfig.publicKey
-        );
-      } catch (emailErr: any) {
-        console.error("EmailJS reset dispatch error:", emailErr);
-        return {
-          success: false,
-          message: "❌ We couldn't send the verification code. Please try again. 📩"
-        };
-      }
-
+      return await sendOtp(cleanEmail, "FORGOT_PASSWORD", "COOPNEX Member");
+    } catch {
       return {
-        success: true,
-        message: "✅ OTP sent successfully! Check your email. 📩",
-        otpCode
+        success: false,
+        message: "❌ We couldn't send the verification code. Please try again. 📩"
       };
-    } catch (err: any) {
-      return { success: false, message: "❌ We couldn't send the verification code. Please try again. 📩" };
     }
   };
 
@@ -971,6 +753,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated,
         login,
         workerLogin,
+        validateEmail,
         sendOtp,
         verifyOtp,
         forgotPasswordSendOtp,

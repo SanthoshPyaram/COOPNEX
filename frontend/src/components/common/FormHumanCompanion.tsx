@@ -8,9 +8,12 @@ export type FormCompanionEmotion =
   | "VALID_FORM"
   | "INVALID_NAME"
   | "INVALID_EMAIL"
+  | "CHECKING_EMAIL"
+  | "EMAIL_VALID"
   | "EMAIL_NOT_REGISTERED"
   | "OTP_SENT"
   | "WRONG_OTP"
+  | "EMAIL_VERIFIED"
   | "STRONG_PASSWORD"
   | "WEAK_PASSWORD"
   | "SUCCESS";
@@ -44,8 +47,18 @@ const EMOTION_MAP: Record<FormCompanionEmotion, { emoji: string; text: string; r
     role: "customer-rep"
   },
   INVALID_EMAIL: {
+    emoji: "😕",
+    text: "Hmm... I couldn't verify that email.",
+    role: "customer-rep"
+  },
+  CHECKING_EMAIL: {
     emoji: "🤔",
-    text: "Please check that email address.",
+    text: "Let me check that email...",
+    role: "customer-rep"
+  },
+  EMAIL_VALID: {
+    emoji: "😊",
+    text: "That email looks good!",
     role: "customer-rep"
   },
   EMAIL_NOT_REGISTERED: {
@@ -55,13 +68,18 @@ const EMOTION_MAP: Record<FormCompanionEmotion, { emoji: string; text: string; r
   },
   OTP_SENT: {
     emoji: "📩",
-    text: "Your OTP is on its way!",
+    text: "Your verification code is on its way!",
     role: "electrician"
   },
   WRONG_OTP: {
     emoji: "😟",
-    text: "That code doesn't match. Please try again.",
+    text: "That code doesn't match. Try again.",
     role: "customer-rep"
+  },
+  EMAIL_VERIFIED: {
+    emoji: "🎉",
+    text: "Email verified successfully!",
+    role: "welcoming"
   },
   STRONG_PASSWORD: {
     emoji: "😎",

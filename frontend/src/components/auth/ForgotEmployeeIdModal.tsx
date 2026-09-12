@@ -302,7 +302,9 @@ export const ForgotEmployeeIdModal: React.FC<ForgotEmployeeIdModalProps> = ({
                           setEmailError(check.error || null);
                         }
                       }}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600 shadow-xs font-medium"
+                      className={`w-full bg-slate-50 border ${
+                        emailError ? "border-rose-500 bg-rose-50/20 text-rose-900" : "border-slate-300 text-slate-900"
+                      } rounded-xl pl-10 pr-4 py-2.5 text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600 shadow-xs font-medium`}
                     />
                   </div>
                 </FormField>

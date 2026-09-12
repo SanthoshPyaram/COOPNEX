@@ -86,7 +86,7 @@ export const HOME_PAGE_TRADE_PHOTOS: Record<string, { male: string; female: stri
   },
   painter: {
     male: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&q=80",
-    female: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&q=80",
+    female: "https://t4.ftcdn.net/jpg/01/67/07/95/240_F_167079543_Rk1lsNYGxsfbJHXqM4y7voo3cmm1DcpV.jpg",
     default: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&q=80"
   },
   cleaner: {

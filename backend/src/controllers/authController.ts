@@ -12,6 +12,7 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import crypto from "crypto";
 import { sendOtpEmail } from "../services/emailService";
 import { sendEmailJsOtp } from "../services/emailJsService";
+import { validateEmailAddress } from "../services/emailValidationService";
 import { validateAadhaarVerhoeff, validatePanFormat, evaluatePreliminaryValidation } from "../utils/identityValidation";
 import { saveDocument, saveAvatar } from "../services/documentService";
 
@@ -23,6 +24,81 @@ const hashOtp = (identifier: string, code: string): string => {
 const signToken = (userId: string, role: UserRole) => {
   const secret = process.env.JWT_SECRET || "coopnex_super_secure_jwt_secret_2026_sih";
   return jwt.sign({ userId, role }, secret, { expiresIn: "7d" });
+};
+
+/**
+ * Real-Time Server-Side Email Validation API
+ * Integrates ZeroBounce API, DNS MX Resolution, and Disposable Domain Blocklists
+ * POST /api/auth/validate-email
+ */
+export const validateEmail = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const rawEmail = (req.body.email || req.query.email || "").toString().trim();
+    if (!rawEmail) {
+      res.status(400).json({
+        success: false,
+        status: "invalid",
+        safeToSendOtp: false,
+        reason: "missing_email",
+        message: "❌ Please enter a valid email address. 📧"
+      });
+      return;
+    }
+
+    const clientIp = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").toString().split(",")[0].trim();
+    const result = await validateEmailAddress(rawEmail, clientIp);
+
+    if (!result.safeToSendOtp) {
+      res.status(400).json({
+        success: false,
+        status: result.status,
+        safeToSendOtp: false,
+        reason: result.reason,
+        subStatus: result.subStatus,
+        message: result.message
+      });
+      return;
+    }
+
+    // Account duplicate check for registration mode
+    const mode = (req.body.mode || req.query.mode || "REGISTER").toString().trim().toUpperCase();
+    if (mode === "REGISTER") {
+      let isTaken = false;
+      if (mongoose.connection.readyState === 1) {
+        const existingUser = await User.findOne({ email: result.normalizedEmail });
+        const existingWorker = existingUser ? null : await Worker.findOne({ email: result.normalizedEmail });
+        const existingAdmin = (existingUser || existingWorker) ? null : await Admin.findOne({ email: result.normalizedEmail });
+        isTaken = Boolean(existingUser || existingWorker || existingAdmin);
+      }
+      if (isTaken) {
+        res.status(409).json({
+          success: false,
+          status: "invalid",
+          safeToSendOtp: false,
+          reason: "already_registered",
+          message: "❌ This email is already registered. Please sign in or use another email. 📧"
+        });
+        return;
+      }
+    }
+
+    res.json({
+      success: true,
+      status: "valid",
+      safeToSendOtp: true,
+      message: result.message,
+      details: result.details
+    });
+  } catch (err: any) {
+    console.error("[validateEmail] Unexpected error:", err);
+    res.status(500).json({
+      success: false,
+      status: "unknown",
+      safeToSendOtp: false,
+      reason: "internal_error",
+      message: "⚠️ We couldn't confirm this email address. Please use another email. 📧"
+    });
+  }
 };
 
 /**
@@ -1288,19 +1364,75 @@ export const recordEmailJsOtp = async (req: Request, res: Response): Promise<voi
 
 /**
  * Real-Time Cryptographically Secure OTP Generation & Dispatch
- * Backed by MongoDB Otp collection with 5-minute TTL, 60-second cooldown, and SHA-256 hashing
+ * STRICT REQUIREMENT:
+ * Server-side email validation runs FIRST via validateEmailAddress.
+ * If safeToSendOtp is false, OTP generation and email sending are STRICTLY FORBIDDEN.
+ * OTP is generated cryptographically on the server, hashed with salt, and stored in MongoDB.
  */
 export const sendOtp = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { identifier, phone, email, name, purpose = "VERIFY_ACCOUNT" } = req.body;
-    const target = (identifier || phone || email || "").trim().toLowerCase();
+    const { identifier, phone, email, name, purpose = "REGISTER" } = req.body;
+    const target = (identifier || email || phone || "").trim().toLowerCase();
 
     if (!target) {
-      res.status(400).json({ success: false, message: "Email address or phone number is required to send OTP." });
+      res.status(400).json({
+        success: false,
+        safeToSendOtp: false,
+        message: "❌ Please enter a valid email address. 📧"
+      });
       return;
     }
 
-    // 60-Second Resend Cooldown Check
+    // STRICT STEP: If target is an email, run server-side real validation FIRST
+    if (target.includes("@")) {
+      const clientIp = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").toString().split(",")[0].trim();
+      const valResult = await validateEmailAddress(target, clientIp);
+
+      if (!valResult.safeToSendOtp) {
+        res.status(400).json({
+          success: false,
+          safeToSendOtp: false,
+          status: valResult.status,
+          reason: valResult.reason,
+          subStatus: valResult.subStatus,
+          message: valResult.message
+        });
+        return;
+      }
+
+      // Check registration duplicate or recovery existence
+      if (purpose === "REGISTER") {
+        if (mongoose.connection.readyState === 1) {
+          const existingUser = await User.findOne({ email: target });
+          const existingWorker = existingUser ? null : await Worker.findOne({ email: target });
+          const existingAdmin = (existingUser || existingWorker) ? null : await Admin.findOne({ email: target });
+          if (existingUser || existingWorker || existingAdmin) {
+            res.status(409).json({
+              success: false,
+              safeToSendOtp: false,
+              message: "❌ This email is already registered. Please sign in or use another email. 📧"
+            });
+            return;
+          }
+        }
+      } else if (purpose === "RECOVER_EMPLOYEE_ID" || purpose === "FORGOT_PASSWORD") {
+        if (mongoose.connection.readyState === 1) {
+          const existingUser = await User.findOne({ email: target });
+          const existingWorker = existingUser ? null : await Worker.findOne({ email: target });
+          const existingAdmin = (existingUser || existingWorker) ? null : await Admin.findOne({ email: target });
+          if (!existingUser && !existingWorker && !existingAdmin) {
+            res.status(404).json({
+              success: false,
+              safeToSendOtp: false,
+              message: "❌ This email address is not registered. Please check your email and try again. 📧"
+            });
+            return;
+          }
+        }
+      }
+    }
+
+    // Rate Limiting: 60-Second Resend Cooldown
     const recentOtp = await Otp.findOne({ identifier: target, purpose }).sort({ createdAt: -1 });
     if (recentOtp && recentOtp.lastSentAt) {
       const timeSinceLastSent = (Date.now() - new Date(recentOtp.lastSentAt).getTime()) / 1000;
@@ -1308,11 +1440,28 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
         const waitTime = Math.ceil(60 - timeSinceLastSent);
         res.status(429).json({
           success: false,
+          safeToSendOtp: false,
           message: `Please wait ${waitTime}s before requesting a new verification code.`,
           retryAfterSeconds: waitTime
         });
         return;
       }
+    }
+
+    // Rate Limiting: Maximum 3 OTP requests within 10 minutes
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const recentCount = await Otp.countDocuments({
+      identifier: target,
+      createdAt: { $gte: tenMinutesAgo }
+    });
+    if (recentCount >= 3) {
+      res.status(429).json({
+        success: false,
+        safeToSendOtp: false,
+        message: "Maximum OTP request limit reached. Please wait 10 minutes before requesting a new code.",
+        retryAfterSeconds: 600
+      });
+      return;
     }
 
     // Generate cryptographically secure 6-digit OTP code using crypto.randomInt
@@ -1333,37 +1482,36 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
       createdAt: new Date()
     });
 
-    // Real Email Dispatch via EmailJS (with fallback to nodemailer if EmailJS pending)
-    let emailDispatched = false;
-    let dispatchMessage = `A 6-digit verification code has been dispatched to ${target}.`;
-
+    // Real Email Dispatch via Server-Side Hierarchy (Brevo -> EmailJS Server -> SMTP)
     if (target.includes("@")) {
-      const emailResult = await sendEmailJsOtp(target, otpCode, name, purpose);
-      if (emailResult.success) {
-        emailDispatched = true;
-      } else {
-        console.warn(`[AUTH] EmailJS dispatch pending: ${emailResult.message}. Attempting fallback SMTP...`);
-        const fallbackResult = await sendOtpEmail(target, otpCode, purpose);
-        if (fallbackResult.success) {
-          emailDispatched = true;
-        } else {
-          // If neither provider succeeded
-          console.warn("[AUTH] Note: Email credentials pending in .env");
-          dispatchMessage = `A 6-digit verification code has been generated for ${target}. Ensure EMAILJS credentials are configured in .env.`;
-        }
+      const emailResult = await sendOtpEmail(target, otpCode, purpose, name);
+
+      if (!emailResult.success) {
+        // Rollback OTP on dispatch failure so un-sent OTP cannot be used
+        await Otp.deleteMany({ identifier: target, purpose, verified: false });
+        res.status(500).json({
+          success: false,
+          safeToSendOtp: false,
+          message: "❌ We couldn't send the verification code. Please try again. 📩"
+        });
+        return;
       }
     }
 
-    // NEVER return the plain OTP code in response and NEVER log plain OTP to console
+    // NEVER return plain OTP code
     res.json({
       success: true,
-      message: dispatchMessage,
-      expiresInSeconds: 300,
-      emailDispatched
+      safeToSendOtp: true,
+      message: "✅ OTP sent successfully! 📩",
+      expiresInSeconds: 300
     });
   } catch (error: any) {
     console.error("sendOtp error:", error);
-    res.status(500).json({ success: false, message: "Failed to dispatch OTP.", error: error.message });
+    res.status(500).json({
+      success: false,
+      safeToSendOtp: false,
+      message: "❌ We couldn't send the verification code. Please try again. 📩"
+    });
   }
 };
 
@@ -1372,17 +1520,17 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
  */
 export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { identifier, phone, email, otpCode, purpose = "VERIFY_ACCOUNT" } = req.body;
+    const { identifier, phone, email, otpCode, purpose = "REGISTER" } = req.body;
     const target = (identifier || phone || email || "").trim().toLowerCase();
     const code = (otpCode || "").trim();
 
     if (!target || !code) {
-      res.status(400).json({ success: false, message: "Identifier and 6-digit OTP code are required." });
+      res.status(400).json({ success: false, message: "❌ Identifier and 6-digit OTP code are required. 🔐" });
       return;
     }
 
     if (code.length !== 6 || !/^\d{6}$/.test(code)) {
-      res.status(400).json({ success: false, message: "Please enter a valid 6-digit numeric verification code." });
+      res.status(400).json({ success: false, message: "❌ Please enter a valid 6-digit numeric verification code. 🔐" });
       return;
     }
 
@@ -1396,7 +1544,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
     if (!validOtp) {
       res.status(400).json({
         success: false,
-        message: "No active verification code found for this address. It may have expired. Please request a new code."
+        message: "⏰ This verification code has expired. Please request a new one."
       });
       return;
     }
@@ -1406,7 +1554,18 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
       await Otp.deleteOne({ _id: validOtp._id });
       res.status(429).json({
         success: false,
-        message: "Maximum verification attempts exceeded (5/5). This code has been invalidated for security. Please request a new code."
+        message: "⏰ Maximum verification attempts exceeded. Please request a new code."
+      });
+      return;
+    }
+
+    // Check 5-minute expiration
+    const otpAgeSeconds = (Date.now() - new Date(validOtp.createdAt).getTime()) / 1000;
+    if (otpAgeSeconds > 300) {
+      await Otp.deleteOne({ _id: validOtp._id });
+      res.status(400).json({
+        success: false,
+        message: "⏰ This verification code has expired. Please request a new one."
       });
       return;
     }
@@ -1422,8 +1581,8 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
       res.status(400).json({
         success: false,
         message: remaining > 0
-          ? `Invalid verification code. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`
-          : "Invalid verification code. Maximum attempts reached. Please request a new code."
+          ? `❌ Incorrect OTP. Please try again. (${remaining} attempt${remaining === 1 ? "" : "s"} remaining) 🔐`
+          : "❌ Incorrect OTP. Maximum attempts reached. Please request a new code. 🔐"
       });
       return;
     }
@@ -1436,7 +1595,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
     if (purpose === "PHONE_VERIFY" || purpose === "VERIFY_ACCOUNT" || purpose === "REGISTER") {
       res.json({
         success: true,
-        message: `${target.includes("@") ? "Email" : "Mobile number"} successfully verified.`
+        message: "✅ Email verified successfully! 🎉"
       });
       return;
     }
@@ -1750,4 +1909,38 @@ export const forgotPasswordReset = async (req: Request, res: Response): Promise<
     res.status(500).json({ success: false, message: "Server error resetting password." });
   }
 };
+
+/**
+ * Brevo Delivery Webhook Listener
+ * Receives transactional delivery events (delivered, hardBounce, softBounce, invalid, blocked, error).
+ * Automatically invalidates active verification attempts if hardBounce or invalid event occurs.
+ */
+export const handleBrevoWebhook = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const event = req.body;
+    const eventType = (event.event || event.type || "").toString();
+    const recipientEmail = (event.email || "").toString().trim().toLowerCase();
+
+    console.log(`[BREVO WEBHOOK] Event: ${eventType} for ${recipientEmail}`);
+
+    if (
+      eventType === "hardBounce" ||
+      eventType === "softBounce" ||
+      eventType === "invalid" ||
+      eventType === "blocked" ||
+      eventType === "error"
+    ) {
+      if (recipientEmail) {
+        await Otp.deleteMany({ identifier: recipientEmail });
+        console.warn(`[BREVO WEBHOOK] Delivery failure (${eventType}). Invalidated verification attempts for ${recipientEmail}.`);
+      }
+    }
+
+    res.status(200).json({ received: true });
+  } catch (err: any) {
+    console.error("[BREVO WEBHOOK ERROR]:", err?.message);
+    res.status(200).json({ received: true });
+  }
+};
+
 

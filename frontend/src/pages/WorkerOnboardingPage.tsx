@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { CoopnexLogo } from "../components/brand/CoopnexLogo";
 import { useAuth } from "../context/AuthContext";
+import { FormHumanCompanion } from "../components/common/FormHumanCompanion";
 import {
   HandHeart,
   User,
@@ -77,7 +79,7 @@ const ONBOARDING_BLOOD_GROUPS = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-
 export const WorkerOnboardingPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { registerWorker, sendOtp, verifyOtp } = useAuth();
+  const { registerWorker, sendOtp, verifyOtp, validateEmail } = useAuth();
 
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -172,16 +174,20 @@ export const WorkerOnboardingPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  // Email Verification States (EmailJS / Backend)
+  // Email Verification States (Server-Validated + Cryptographic Backend OTP)
   const [emailOtpSent, setEmailOtpSent] = useState(false);
   const [emailOtpVerified, setEmailOtpVerified] = useState(searchParams.get("emailVerified") === "true");
-  const [emailOtpInput, setEmailOtpInput] = useState("");
+  const [emailOtp, setEmailOtp] = useState<string[]>(["", "", "", "", "", ""]);
   const [isSendingEmailOtp, setIsSendingEmailOtp] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isVerifyingEmailOtp, setIsVerifyingEmailOtp] = useState(false);
   const [emailCountdown, setEmailCountdown] = useState(0);
   const [emailOtpJustSent, setEmailOtpJustSent] = useState(false);
+  const [emailOtpWrong, setEmailOtpWrong] = useState(false);
   const [emailStatusMsg, setEmailStatusMsg] = useState<string | null>(null);
   const [emailErrorMsg, setEmailErrorMsg] = useState<string | null>(null);
+  const [emailDuplicateError, setEmailDuplicateError] = useState<string | null>(null);
+  const emailOtpInputs = React.useRef<(HTMLInputElement | null)[]>([]);
 
   React.useEffect(() => {
     let timer: any;
@@ -276,13 +282,17 @@ export const WorkerOnboardingPage: React.FC = () => {
 
   const [error, setError] = useState<string | null>(null);
 
-  // Verification helper methods (real Email OTP)
+  // Verification helper methods (Server Validated + Cryptographic OTP)
   const handleSendEmailOtp = async () => {
     setEmailErrorMsg(null);
     setEmailStatusMsg(null);
+    setEmailDuplicateError(null);
+    setEmailOtpWrong(false);
     setStep1Errors((prev) => ({ ...prev, email: undefined }));
 
     const cleanEmail = email.trim().toLowerCase();
+
+    // STEP 1: Client-Side Syntax Check
     const fmtCheck = validateEmailFormat(cleanEmail);
     if (!fmtCheck.isValid) {
       setStep1Errors((prev) => ({ ...prev, email: "❌ Please enter a valid email address. 📧" }));
@@ -290,59 +300,148 @@ export const WorkerOnboardingPage: React.FC = () => {
     }
 
     setIsSendingEmailOtp(true);
+    setIsCheckingEmail(true);
+
     try {
+      // STEP 2: Server-Side Real Email Validation (ZeroBounce + DNS MX + Disposable Blocklists)
+      const valRes = await validateEmail(cleanEmail, "REGISTER");
+
+      if (!valRes.safeToSendOtp) {
+        setIsSendingEmailOtp(false);
+        setIsCheckingEmail(false);
+        if (valRes.reason === "already_registered") {
+          setEmailDuplicateError(valRes.message);
+        } else {
+          setEmailErrorMsg(valRes.message || "❌ We couldn't verify this email address. Please check it and try again. 📧");
+        }
+        return;
+      }
+
+      // STEP 3: Cryptographic OTP dispatch via backend
       const res = await sendOtp(cleanEmail, "REGISTER", name.trim() || undefined);
+
       setIsSendingEmailOtp(false);
+      setIsCheckingEmail(false);
+
       if (res.success) {
         setEmailOtpSent(true);
         setEmailOtpJustSent(true);
         setTimeout(() => setEmailOtpJustSent(false), 2000);
         setEmailCountdown(res.retryAfterSeconds || 60);
-        setEmailStatusMsg("✅ OTP sent successfully! Check your email. 📩");
+        setEmailStatusMsg("✅ Verification code sent! Please check your email inbox. 📩");
+        setTimeout(() => emailOtpInputs.current[0]?.focus(), 100);
       } else {
         if (res.retryAfterSeconds) {
           setEmailCountdown(res.retryAfterSeconds);
         }
-        setStep1Errors((prev) => ({
-          ...prev,
-          email: res.message || "❌ We couldn't send the verification code. Please try again. 📩"
-        }));
+        if (res.message?.includes("already registered")) {
+          setEmailDuplicateError(res.message);
+        } else {
+          setEmailErrorMsg(res.message || "❌ We couldn't send the verification code. Please try again. 📩");
+        }
       }
     } catch {
       setIsSendingEmailOtp(false);
-      setStep1Errors((prev) => ({
-        ...prev,
-        email: "❌ We couldn't send the verification code. Please try again. 📩"
-      }));
+      setIsCheckingEmail(false);
+      setEmailErrorMsg("❌ We couldn't send the verification code. Please try again. 📩");
+    }
+  };
+
+  const handleEmailOtpDigitChange = (index: number, val: string) => {
+    const clean = val.replace(/\D/g, "").slice(-1);
+    const newOtp = [...emailOtp];
+    newOtp[index] = clean;
+    setEmailOtp(newOtp);
+    setEmailOtpWrong(false);
+
+    if (clean && index < 5) {
+      emailOtpInputs.current[index + 1]?.focus();
+    }
+
+    if (clean && index === 5 && newOtp.every((d) => d.length === 1)) {
+      executeVerifyEmailOtp(newOtp.join(""));
+    }
+  };
+
+  const handleEmailOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace") {
+      if (!emailOtp[index] && index > 0) {
+        emailOtpInputs.current[index - 1]?.focus();
+      }
+    } else if (e.key === "ArrowLeft" && index > 0) {
+      emailOtpInputs.current[index - 1]?.focus();
+    } else if (e.key === "ArrowRight" && index < 5) {
+      emailOtpInputs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleEmailOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!pasted) return;
+
+    const newOtp = [...emailOtp];
+    for (let i = 0; i < pasted.length; i++) {
+      newOtp[i] = pasted[i];
+    }
+    setEmailOtp(newOtp);
+    setEmailOtpWrong(false);
+
+    const nextIndex = Math.min(pasted.length, 5);
+    emailOtpInputs.current[nextIndex]?.focus();
+
+    if (pasted.length === 6) {
+      executeVerifyEmailOtp(pasted);
     }
   };
 
   const executeVerifyEmailOtp = async (code: string) => {
     if (code.length !== 6) {
-      setError("❌ Incorrect OTP. Please check the code and try again. 🔐");
+      setEmailErrorMsg("❌ Incorrect OTP. Please check the code and try again. 🔐");
+      setEmailOtpWrong(true);
       return;
     }
-    setError(null);
+
+    setEmailErrorMsg(null);
+    setEmailOtpWrong(false);
     setIsVerifyingEmailOtp(true);
+
     const cleanEmail = email.trim().toLowerCase();
     try {
       const res = await verifyOtp(cleanEmail, code, "REGISTER");
       setIsVerifyingEmailOtp(false);
+
       if (res.success) {
         setEmailOtpVerified(true);
         setEmailOtpSent(false);
+        setEmailOtpWrong(false);
         setEmailStatusMsg("✅ Email verified successfully! 🎉");
       } else {
-        setError(res.message || "❌ Incorrect OTP. Please check the code and try again. 🔐");
+        setEmailOtpWrong(true);
+        setEmailErrorMsg(res.message || "❌ Incorrect OTP. Please check the code and try again. 🔐");
       }
     } catch {
       setIsVerifyingEmailOtp(false);
-      setError("❌ Incorrect OTP. Please check the code and try again. 🔐");
+      setEmailOtpWrong(true);
+      setEmailErrorMsg("❌ Incorrect OTP. Please check the code and try again. 🔐");
     }
   };
 
   const handleVerifyEmailOtp = async () => {
-    await executeVerifyEmailOtp(emailOtpInput.trim());
+    await executeVerifyEmailOtp(emailOtp.join("").trim());
+  };
+
+  const getStep1CompanionState = () => {
+    if (emailOtpVerified) return "EMAIL_VERIFIED";
+    if (emailOtpWrong) return "WRONG_OTP";
+    if (emailOtpSent) return "OTP_SENT";
+    if (isCheckingEmail || isSendingEmailOtp || isVerifyingEmailOtp) return "CHECKING_EMAIL";
+    if (step1Errors.email || emailErrorMsg || emailDuplicateError) return "INVALID_EMAIL";
+    if (email.includes("@") && !step1Errors.email && !emailErrorMsg) return "EMAIL_VALID";
+    if (step1Errors.name) return "INVALID_NAME";
+    if (password.length >= 8) return "STRONG_PASSWORD";
+    if (name || email || phone) return "TYPING";
+    return "IDLE";
   };
 
   // Run Algorithmic Pre-Check with Authentic UIDAI Verhoeff Checksum & NSDL PAN Validation
@@ -820,7 +919,12 @@ export const WorkerOnboardingPage: React.FC = () => {
                 <div className="space-y-4">
                   <div className="border-b border-slate-100 pb-3">
                     <h2 className="text-lg font-black text-slate-900">Step 1: Identity & Email Verification</h2>
-                    <p className="text-xs text-slate-500">Email address must be verified via EmailJS OTP</p>
+                    <p className="text-xs text-slate-500">Email address must be verified via secure OTP verification</p>
+                  </div>
+
+                  {/* Interactive Character Companion reacting to form progress */}
+                  <div className="flex justify-center pb-1">
+                    <FormHumanCompanion state={getStep1CompanionState()} />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -910,128 +1014,247 @@ export const WorkerOnboardingPage: React.FC = () => {
                     </FormField>
                   </div>
 
-                  {/* Email + Real EmailJS OTP Verification */}
+                  {/* Email + Real Server Validated OTP Verification */}
                   <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-2">
-                    <FormField
-                      id="worker-onboarding-email"
-                      label="Email Address"
-                      required
-                      error={step1Errors.email}
-                    >
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <div className="relative flex-1">
-                          <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
-                          <input
-                            id="worker-onboarding-email"
-                            type="email"
-                            placeholder="rajesh.kumar@example.com"
-                            value={email}
-                            onChange={(e) => {
-                              const newEmail = e.target.value;
-                              setEmail(newEmail);
-                              if (emailOtpVerified || emailOtpSent) {
-                                setEmailOtpVerified(false);
-                                setEmailOtpSent(false);
-                                setEmailOtpInput("");
-                                setEmailStatusMsg("Email changed — please verify again.");
-                              }
-                              setError(null);
-                              const check = validateEmailFormat(newEmail);
-                              setStep1Errors((prev) => ({ ...prev, email: check.error }));
-                            }}
-                            onBlur={() => {
-                              const check = validateEmailFormat(email);
-                              setStep1Errors((prev) => ({ ...prev, email: check.error }));
-                            }}
-                            className={`w-full bg-white border ${
-                              emailOtpVerified ? "border-emerald-500 bg-emerald-50/20" : "border-slate-300"
-                            } rounded-xl pl-10 pr-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600`}
-                          />
-                        </div>
-                        {!emailOtpVerified ? (
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-slate-700">
+                        Email Address *
+                      </label>
+                      {emailOtpVerified ? (
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Email Verified</span>
+                          </span>
                           <button
                             type="button"
-                            onClick={handleSendEmailOtp}
-                            disabled={
-                              isSendingEmailOtp ||
-                              emailOtpJustSent ||
-                              (emailOtpSent && emailCountdown > 0) ||
-                              !email.includes("@")
-                            }
-                            className={`px-4 py-2 text-white text-xs font-bold rounded-xl transition shrink-0 shadow-xs cursor-pointer disabled:opacity-50 ${
-                              emailOtpJustSent
-                                ? "bg-emerald-600 cursor-default"
-                                : "bg-blue-600 hover:bg-blue-700"
-                            }`}
+                            onClick={() => {
+                              setEmailOtpVerified(false);
+                              setEmailOtpSent(false);
+                              setEmailOtp(["", "", "", "", "", ""]);
+                            }}
+                            className="text-[11px] text-blue-600 hover:underline font-bold cursor-pointer"
                           >
-                            {isSendingEmailOtp ? (
-                              <span className="flex items-center gap-1.5">
-                                <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                <span>Sending...</span>
-                              </span>
-                            ) : emailOtpJustSent ? (
-                              <span className="flex items-center gap-1">
-                                <Check className="w-3 h-3 stroke-[3]" />
-                                <span>OTP Sent</span>
-                              </span>
-                            ) : emailOtpSent ? (
-                              emailCountdown > 0 ? `Resend OTP in ${emailCountdown}s` : "Resend OTP"
-                            ) : (
-                              "Verify"
-                            )}
+                            Change
                           </button>
-                        ) : (
-                          <div className="px-3 py-2 bg-emerald-50 border border-emerald-300 text-emerald-700 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0">
-                            <Check className="w-4 h-4 text-emerald-600 stroke-[3]" />
-                            <span>✓ Verified</span>
-                          </div>
-                        )}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="relative flex-1">
+                        <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
+                        <input
+                          id="worker-onboarding-email"
+                          type="email"
+                          placeholder="rajesh.kumar@example.com"
+                          value={email}
+                          onChange={(e) => {
+                            const newEmail = e.target.value;
+                            setEmail(newEmail);
+                            if (emailOtpVerified || emailOtpSent) {
+                              setEmailOtpVerified(false);
+                              setEmailOtpSent(false);
+                              setEmailOtp(["", "", "", "", "", ""]);
+                              setEmailStatusMsg("Email changed — please verify again.");
+                            }
+                            setError(null);
+                            const check = validateEmailFormat(newEmail);
+                            setStep1Errors((prev) => ({ ...prev, email: check.isValid ? undefined : check.error }));
+                            setEmailErrorMsg(null);
+                            setEmailDuplicateError(null);
+                          }}
+                          onBlur={() => {
+                            const check = validateEmailFormat(email);
+                            setStep1Errors((prev) => ({ ...prev, email: check.isValid ? undefined : check.error }));
+                          }}
+                          className={`w-full bg-white border ${
+                            step1Errors.email || emailErrorMsg || emailDuplicateError
+                              ? "border-rose-500 bg-rose-50/20 text-rose-900"
+                              : emailOtpVerified
+                              ? "border-emerald-500 bg-emerald-50/20"
+                              : "border-slate-300"
+                          } rounded-xl pl-10 pr-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600 transition`}
+                        />
                       </div>
-                    </FormField>
-
-                    {emailStatusMsg && !emailOtpVerified && (
-                      <p className="text-[11px] text-emerald-700 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" />
-                        <span>{emailStatusMsg}</span>
-                      </p>
-                    )}
-
-                    {emailOtpSent && !emailOtpVerified && (
-                      <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl text-xs space-y-2">
-                        <div className="flex justify-between items-center text-emerald-950 font-bold">
-                          <span>Enter 6-Digit Email Verification Code:</span>
-                          {emailCountdown > 0 ? (
-                            <span className="text-[10px] text-slate-500">Resend in {emailCountdown}s</span>
+                      {!emailOtpVerified ? (
+                        <button
+                          type="button"
+                          onClick={handleSendEmailOtp}
+                          disabled={
+                            isSendingEmailOtp ||
+                            isCheckingEmail ||
+                            emailOtpJustSent ||
+                            (emailOtpSent && emailCountdown > 0) ||
+                            !email.includes("@")
+                          }
+                          className={`px-4 py-2 text-white text-xs font-bold rounded-xl transition shrink-0 shadow-xs cursor-pointer disabled:opacity-50 ${
+                            emailOtpJustSent
+                              ? "bg-emerald-600 cursor-default"
+                              : "bg-blue-600 hover:bg-blue-700"
+                          }`}
+                        >
+                          {isSendingEmailOtp ? (
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              <span>Sending...</span>
+                            </span>
+                          ) : emailOtpJustSent ? (
+                            <span className="flex items-center gap-1">
+                              <Check className="w-3 h-3 stroke-[3]" />
+                              <span>OTP Sent</span>
+                            </span>
+                          ) : emailOtpSent ? (
+                            <span className="flex items-center gap-1">
+                              <RotateCcw className="w-3 h-3" />
+                              <span>{emailCountdown > 0 ? `Resend OTP in ${emailCountdown}s` : "Resend OTP"}</span>
+                            </span>
                           ) : (
+                            <span>Verify</span>
+                          )}
+                        </button>
+                      ) : (
+                        <div className="px-3 py-2 bg-emerald-50 border border-emerald-300 text-emerald-700 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0">
+                          <Check className="w-4 h-4 text-emerald-600 stroke-[3]" />
+                          <span>✓ Verified</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Email Feedback Messages directly underneath with smooth animation */}
+                    <AnimatePresence mode="wait">
+                      {step1Errors.email && (
+                        <motion.div
+                          key="syntax-error"
+                          initial={{ opacity: 0, height: 0, y: -6 }}
+                          animate={{ opacity: 1, height: "auto", y: 0 }}
+                          exit={{ opacity: 0, height: 0, y: -6 }}
+                          transition={{ duration: 0.2 }}
+                          className="text-xs font-semibold text-rose-600 flex items-center gap-1.5 mt-1"
+                        >
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>{step1Errors.email}</span>
+                        </motion.div>
+                      )}
+                      {emailErrorMsg && !step1Errors.email && (
+                        <motion.div
+                          key="validation-error"
+                          initial={{ opacity: 0, height: 0, y: -6 }}
+                          animate={{ opacity: 1, height: "auto", y: 0 }}
+                          exit={{ opacity: 0, height: 0, y: -6 }}
+                          transition={{ duration: 0.2 }}
+                          className="text-xs font-semibold text-rose-600 flex items-center gap-1.5 mt-1"
+                        >
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>{emailErrorMsg}</span>
+                        </motion.div>
+                      )}
+                      {emailDuplicateError && !step1Errors.email && (
+                        <motion.div
+                          key="duplicate-error"
+                          initial={{ opacity: 0, height: 0, y: -6 }}
+                          animate={{ opacity: 1, height: "auto", y: 0 }}
+                          exit={{ opacity: 0, height: 0, y: -6 }}
+                          transition={{ duration: 0.2 }}
+                          className="text-xs font-semibold text-rose-600 flex items-center gap-1.5 mt-1"
+                        >
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>{emailDuplicateError}</span>
+                        </motion.div>
+                      )}
+                      {emailStatusMsg && !emailOtpVerified && !step1Errors.email && !emailErrorMsg && (
+                        <motion.div
+                          key="status-msg"
+                          initial={{ opacity: 0, height: 0, y: -6 }}
+                          animate={{ opacity: 1, height: "auto", y: 0 }}
+                          exit={{ opacity: 0, height: 0, y: -6 }}
+                          transition={{ duration: 0.2 }}
+                          className="text-xs text-emerald-600 flex items-center gap-1.5 font-medium mt-1"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                          <span>{emailStatusMsg}</span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* 6-Digit Email OTP Box — COMPLETELY HIDDEN initially until validation + send succeeds */}
+                    <AnimatePresence>
+                      {emailOtpSent && !emailOtpVerified && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0, y: -8 }}
+                          animate={{ opacity: 1, height: "auto", y: 0 }}
+                          exit={{ opacity: 0, height: 0, y: -8 }}
+                          transition={{ duration: 0.3, ease: "easeOut" }}
+                          className="mt-3 p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl space-y-3 shadow-xs"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                              <span>📩</span>
+                              <span>Verification code sent! Enter the 6-digit code:</span>
+                            </span>
+                            {emailCountdown > 0 ? (
+                              <span className="text-[11px] text-slate-500 font-medium">
+                                Resend in <strong className="text-blue-600 font-mono">{emailCountdown}s</strong>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={handleSendEmailOtp}
+                                disabled={isSendingEmailOtp}
+                                className="text-[11px] text-blue-600 font-bold hover:underline cursor-pointer"
+                              >
+                                Resend code
+                              </button>
+                            )}
+                          </div>
+
+                          {/* 6 Individual Digit Boxes */}
+                          <div className="flex items-center justify-center gap-2 sm:gap-2.5">
+                            {emailOtp.map((digit, index) => (
+                              <input
+                                key={index}
+                                ref={(el) => {
+                                  emailOtpInputs.current[index] = el;
+                                }}
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={1}
+                                value={digit}
+                                onChange={(e) => handleEmailOtpDigitChange(index, e.target.value)}
+                                onKeyDown={(e) => handleEmailOtpKeyDown(index, e)}
+                                onPaste={handleEmailOtpPaste}
+                                className={`w-10 h-12 text-center text-lg font-black rounded-xl border ${
+                                  emailOtpWrong
+                                    ? "border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20 text-rose-900"
+                                    : "border-slate-300 bg-white text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
+                                } focus:outline-hidden transition shadow-2xs`}
+                              />
+                            ))}
+                          </div>
+
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="text-[11px] text-slate-500 font-medium">
+                              ⏱️ Valid for 5 minutes only
+                            </span>
                             <button
                               type="button"
-                              onClick={handleSendEmailOtp}
-                              className="text-[10px] text-emerald-700 hover:underline font-bold"
+                              onClick={handleVerifyEmailOtp}
+                              disabled={isVerifyingEmailOtp || emailOtp.some((d) => !d)}
+                              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 flex items-center gap-1.5 shadow-xs cursor-pointer"
                             >
-                              Resend Code
+                              {isVerifyingEmailOtp ? (
+                                <>
+                                  <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                  <span>Verifying...</span>
+                                </>
+                              ) : (
+                                <span>Verify Code</span>
+                              )}
                             </button>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            maxLength={6}
-                            placeholder="Enter 6-digit OTP"
-                            value={emailOtpInput}
-                            onChange={(e) => setEmailOtpInput(e.target.value.replace(/\D/g, ""))}
-                            className="w-40 bg-white border border-emerald-300 rounded-lg px-3 py-1.5 text-xs font-mono font-bold tracking-widest text-center focus:ring-2 focus:ring-emerald-600"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleVerifyEmailOtp}
-                            disabled={isVerifyingEmailOtp || emailOtpInput.trim().length !== 6}
-                            className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 cursor-pointer"
-                          >
-                            {isVerifyingEmailOtp ? "Verifying..." : "Confirm OTP"}
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   {/* Password & Confirm Password */}

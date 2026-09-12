@@ -325,7 +325,9 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                         setEmailError(check.error || null);
                       }
                     }}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] focus:bg-white transition shadow-xs font-medium"
+                    className={`w-full pl-10 pr-4 py-3 bg-slate-50 border ${
+                      emailError ? "border-rose-500 bg-rose-50/20 text-rose-900" : "border-slate-300 text-slate-900"
+                    } rounded-xl text-xs sm:text-sm placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] focus:bg-white transition shadow-xs font-medium`}
                   />
                 </div>
               </FormField>

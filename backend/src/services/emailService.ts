@@ -1,4 +1,6 @@
 import nodemailer from "nodemailer";
+import { sendBrevoOtpEmail } from "./brevoEmailService";
+import { sendEmailJsOtp } from "./emailJsService";
 
 let testAccountPromise: Promise<any> | null = null;
 
@@ -49,23 +51,67 @@ async function getTransporter() {
 
 export interface SendEmailResult {
   success: boolean;
+  provider?: "brevo" | "emailjs" | "smtp";
   messageId?: string;
   previewUrl?: string | false;
+  message?: string;
   error?: string;
 }
 
+/**
+ * Robust Multi-Provider Email Dispatch Hierarchy
+ * Priority 1: Brevo Transactional Email API (if configured)
+ * Priority 2: EmailJS Server-Side REST API (if configured)
+ * Priority 3: Nodemailer SMTP
+ */
 export async function sendOtpEmail(
   toEmail: string,
   otpCode: string,
-  purpose: "LOGIN" | "FORGOT_PASSWORD" | "VERIFY_ACCOUNT" | string = "LOGIN"
+  purpose: "LOGIN" | "FORGOT_PASSWORD" | "VERIFY_ACCOUNT" | "REGISTER" | string = "LOGIN",
+  recipientName?: string
 ): Promise<SendEmailResult> {
+  const cleanEmail = toEmail.trim().toLowerCase();
+
+  // 1. Try Brevo First
+  try {
+    const brevoRes = await sendBrevoOtpEmail(cleanEmail, otpCode, recipientName, purpose);
+    if (brevoRes.success) {
+      console.log(`[EMAIL DISPATCH] Dispatched via Brevo to ${cleanEmail}`);
+      return {
+        success: true,
+        provider: "brevo",
+        messageId: brevoRes.messageId,
+        message: "Verification code sent via Brevo."
+      };
+    }
+  } catch (brevoErr) {
+    console.warn("[EMAIL DISPATCH] Brevo attempt failed, falling back:", (brevoErr as any)?.message);
+  }
+
+  // 2. Try EmailJS Server REST API
+  try {
+    const emailJsRes = await sendEmailJsOtp(cleanEmail, otpCode, recipientName, purpose);
+    if (emailJsRes.success) {
+      console.log(`[EMAIL DISPATCH] Dispatched via EmailJS to ${cleanEmail}`);
+      return {
+        success: true,
+        provider: "emailjs",
+        message: emailJsRes.message || "Verification code sent via EmailJS."
+      };
+    }
+  } catch (emailJsErr) {
+    console.warn("[EMAIL DISPATCH] EmailJS attempt failed, falling back:", (emailJsErr as any)?.message);
+  }
+
+  // 3. Try Nodemailer SMTP
   try {
     const transporter = await getTransporter();
 
     const titleMap: Record<string, string> = {
       LOGIN: "One-Time Password (OTP) for COOPNEX Sign-In",
       FORGOT_PASSWORD: "Password Reset Verification Code - COOPNEX",
-      VERIFY_ACCOUNT: "Account Verification OTP - COOPNEX"
+      VERIFY_ACCOUNT: "Account Verification OTP - COOPNEX",
+      REGISTER: "Account Verification OTP - COOPNEX"
     };
 
     const subject = titleMap[purpose] || "COOPNEX Security Verification Code";
@@ -73,71 +119,53 @@ export async function sendOtpEmail(
     const htmlContent = `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
         <div style="background: linear-gradient(135deg, #0A66C2 0%, #059669 100%); padding: 28px 24px; text-align: center;">
-          <div style="display: inline-block; background-color: rgba(255, 255, 255, 0.15); border-radius: 50%; padding: 12px; margin-bottom: 12px;">
-            <span style="font-size: 32px;">🤝</span>
-          </div>
-          <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px;">COOPNEX</h1>
+          <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700;">COOPNEX</h1>
           <p style="color: #bfdbfe; margin: 6px 0 0; font-size: 13px;">People. Skills. Cooperatives. Connected.</p>
         </div>
-        
         <div style="padding: 32px 28px; background-color: #ffffff;">
           <h2 style="color: #0f172a; margin-top: 0; font-size: 20px; font-weight: 600;">Security Verification Code</h2>
           <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 12px 0 24px;">
-            We received a request for <strong>${purpose.replace(/_/g, " ")}</strong> associated with your registered email address <strong>${toEmail}</strong>.
+            We received a request for <strong>${purpose.replace(/_/g, " ")}</strong> associated with your registered email address <strong>${cleanEmail}</strong>.
           </p>
-
           <div style="background: #f8fafc; border: 2px dashed #0A66C2; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
-            <p style="color: #64748b; font-size: 13px; text-transform: uppercase; font-weight: 600; letter-spacing: 1.5px; margin: 0 0 8px;">Your 6-Digit One-Time Code</p>
+            <p style="color: #64748b; font-size: 13px; text-transform: uppercase; font-weight: 600; margin: 0 0 8px;">Your 6-Digit One-Time Code</p>
             <div style="font-size: 40px; font-weight: 800; letter-spacing: 8px; color: #0A66C2; font-family: monospace;">${otpCode}</div>
-            <p style="color: #ef4444; font-size: 13px; margin: 12px 0 0; font-weight: 500;">⏱️ Valid for 5 minutes only. Do not share this code with anyone.</p>
+            <p style="color: #ef4444; font-size: 13px; margin: 12px 0 0; font-weight: 500;">⏱️ Valid for 5 minutes only. Do not share this code.</p>
           </div>
-
-          <div style="background-color: #eff6ff; border-left: 4px solid #0A66C2; padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 24px;">
-            <p style="margin: 0; color: #1e40af; font-size: 13px; line-height: 1.5;">
-              <strong>National Security Note:</strong> COOPNEX officials will never ask for your OTP, password, or Aadhaar details over a phone call or SMS.
-            </p>
-          </div>
-
           <p style="color: #64748b; font-size: 13px; line-height: 1.5; margin: 0;">
-            If you did not initiate this request, you can safely disregard this email. Your account remains protected.
+            If you did not initiate this request, you can safely disregard this email.
           </p>
         </div>
-
         <div style="background-color: #f1f5f9; padding: 20px 28px; text-align: center; border-top: 1px solid #e2e8f0;">
-          <p style="color: #64748b; font-size: 12px; margin: 0 0 4px;">
-            © ${new Date().getFullYear()} Sahakari Seva Portal • Ministry of Cooperation, Government of India
-          </p>
-          <p style="color: #94a3b8; font-size: 11px; margin: 0;">
-            This is an automated system notification. Please do not reply directly to this email.
+          <p style="color: #64748b; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} COOPNEX Portal • Ministry of Cooperation, Government of India
           </p>
         </div>
       </div>
     `;
 
     const info = await transporter.sendMail({
-      from: process.env.SMTP_FROM || '"Sahakari Seva Auth" <no-reply@sahakariseva.gov.in>',
-      to: toEmail,
+      from: process.env.SMTP_FROM || '"COOPNEX Verification" <no-reply@coopnex.org>',
+      to: cleanEmail,
       subject,
-      text: `Your Sahakari Seva OTP code for ${purpose} is: ${otpCode}. Valid for 5 minutes. Do not share this code.`,
+      text: `Your COOPNEX OTP code for ${purpose} is: ${otpCode}. Valid for 5 minutes. Do not share this code.`,
       html: htmlContent
     });
 
     const previewUrl = nodemailer.getTestMessageUrl(info);
-    console.log(`[EMAIL SERVICE] OTP email dispatched to ${toEmail}. Message ID: ${info.messageId}`);
-    if (previewUrl) {
-      console.log(`[EMAIL SERVICE] Live Test Inbox Preview URL: ${previewUrl}`);
-    }
+    console.log(`[EMAIL DISPATCH] Dispatched via SMTP to ${cleanEmail}. ID: ${info.messageId}`);
 
     return {
       success: true,
+      provider: "smtp",
       messageId: info.messageId,
       previewUrl
     };
-  } catch (error: any) {
-    console.error("[EMAIL SERVICE ERROR] Failed to send email:", error);
+  } catch (smtpErr: any) {
+    console.error("[EMAIL DISPATCH ERROR] All dispatch channels failed:", smtpErr?.message);
     return {
       success: false,
-      error: error.message
+      error: smtpErr?.message || "Failed to dispatch email via all configured channels"
     };
   }
 }
