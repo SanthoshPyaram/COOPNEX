@@ -3,7 +3,6 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
 import { WorkerProfile, Booking } from "../types";
-import { getPanIndiaWorkerProfiles } from "../data/indiaLocations";
 import { VerificationBadge } from "../components/VerificationBadge";
 import { FairWageBreakdownCard } from "../components/FairWageBreakdownCard";
 import { resolveWorkerAvatar } from "../utils/workerAvatar";
@@ -36,9 +35,7 @@ export const ServicesPage: React.FC = () => {
   const [selectedService, setSelectedService] = useState(initialService);
   const [searchQuery, setSearchQuery] = useState("");
   const [minRating, setMinRating] = useState<number>(0);
-  const [workers, setWorkers] = useState<WorkerProfile[]>(() =>
-    getPanIndiaWorkerProfiles("Vijayawada", "NTR District", "Andhra Pradesh", currentPincode, initialService)
-  );
+  const [workers, setWorkers] = useState<WorkerProfile[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Auth Gating Modal State
@@ -68,16 +65,14 @@ export const ServicesPage: React.FC = () => {
         pincode: currentPincode,
         minRating: minRating > 0 ? minRating : undefined
       });
-      if (data && data.length > 0) {
+      if (data && Array.isArray(data)) {
         setWorkers(data);
       } else {
-        const pan = getPanIndiaWorkerProfiles("Vijayawada", "NTR District", "Andhra Pradesh", currentPincode, selectedService);
-        setWorkers(pan);
+        setWorkers([]);
       }
     } catch (err) {
       console.error(err);
-      const pan = getPanIndiaWorkerProfiles("Vijayawada", "NTR District", "Andhra Pradesh", currentPincode, selectedService);
-      setWorkers(pan);
+      setWorkers([]);
     } finally {
       setLoading(false);
     }

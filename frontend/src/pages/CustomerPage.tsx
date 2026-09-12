@@ -4,7 +4,6 @@ import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { api } from "../services/api";
 import { WorkerProfile, Booking, FairWageBreakdown } from "../types";
-import { getPanIndiaWorkerProfiles } from "../data/indiaLocations";
 import { VerificationBadge } from "../components/VerificationBadge";
 import { FairWageBreakdownCard } from "../components/FairWageBreakdownCard";
 import { WhyThisWorkerModal } from "../components/WhyThisWorkerModal";
@@ -43,9 +42,7 @@ export const CustomerPage: React.FC = () => {
   const [verifiedOnly, setVerifiedOnly] = useState(false);
 
   // Data State
-  const [workers, setWorkers] = useState<WorkerProfile[]>(() =>
-    getPanIndiaWorkerProfiles("Vijayawada", "NTR District", "Andhra Pradesh", currentPincode, initialService)
-  );
+  const [workers, setWorkers] = useState<WorkerProfile[]>([]);
   const [myBookings, setMyBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -85,16 +82,14 @@ export const CustomerPage: React.FC = () => {
         minRating: minRating > 0 ? minRating : undefined,
         verificationLevel: verifiedOnly ? 4 : undefined
       });
-      if (data && data.length > 0) {
+      if (data && Array.isArray(data)) {
         setWorkers(data);
       } else {
-        const pan = getPanIndiaWorkerProfiles("Vijayawada", "NTR District", "Andhra Pradesh", currentPincode, selectedService);
-        setWorkers(pan);
+        setWorkers([]);
       }
     } catch (err) {
       console.error(err);
-      const pan = getPanIndiaWorkerProfiles("Vijayawada", "NTR District", "Andhra Pradesh", currentPincode, selectedService);
-      setWorkers(pan);
+      setWorkers([]);
     } finally {
       setLoading(false);
     }

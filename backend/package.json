@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "seed": "tsx src/scripts/seed.ts",
+    "db:reset": "tsx src/scripts/reset-coopnex-data.ts",
     "migrate": "tsx src/scripts/migrateToAtlas.ts",
     "test": "vitest run"
   },
