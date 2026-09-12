@@ -285,7 +285,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const cleanEmail = identifier.trim().toLowerCase();
       if (!cleanEmail || !cleanEmail.includes("@")) {
-        return { success: false, message: "Please enter a valid email address." };
+        return { success: false, message: "❌ Please enter a valid email address. 📧" };
+      }
+
+      // STAGE 2 — Email Existence Check: For registration, reject if already exists
+      if (purpose === "REGISTER") {
+        try {
+          const chkRes = await fetch(`${API_BASE}/auth/check-email?email=${encodeURIComponent(cleanEmail)}`);
+          const chkData = await chkRes.json();
+          if (chkData && chkData.success && chkData.exists) {
+            return {
+              success: false,
+              message: "❌ This email is already registered. Please sign in or use another email. 📧"
+            };
+          }
+        } catch (chkErr) {
+          console.warn("Pre-registration email check warning:", chkErr);
+        }
       }
 
       // Generate cryptographically secure 6-digit numeric OTP using Web Crypto API
@@ -326,7 +342,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!status.isConfigured && !emailJsConfig.serviceId) {
         return {
           success: false,
-          message: status.errorMessage || "Email service is not configured. Please check your settings."
+          message: status.errorMessage || "❌ We couldn't send the OTP. Please check the email and try again. 📩"
         };
       }
 
@@ -353,13 +369,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error("EmailJS dispatch error:", emailErr);
         return {
           success: false,
-          message: "Failed to dispatch verification email via EmailJS. Please ensure the email address is valid."
+          message: "❌ We couldn't send the OTP. Please check the email and try again. 📩"
         };
       }
 
       return {
         success: true,
-        message: "Verification code dispatched to your email address. Valid for 5 minutes.",
+        message: "✅ OTP sent successfully to your email. 📩",
         emailDispatched: true
       };
     } catch (err: any) {
@@ -447,11 +463,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const forgotPasswordSendOtp = async (identifier: string): Promise<{ success: boolean; message?: string; otpCode?: string; retryAfterSeconds?: number }> => {
+  const forgotPasswordSendOtp = async (identifier: string): Promise<{ success: boolean; message?: string; otpCode?: string; retryAfterSeconds?: number; notRegistered?: boolean }> => {
     try {
       const cleanEmail = identifier.trim().toLowerCase();
       if (!cleanEmail || !cleanEmail.includes("@")) {
-        return { success: false, message: "Please enter a valid email address." };
+        return { success: false, message: "❌ Please enter a valid email address. 📧" };
+      }
+
+      // STAGE 2 — Email Existence Check: Must be registered in COOPNEX database
+      try {
+        const chkRes = await fetch(`${API_BASE}/auth/check-email?email=${encodeURIComponent(cleanEmail)}`);
+        const chkData = await chkRes.json();
+        if (chkData && chkData.success && !chkData.exists) {
+          return {
+            success: false,
+            notRegistered: true,
+            message: "❌ This email is not registered. Please use a registered email address. 📧"
+          };
+        }
+      } catch (chkErr) {
+        console.warn("Pre-check error:", chkErr);
       }
 
       const array = new Uint32Array(1);
@@ -489,7 +520,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!status.isResetConfigured && !emailJsConfig.serviceId) {
         return {
           success: false,
-          message: status.errorMessage || "Email service is not configured. Please check your settings."
+          message: status.errorMessage || "❌ We couldn't send the OTP. Please check the email and try again. 📩"
         };
       }
 
@@ -516,13 +547,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error("EmailJS reset dispatch error:", emailErr);
         return {
           success: false,
-          message: "Failed to dispatch reset email via EmailJS. Please verify your email address."
+          message: "❌ We couldn't send the OTP. Please check the email and try again. 📩"
         };
       }
 
       return {
         success: true,
-        message: "Password reset verification code dispatched to your email. Valid for 5 minutes."
+        message: "✅ OTP sent successfully to your email. 📩",
+        otpCode
       };
     } catch (err: any) {
       return { success: false, message: "Unable to connect to password reset service. Please try again." };

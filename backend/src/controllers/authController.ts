@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { User } from "../models/User";
 import { Worker } from "../models/Worker";
+import { Admin } from "../models/Admin";
 import { Otp } from "../models/Otp";
 import { USER_ROLES, UserRole } from "../config/constants";
 import { AuthenticatedRequest } from "../middleware/auth";
@@ -43,10 +44,12 @@ export const checkEmail = async (req: Request, res: Response): Promise<void> => 
     }
     const existingUser = await User.findOne({ email: rawEmail });
     const existingWorker = existingUser ? null : await Worker.findOne({ email: rawEmail });
+    const existingAdmin = (existingUser || existingWorker) ? null : await Admin.findOne({ email: rawEmail });
+    const exists = Boolean(existingUser || existingWorker || existingAdmin);
     res.json({
       success: true,
-      exists: Boolean(existingUser || existingWorker),
-      message: existingUser || existingWorker ? "Email already exists. Please use another email." : "Email is available."
+      exists,
+      message: exists ? "Email already exists. Please use another email." : "Email is available."
     });
   } catch (error: any) {
     res.status(500).json({ success: false, message: "Error checking email availability." });
@@ -144,6 +147,54 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         message: "Missing required fields (Name, Email, Password)."
       });
       return;
+    }
+
+    // Name Validation: Letters only, single spaces, optional dots
+    if (/\d/.test(resolvedName) || !/^[A-Za-z]+(?:[ .'-][A-Za-z]+)*[.]?$/.test(resolvedName)) {
+      res.status(400).json({
+        success: false,
+        message: "❌ Please enter a valid name using letters only. 👤"
+      });
+      return;
+    }
+
+    // Age Validation: Integer between 1 and 120
+    if (age !== undefined && age !== null && age !== "") {
+      const parsedAge = Number(age);
+      if (!Number.isInteger(parsedAge) || parsedAge < 1 || parsedAge > 120) {
+        res.status(400).json({
+          success: false,
+          message: "❌ Please enter a valid age between 1 and 120. 🎂"
+        });
+        return;
+      }
+    }
+
+    // Password Complexity: min 8, uppercase, lowercase, number, special char
+    const pStr = String(password);
+    const hasMin8 = pStr.length >= 8;
+    const hasUpper = /[A-Z]/.test(pStr);
+    const hasLower = /[a-z]/.test(pStr);
+    const hasNumber = /[0-9]/.test(pStr);
+    const hasSpecial = /[^A-Za-z0-9]/.test(pStr);
+    if (!hasMin8 || !hasUpper || !hasLower || !hasNumber || !hasSpecial) {
+      res.status(400).json({
+        success: false,
+        message: "❌ Password must contain at least 8 characters, including uppercase, lowercase, number and special character. 🔐"
+      });
+      return;
+    }
+
+    // Phone Validation: 10 digits
+    if (phone) {
+      const cleanPhone = String(phone).replace(/\D/g, "").slice(-10);
+      if (cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+        res.status(400).json({
+          success: false,
+          message: "❌ Please enter a valid 10-digit mobile number. 📱"
+        });
+        return;
+      }
     }
 
     // Require email to have been marked verified

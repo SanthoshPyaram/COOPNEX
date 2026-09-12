@@ -37,6 +37,17 @@ import {
   Eye,
   EyeOff
 } from "lucide-react";
+import { FormField } from "../components/common/FormField";
+import { PasswordRequirements } from "../components/common/PasswordRequirements";
+import {
+  validateName,
+  validateAge,
+  validateEmailFormat,
+  validatePassword,
+  validateConfirmPassword,
+  validatePhone,
+  validateRequired
+} from "../utils/validation";
 import { WorkerSmartIdCard } from "../components/WorkerSmartIdCard";
 import { LanguageDropdown } from "../components/LanguageDropdown";
 import {
@@ -81,6 +92,18 @@ export const WorkerOnboardingPage: React.FC = () => {
   const [age, setAge] = useState(searchParams.get("age") || "");
   const [district, setDistrict] = useState("");
   const [address, setAddress] = useState("");
+
+  const [step1Errors, setStep1Errors] = useState<{
+    name?: string;
+    gender?: string;
+    phone?: string;
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+    age?: string;
+    district?: string;
+    address?: string;
+  }>({});
 
   // Blood Group & Multi-Language Selection for Smart ID
   const paramLangs = searchParams.get("languages")
@@ -446,20 +469,35 @@ export const WorkerOnboardingPage: React.FC = () => {
   const handleNext = () => {
     setError(null);
     if (step === 1) {
-      if (!name.trim() || !address.trim()) {
-        setError("Please fill in your full legal name and residential address.");
+      const nameCheck = validateName(name);
+      const genderCheck = validateRequired(gender, "Gender");
+      const phoneCheck = phone ? validatePhone(phone) : { isValid: true, error: undefined };
+      const emailCheck = validateEmailFormat(email);
+      const passCheck = validatePassword(password);
+      const confirmCheck = validateConfirmPassword(password, confirmPassword);
+      const ageCheck = validateAge(age, 18, 90);
+      const districtCheck = validateRequired(district, "District");
+      const addressCheck = validateRequired(address, "Residential Address");
+
+      const errors: typeof step1Errors = {};
+      if (!nameCheck.isValid) errors.name = nameCheck.error;
+      if (!genderCheck.isValid) errors.gender = genderCheck.error;
+      if (!phoneCheck.isValid) errors.phone = phoneCheck.error;
+      if (!emailCheck.isValid) errors.email = emailCheck.error;
+      if (!passCheck.isValid) errors.password = passCheck.error;
+      if (!confirmCheck.isValid) errors.confirmPassword = confirmCheck.error;
+      if (!ageCheck.isValid) errors.age = ageCheck.error;
+      if (!districtCheck.isValid) errors.district = districtCheck.error;
+      if (!addressCheck.isValid) errors.address = addressCheck.error;
+
+      if (Object.keys(errors).length > 0) {
+        setStep1Errors(errors);
+        setError("Please correct the highlighted form errors before continuing.");
         return;
       }
+
       if (!emailOtpVerified) {
-        setError("Email verification is required. Please verify your email address.");
-        return;
-      }
-      if (!password || password.length < 8) {
-        setError("Please set a secure password with at least 8 characters.");
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError("Passwords do not match. Please re-enter.");
+        setError("Email verification is required. Please verify your email address with the 6-digit OTP.");
         return;
       }
     }
@@ -778,26 +816,48 @@ export const WorkerOnboardingPage: React.FC = () => {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Full Legal Name (as on Aadhaar) *
-                      </label>
+                    <FormField
+                      id="worker-onboarding-name"
+                      label="Full Legal Name (as on Aadhaar)"
+                      required
+                      error={step1Errors.name}
+                    >
                       <input
+                        id="worker-onboarding-name"
                         type="text"
                         placeholder="e.g. Rajesh Kumar"
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setName(val);
+                          setError(null);
+                          const check = validateName(val);
+                          setStep1Errors((prev) => ({ ...prev, name: check.error }));
+                        }}
+                        onBlur={() => {
+                          const check = validateName(name);
+                          setStep1Errors((prev) => ({ ...prev, name: check.error }));
+                        }}
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                       />
-                    </div>
+                    </FormField>
 
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Gender *
-                      </label>
+                    <FormField
+                      id="worker-onboarding-gender"
+                      label="Gender"
+                      required
+                      error={step1Errors.gender}
+                    >
                       <select
+                        id="worker-onboarding-gender"
                         value={gender}
-                        onChange={(e) => setGender(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setGender(val);
+                          setError(null);
+                          const check = validateRequired(val, "Gender");
+                          setStep1Errors((prev) => ({ ...prev, gender: check.error }));
+                        }}
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                       >
                         <option value="">Select Gender</option>
@@ -805,122 +865,121 @@ export const WorkerOnboardingPage: React.FC = () => {
                         <option value="Female">Female</option>
                         <option value="Other">Other</option>
                       </select>
-                    </div>
+                    </FormField>
                   </div>
 
                   {/* Optional Contact Phone Number */}
                   <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-2">
-                    <label className="block text-xs font-bold text-slate-800">
-                      Contact Phone Number (Optional)
-                    </label>
-                    <div className="relative">
-                      <div className="absolute left-3.5 top-2.5 text-xs font-bold text-slate-500">
-                        +91
+                    <FormField
+                      id="worker-onboarding-phone"
+                      label="Contact Phone Number (Optional)"
+                      error={step1Errors.phone}
+                    >
+                      <div className="relative">
+                        <div className="absolute left-3.5 top-2.5 text-xs font-bold text-slate-500">
+                          +91
+                        </div>
+                        <input
+                          id="worker-onboarding-phone"
+                          type="tel"
+                          maxLength={10}
+                          placeholder="9876543210"
+                          value={phone}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, "");
+                            setPhone(val);
+                            setError(null);
+                            if (val.length > 0) {
+                              const check = validatePhone(val);
+                              setStep1Errors((prev) => ({ ...prev, phone: check.error }));
+                            } else {
+                              setStep1Errors((prev) => ({ ...prev, phone: undefined }));
+                            }
+                          }}
+                          className="w-full bg-white border border-slate-300 rounded-xl pl-12 pr-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
+                        />
                       </div>
-                      <input
-                        type="tel"
-                        maxLength={10}
-                        placeholder="9876543210"
-                        value={phone}
-                        onChange={(e) => {
-                          setPhone(e.target.value.replace(/\D/g, ""));
-                          setError(null);
-                        }}
-                        className="w-full bg-white border border-slate-300 rounded-xl pl-12 pr-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
-                      />
-                    </div>
+                    </FormField>
                   </div>
 
                   {/* Email + Real EmailJS OTP Verification */}
                   <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-xs font-bold text-slate-800">
-                        Email Address *
-                      </label>
-                      {emailOtpVerified ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/70 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Email Verified
-                          </span>
+                    <FormField
+                      id="worker-onboarding-email"
+                      label="Email Address"
+                      required
+                      error={step1Errors.email}
+                    >
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <div className="relative flex-1">
+                          <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
+                          <input
+                            id="worker-onboarding-email"
+                            type="email"
+                            placeholder="rajesh.kumar@example.com"
+                            value={email}
+                            onChange={(e) => {
+                              const newEmail = e.target.value;
+                              setEmail(newEmail);
+                              if (emailOtpVerified || emailOtpSent) {
+                                setEmailOtpVerified(false);
+                                setEmailOtpSent(false);
+                                setEmailOtpInput("");
+                                setEmailStatusMsg("Email changed — please verify again.");
+                              }
+                              setError(null);
+                              const check = validateEmailFormat(newEmail);
+                              setStep1Errors((prev) => ({ ...prev, email: check.error }));
+                            }}
+                            onBlur={() => {
+                              const check = validateEmailFormat(email);
+                              setStep1Errors((prev) => ({ ...prev, email: check.error }));
+                            }}
+                            className={`w-full bg-white border ${
+                              emailOtpVerified ? "border-emerald-500 bg-emerald-50/20" : "border-slate-300"
+                            } rounded-xl pl-10 pr-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600`}
+                          />
+                        </div>
+                        {!emailOtpVerified ? (
                           <button
                             type="button"
-                            onClick={() => {
-                              setEmailOtpVerified(false);
-                              setEmailOtpSent(false);
-                            }}
-                            className="text-[11px] text-blue-600 hover:underline font-bold cursor-pointer"
-                          >
-                            Change
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-[10px] font-semibold text-amber-700 bg-amber-100/60 px-2 py-0.5 rounded-full">
-                          Email OTP Required
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <div className="relative flex-1">
-                        <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
-                        <input
-                          type="email"
-                          placeholder="rajesh.kumar@example.com"
-                          value={email}
-                          onChange={(e) => {
-                            const newEmail = e.target.value;
-                            setEmail(newEmail);
-                            if (emailOtpVerified || emailOtpSent) {
-                              setEmailOtpVerified(false);
-                              setEmailOtpSent(false);
-                              setEmailOtpInput("");
-                              setEmailStatusMsg("Email changed — please verify again.");
+                            onClick={handleSendEmailOtp}
+                            disabled={
+                              isSendingEmailOtp ||
+                              emailOtpJustSent ||
+                              (emailOtpSent && emailCountdown > 0) ||
+                              !email.includes("@")
                             }
-                            setError(null);
-                          }}
-                          className={`w-full bg-white border ${
-                            emailOtpVerified ? "border-emerald-500 bg-emerald-50/20" : "border-slate-300"
-                          } rounded-xl pl-10 pr-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600`}
-                        />
+                            className={`px-4 py-2 text-white text-xs font-bold rounded-xl transition shrink-0 shadow-xs cursor-pointer disabled:opacity-50 ${
+                              emailOtpJustSent
+                                ? "bg-emerald-600 cursor-default"
+                                : "bg-blue-600 hover:bg-blue-700"
+                            }`}
+                          >
+                            {isSendingEmailOtp ? (
+                              <span className="flex items-center gap-1.5">
+                                <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                <span>Sending...</span>
+                              </span>
+                            ) : emailOtpJustSent ? (
+                              <span className="flex items-center gap-1">
+                                <Check className="w-3 h-3 stroke-[3]" />
+                                <span>OTP Sent</span>
+                              </span>
+                            ) : emailOtpSent ? (
+                              emailCountdown > 0 ? `Resend OTP in ${emailCountdown}s` : "Resend OTP"
+                            ) : (
+                              "Verify"
+                            )}
+                          </button>
+                        ) : (
+                          <div className="px-3 py-2 bg-emerald-50 border border-emerald-300 text-emerald-700 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0">
+                            <Check className="w-4 h-4 text-emerald-600 stroke-[3]" />
+                            <span>✓ Verified</span>
+                          </div>
+                        )}
                       </div>
-                      {!emailOtpVerified ? (
-                        <button
-                          type="button"
-                          onClick={handleSendEmailOtp}
-                          disabled={
-                            isSendingEmailOtp ||
-                            emailOtpJustSent ||
-                            (emailOtpSent && emailCountdown > 0) ||
-                            !email.includes("@")
-                          }
-                          className={`px-4 py-2 text-white text-xs font-bold rounded-xl transition shrink-0 shadow-xs cursor-pointer disabled:opacity-50 ${
-                            emailOtpJustSent
-                              ? "bg-emerald-600 cursor-default"
-                              : "bg-blue-600 hover:bg-blue-700"
-                          }`}
-                        >
-                          {isSendingEmailOtp ? (
-                            <span className="flex items-center gap-1.5">
-                              <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              <span>Sending...</span>
-                            </span>
-                          ) : emailOtpJustSent ? (
-                            <span className="flex items-center gap-1">
-                              <Check className="w-3 h-3 stroke-[3]" />
-                              <span>OTP Sent</span>
-                            </span>
-                          ) : emailOtpSent ? (
-                            emailCountdown > 0 ? `Resend OTP in ${emailCountdown}s` : "Resend OTP"
-                          ) : (
-                            "Verify"
-                          )}
-                        </button>
-                      ) : (
-                        <div className="px-3 py-2 bg-emerald-50 border border-emerald-300 text-emerald-700 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0">
-                          <Check className="w-4 h-4 text-emerald-600 stroke-[3]" />
-                          <span>✓ Verified</span>
-                        </div>
-                      )}
-                    </div>
+                    </FormField>
 
                     {emailStatusMsg && !emailOtpVerified && (
                       <p className="text-[11px] text-emerald-700 flex items-center gap-1">
@@ -979,18 +1038,31 @@ export const WorkerOnboardingPage: React.FC = () => {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                          Password (Min 8 characters) *
-                        </label>
+                      <FormField
+                        id="worker-onboarding-password"
+                        label="Password (Min 8 characters)"
+                        required
+                        error={step1Errors.password}
+                      >
                         <div className="relative">
                           <Lock className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
                           <input
+                            id="worker-onboarding-password"
                             type={showPassword ? "text" : "password"}
                             required
                             placeholder="Enter password"
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setPassword(val);
+                              setError(null);
+                              const check = validatePassword(val);
+                              setStep1Errors((prev) => ({ ...prev, password: check.error }));
+                              if (confirmPassword) {
+                                const cCheck = validateConfirmPassword(val, confirmPassword);
+                                setStep1Errors((prev) => ({ ...prev, confirmPassword: cCheck.error }));
+                              }
+                            }}
                             className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                           />
                           <button
@@ -1001,20 +1073,29 @@ export const WorkerOnboardingPage: React.FC = () => {
                             {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                           </button>
                         </div>
-                      </div>
+                      </FormField>
 
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                          Confirm Password *
-                        </label>
+                      <FormField
+                        id="worker-onboarding-confirm-password"
+                        label="Confirm Password"
+                        required
+                        error={step1Errors.confirmPassword}
+                      >
                         <div className="relative">
                           <Lock className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
                           <input
+                            id="worker-onboarding-confirm-password"
                             type={showPassword ? "text" : "password"}
                             required
                             placeholder="Re-enter password"
                             value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setConfirmPassword(val);
+                              setError(null);
+                              const check = validateConfirmPassword(password, val);
+                              setStep1Errors((prev) => ({ ...prev, confirmPassword: check.error }));
+                            }}
                             className={`w-full bg-white border ${
                               confirmPassword && confirmPassword !== password
                                 ? "border-rose-400"
@@ -1024,32 +1105,58 @@ export const WorkerOnboardingPage: React.FC = () => {
                             } rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600`}
                           />
                         </div>
-                      </div>
+                      </FormField>
                     </div>
+
+                    {/* Dynamic 5-point Password Requirements */}
+                    {password && (
+                      <div className="p-3 bg-white border border-slate-200 rounded-2xl">
+                        <PasswordRequirements password={password} />
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Age (Years)
-                      </label>
+                    <FormField
+                      id="worker-onboarding-age"
+                      label="Age (Years)"
+                      required
+                      error={step1Errors.age}
+                    >
                       <input
+                        id="worker-onboarding-age"
                         type="number"
                         min={18}
                         max={70}
                         placeholder="e.g. 28"
                         value={age}
-                        onChange={(e) => setAge(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAge(val);
+                          setError(null);
+                          const check = validateAge(val, 18, 90);
+                          setStep1Errors((prev) => ({ ...prev, age: check.error }));
+                        }}
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                       />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        District
-                      </label>
+                    </FormField>
+
+                    <FormField
+                      id="worker-onboarding-district"
+                      label="District"
+                      required
+                      error={step1Errors.district}
+                    >
                       <select
+                        id="worker-onboarding-district"
                         value={district}
-                        onChange={(e) => setDistrict(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setDistrict(val);
+                          setError(null);
+                          const check = validateRequired(val, "District");
+                          setStep1Errors((prev) => ({ ...prev, district: check.error }));
+                        }}
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                       >
                         <option value="">Select District</option>
@@ -1058,7 +1165,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                         <option value="Visakhapatnam">Visakhapatnam</option>
                         <option value="Hyderabad">Hyderabad Central</option>
                       </select>
-                    </div>
+                    </FormField>
                   </div>
 
                   {/* Photo & Blood Group for Official Smart ID */}
@@ -1175,19 +1282,27 @@ export const WorkerOnboardingPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Residential Address / Colony *
-                    </label>
-
+                  <FormField
+                    id="worker-onboarding-address"
+                    label="Residential Address / Colony"
+                    required
+                    error={step1Errors.address}
+                  >
                     <textarea
+                      id="worker-onboarding-address"
                       rows={2}
                       placeholder="Door number, street, landmark, pincode"
                       value={address}
-                      onChange={(e) => setAddress(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setAddress(val);
+                        setError(null);
+                        const check = validateRequired(val, "Residential Address");
+                        setStep1Errors((prev) => ({ ...prev, address: check.error }));
+                      }}
                       className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
                     />
-                  </div>
+                  </FormField>
                 </div>
               )}
 
@@ -1999,13 +2114,23 @@ export const WorkerOnboardingPage: React.FC = () => {
                       type="button"
                       onClick={handleNext}
                       disabled={
-                        step === 3 && (
+                        (step === 1 && (
+                          !name.trim() ||
+                          !gender ||
+                          !email.trim() ||
+                          !emailOtpVerified ||
+                          !password ||
+                          !confirmPassword ||
+                          !address.trim() ||
+                          Object.values(step1Errors).some(Boolean)
+                        )) ||
+                        (step === 3 && (
                           !aadhaarFile ||
                           !panFile ||
                           !preCheckRan ||
                           !preCheckResult ||
                           preCheckResult.status === "CHECKSUM_FAILED"
-                        )
+                        ))
                       }
                       className="btn-primary !min-h-[42px] text-xs !py-2 !px-7 disabled:opacity-50 disabled:cursor-not-allowed"
                     >

@@ -26,6 +26,17 @@ import {
   Sparkles,
   Shield
 } from "lucide-react";
+import { FormField } from "../components/common/FormField";
+import { PasswordRequirements } from "../components/common/PasswordRequirements";
+import { FormHumanCompanion } from "../components/common/FormHumanCompanion";
+import {
+  validateName,
+  validateAge,
+  validateEmailFormat,
+  validatePhone,
+  validatePincode,
+  validateConfirmPassword
+} from "../utils/validation";
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -41,11 +52,15 @@ export const RegisterPage: React.FC = () => {
   const { t } = useTranslation();
   const { registerCustomer, sendOtp, verifyOtp } = useAuth();
 
-  // Personal Details
+  // Personal Details & Field Errors
   const [firstName, setFirstName] = useState("");
+  const [firstNameError, setFirstNameError] = useState<string | null>(null);
   const [lastName, setLastName] = useState("");
+  const [lastNameError, setLastNameError] = useState<string | null>(null);
   const [gender, setGender] = useState("");
+  const [genderError, setGenderError] = useState<string | null>(null);
   const [age, setAge] = useState<string>("");
+  const [ageError, setAgeError] = useState<string | null>(null);
 
   // Phone Field & Pre-Check State
   const [phone, setPhone] = useState("");
@@ -58,6 +73,7 @@ export const RegisterPage: React.FC = () => {
 
   // Email Field & Verification State
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [emailOtpSent, setEmailOtpSent] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
   const [emailOtp, setEmailOtp] = useState(["", "", "", "", "", ""]);
@@ -72,9 +88,14 @@ export const RegisterPage: React.FC = () => {
 
   const checkPhoneAvailability = async (rawDigits: string) => {
     const cleanDigits = rawDigits.replace(/\D/g, "");
-    if (!cleanDigits) return;
-    if (cleanDigits.length < 10) {
-      setPhoneError(t("auth.phoneInvalid", "Please provide a valid 10-digit mobile number."));
+    if (!cleanDigits) {
+      setPhoneError("❌ Please enter a valid 10-digit Indian mobile number. 📱");
+      setPhoneChecked(false);
+      return;
+    }
+    const valRes = validatePhone(cleanDigits);
+    if (!valRes.isValid) {
+      setPhoneError(valRes.error || "❌ Please enter a valid phone number. 📱");
       setPhoneChecked(false);
       return;
     }
@@ -86,7 +107,7 @@ export const RegisterPage: React.FC = () => {
       setIsCheckingPhone(false);
       setPhoneChecked(true);
       if (data.exists) {
-        setPhoneDuplicateError(t("auth.phoneAlreadyRegistered", "Phone number already registered. Please use another number."));
+        setPhoneDuplicateError("❌ This phone number is already registered. 📱");
       } else {
         setPhoneDuplicateError(null);
       }
@@ -100,15 +121,20 @@ export const RegisterPage: React.FC = () => {
     const cleanDigits = phone.replace(/\D/g, "");
     if (cleanDigits.length === 10) {
       checkPhoneAvailability(cleanDigits);
+    } else if (cleanDigits.length > 0) {
+      setPhoneError("❌ Phone number must be exactly 10 digits. 📱");
     }
   };
 
   // Password & Location
   const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [pincode, setPincode] = useState("");
+  const [pincodeError, setPincodeError] = useState<string | null>(null);
   const [detectedLocation, setDetectedLocation] = useState("");
 
   // Submission State
@@ -289,21 +315,31 @@ export const RegisterPage: React.FC = () => {
     e.preventDefault();
     setFormError(null);
 
-    // Validation checks
-    if (!firstName.trim() || !lastName.trim()) {
-      setFormError("Please enter both first name and last name.");
+    // Strict human-friendly validation checks
+    const fnCheck = validateName(firstName, "First name");
+    if (!fnCheck.isValid) {
+      setFirstNameError(fnCheck.error || null);
       return;
     }
-
-    const numAge = Number(age);
-    if (isNaN(numAge) || numAge < 18 || numAge > 90) {
-      setFormError("Age must be between 18 and 90 years.");
+    const lnCheck = validateName(lastName, "Last name");
+    if (!lnCheck.isValid) {
+      setLastNameError(lnCheck.error || null);
+      return;
+    }
+    if (!gender) {
+      setGenderError("❌ Please select your gender. 👤");
+      return;
+    }
+    const ageCheck = validateAge(age, 18, 90);
+    if (!ageCheck.isValid) {
+      setAgeError(ageCheck.error || null);
       return;
     }
 
     const cleanPhoneDigits = phone.replace(/\D/g, "");
-    if (!cleanPhoneDigits || cleanPhoneDigits.length < 10) {
-      setFormError(t("auth.phoneRequired", "Phone number is required. Please provide a valid 10-digit mobile number."));
+    const phoneCheck = validatePhone(cleanPhoneDigits);
+    if (!phoneCheck.isValid) {
+      setPhoneError(phoneCheck.error || null);
       return;
     }
 
@@ -318,17 +354,24 @@ export const RegisterPage: React.FC = () => {
     }
 
     if (!emailVerified) {
-      setFormError("Please verify your email address using the 'Verify' button before creating an account.");
+      setEmailError("❌ Please verify your email address before creating an account. 📧");
       return;
     }
 
     if (password.length < 8) {
-      setFormError("Password must contain at least 8 characters.");
+      setPasswordError("❌ Password must contain at least 8 characters. 🔒");
       return;
     }
 
-    if (password !== confirmPassword) {
-      setFormError("Passwords do not match. Please re-enter.");
+    const pwMatchCheck = validateConfirmPassword(password, confirmPassword);
+    if (!pwMatchCheck.isValid) {
+      setConfirmPasswordError(pwMatchCheck.error || null);
+      return;
+    }
+
+    const pinCheck = validatePincode(pincode);
+    if (!pinCheck.isValid) {
+      setPincodeError(pinCheck.error || null);
       return;
     }
 
@@ -339,7 +382,7 @@ export const RegisterPage: React.FC = () => {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       gender,
-      age: numAge,
+      age: Number(age),
       phone: cleanPhoneDigits.slice(-10),
       email: email.trim().toLowerCase(),
       password,
@@ -364,13 +407,39 @@ export const RegisterPage: React.FC = () => {
 
   const isFormValid =
     firstName.trim().length > 0 &&
+    !firstNameError &&
     lastName.trim().length > 0 &&
-    phone.replace(/\D/g, "").length >= 10 &&
+    !lastNameError &&
+    gender.trim().length > 0 &&
+    age.trim().length > 0 &&
+    !ageError &&
+    phone.replace(/\D/g, "").length === 10 &&
+    !phoneError &&
     !phoneDuplicateError &&
+    email.trim().length > 0 &&
+    !emailError &&
     !emailDuplicateError &&
     emailVerified &&
     password.length >= 8 &&
-    password === confirmPassword;
+    !passwordError &&
+    confirmPassword.length >= 8 &&
+    !confirmPasswordError &&
+    password === confirmPassword &&
+    pincode.length === 6 &&
+    !pincodeError;
+
+  const getCompanionState = () => {
+    if (accountCreatedUser) return "SUCCESS";
+    if (emailVerified) return "SUCCESS";
+    if (emailOtpSent) return "OTP_SENT";
+    if (firstNameError || lastNameError) return "INVALID_NAME";
+    if (emailError) return "INVALID_EMAIL";
+    if (emailDuplicateError) return "EMAIL_NOT_REGISTERED";
+    if (passwordHasMin8 && passwordHasNumber && passwordHasUpper && passwordHasSpecial) return "STRONG_PASSWORD";
+    if (isFormValid) return "VALID_FORM";
+    if (firstName || lastName || email || phone) return "TYPING";
+    return "IDLE";
+  };
 
   return (
     <AnimatedCoopBackground className="min-h-screen bg-[#FFFDF7] dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 flex flex-col justify-center transition-colors">
@@ -508,53 +577,79 @@ export const RegisterPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Global Error Banner */}
-              {formError && (
-                <div className="p-3 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 rounded-2xl text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
-                  <span>{formError}</span>
-                </div>
-              )}
+              {/* Interactive Character Companion reacting to form progress */}
+              <div className="flex justify-center pb-2">
+                <FormHumanCompanion state={getCompanionState()} />
+              </div>
 
               {/* Personal Details: First Name & Last Name */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    First Name *
-                  </label>
+                <FormField
+                  id="reg-first-name"
+                  label="First Name"
+                  required
+                  error={firstNameError}
+                >
                   <input
+                    id="reg-first-name"
                     type="text"
                     required
                     placeholder="e.g. Ramesh"
                     value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
+                    onChange={(e) => {
+                      setFirstName(e.target.value);
+                      const res = validateName(e.target.value, "First name");
+                      setFirstNameError(res.isValid ? null : (res.error || null));
+                    }}
+                    onBlur={() => {
+                      const res = validateName(firstName, "First name");
+                      setFirstNameError(res.isValid ? null : (res.error || null));
+                    }}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Last Name *
-                  </label>
+                </FormField>
+
+                <FormField
+                  id="reg-last-name"
+                  label="Last Name"
+                  required
+                  error={lastNameError}
+                >
                   <input
+                    id="reg-last-name"
                     type="text"
                     required
                     placeholder="e.g. Kumar"
                     value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
+                    onChange={(e) => {
+                      setLastName(e.target.value);
+                      const res = validateName(e.target.value, "Last name");
+                      setLastNameError(res.isValid ? null : (res.error || null));
+                    }}
+                    onBlur={() => {
+                      const res = validateName(lastName, "Last name");
+                      setLastNameError(res.isValid ? null : (res.error || null));
+                    }}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"
                   />
-                </div>
+                </FormField>
               </div>
 
               {/* Gender & Age */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Gender
-                  </label>
+                <FormField
+                  id="reg-gender"
+                  label="Gender"
+                  required
+                  error={genderError}
+                >
                   <select
+                    id="reg-gender"
                     value={gender}
-                    onChange={(e) => setGender(e.target.value)}
+                    onChange={(e) => {
+                      setGender(e.target.value);
+                      setGenderError(e.target.value ? null : "❌ Please select your gender. 👤");
+                    }}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"
                   >
                     <option value="">Select Gender</option>
@@ -563,22 +658,34 @@ export const RegisterPage: React.FC = () => {
                     <option value="Other">Other</option>
                     <option value="Prefer not to say">Prefer not to say</option>
                   </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Age (18-90) *
-                  </label>
+                </FormField>
+
+                <FormField
+                  id="reg-age"
+                  label="Age (18-90)"
+                  required
+                  error={ageError}
+                >
                   <input
+                    id="reg-age"
                     type="number"
                     min="18"
                     max="90"
                     required
                     placeholder="Enter age (e.g. 28)"
                     value={age}
-                    onChange={(e) => setAge(e.target.value)}
+                    onChange={(e) => {
+                      setAge(e.target.value);
+                      const res = validateAge(e.target.value, 18, 90);
+                      setAgeError(res.isValid ? null : (res.error || null));
+                    }}
+                    onBlur={() => {
+                      const res = validateAge(age, 18, 90);
+                      setAgeError(res.isValid ? null : (res.error || null));
+                    }}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"
                   />
-                </div>
+                </FormField>
               </div>
 
               {/* ======================================================== */}
@@ -609,7 +716,7 @@ export const RegisterPage: React.FC = () => {
                   ) : null}
                 </div>
 
-                {/* Email Input + Verify Button (Beside on desktop, stacked on mobile) */}
+                {/* Email Input + Verify Button */}
                 <div className="flex flex-col sm:flex-row gap-2">
                   <div className="relative flex-1">
                     <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -627,10 +734,19 @@ export const RegisterPage: React.FC = () => {
                           setEmailOtp(["", "", "", "", "", ""]);
                           setEmailStatusMsg("Email changed — please verify again.");
                         }
+                        const fmtRes = validateEmailFormat(newEmail);
+                        setEmailError(fmtRes.isValid ? null : (fmtRes.error || null));
                         setEmailErrorMsg(null);
+                        setEmailDuplicateError(null);
+                      }}
+                      onBlur={() => {
+                        const fmtRes = validateEmailFormat(email);
+                        setEmailError(fmtRes.isValid ? null : (fmtRes.error || null));
                       }}
                       className={`w-full bg-white dark:bg-slate-800 border ${
-                        emailVerified
+                        emailError || emailDuplicateError
+                          ? "border-rose-500 bg-rose-50/20 text-rose-900 dark:text-rose-200"
+                          : emailVerified
                           ? "border-emerald-500 bg-emerald-50/30 text-emerald-900 dark:text-emerald-200"
                           : "border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white"
                       } rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition`}
@@ -682,7 +798,16 @@ export const RegisterPage: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Email Feedback Messages */}
+                {/* Email Feedback Messages directly underneath */}
+                {emailError && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 mt-1"
+                  >
+                    <span>{emailError}</span>
+                  </motion.p>
+                )}
                 {emailStatusMsg && !emailVerified && (
                   <div className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 font-medium">
                     <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
@@ -702,7 +827,7 @@ export const RegisterPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Inline 6-Digit Email OTP Box */}
+                {/* Inline 6-Digit Email OTP Box - Hidden until EmailJS successfully dispatches */}
                 <AnimatePresence>
                   {emailOtpSent && !emailVerified && (
                     <motion.div
@@ -820,7 +945,8 @@ export const RegisterPage: React.FC = () => {
                     onChange={(e) => {
                       const clean = e.target.value.replace(/\D/g, "").slice(0, 10);
                       setPhone(clean);
-                      setPhoneError(null);
+                      const res = validatePhone(clean);
+                      setPhoneError(clean.length === 10 ? (res.isValid ? null : (res.error || null)) : null);
                       setPhoneDuplicateError(null);
                       setPhoneChecked(false);
                       if (clean.length === 10) {
@@ -838,33 +964,48 @@ export const RegisterPage: React.FC = () => {
                   />
                 </div>
                 {phoneError && (
-                  <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1 mt-1">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1 mt-1"
+                  >
                     <span>{phoneError}</span>
-                  </p>
+                  </motion.p>
                 )}
                 {phoneDuplicateError && (
-                  <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1 mt-1">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1 mt-1"
+                  >
                     <span>{phoneDuplicateError}</span>
-                  </p>
+                  </motion.p>
                 )}
               </div>
 
               {/* Password & Confirm Password */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Password (Min 8 Chars) *
-                  </label>
+                <FormField
+                  id="reg-password"
+                  label="Password (Min 8 Chars)"
+                  required
+                  error={passwordError}
+                >
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                     <input
+                      id="reg-password"
                       type={showPassword ? "text" : "password"}
                       required
                       placeholder="Create password"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (confirmPassword) {
+                          const cm = validateConfirmPassword(e.target.value, confirmPassword);
+                          setConfirmPasswordError(cm.isValid ? null : (cm.error || null));
+                        }
+                      }}
                       className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-10 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"
                     />
                     <button
@@ -875,20 +1016,31 @@ export const RegisterPage: React.FC = () => {
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                </div>
+                </FormField>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Confirm Password *
-                  </label>
+                <FormField
+                  id="reg-confirm-password"
+                  label="Confirm Password"
+                  required
+                  error={confirmPasswordError}
+                >
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                     <input
+                      id="reg-confirm-password"
                       type={showConfirmPassword ? "text" : "password"}
                       required
                       placeholder="Re-enter password"
                       value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        const cm = validateConfirmPassword(password, e.target.value);
+                        setConfirmPasswordError(cm.isValid ? null : (cm.error || null));
+                      }}
+                      onBlur={() => {
+                        const cm = validateConfirmPassword(password, confirmPassword);
+                        setConfirmPasswordError(cm.isValid ? null : (cm.error || null));
+                      }}
                       className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-10 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"
                     />
                     <button
@@ -899,64 +1051,45 @@ export const RegisterPage: React.FC = () => {
                       {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                </div>
+                </FormField>
               </div>
 
-              {/* Modern Password Security Meter */}
+              {/* Dynamic 5-Point Password Requirements Checklist */}
               {password && (
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-600 dark:text-slate-400">Password Strength:</span>
-                    <span className={`font-black ${
-                      strength.score >= 75 ? "text-emerald-600 dark:text-emerald-400" :
-                      strength.score >= 50 ? "text-amber-600 dark:text-amber-400" :
-                      "text-rose-600 dark:text-rose-400"
-                    }`}>
-                      {strength.label}
-                    </span>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-300 ${strength.color}`}
-                      style={{ width: `${strength.score}%` }}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5 pt-1 text-[11px]">
-                    <span className={`flex items-center gap-1 ${passwordHasMin8 ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-slate-400"}`}>
-                      <CheckCircle2 className="w-3 h-3" /> Min 8 Characters
-                    </span>
-                    <span className={`flex items-center gap-1 ${passwordHasNumber ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-slate-400"}`}>
-                      <CheckCircle2 className="w-3 h-3" /> Contains Number
-                    </span>
-                    <span className={`flex items-center gap-1 ${passwordHasUpper ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-slate-400"}`}>
-                      <CheckCircle2 className="w-3 h-3" /> Uppercase Letter
-                    </span>
-                    <span className={`flex items-center gap-1 ${passwordHasSpecial ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-slate-400"}`}>
-                      <CheckCircle2 className="w-3 h-3" /> Special Symbol
-                    </span>
-                  </div>
-                </div>
+                <PasswordRequirements password={password} />
               )}
 
               {/* Pincode & Region */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    PIN Code *
-                  </label>
+                <FormField
+                  id="reg-pincode"
+                  label="PIN Code"
+                  required
+                  error={pincodeError}
+                >
                   <div className="relative">
                     <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                     <input
+                      id="reg-pincode"
                       type="text"
                       required
                       maxLength={6}
                       placeholder="Enter 6-digit PIN (e.g. 520001)"
                       value={pincode}
-                      onChange={(e) => handlePincodeChange(e.target.value)}
+                      onChange={(e) => {
+                        handlePincodeChange(e.target.value);
+                        const res = validatePincode(e.target.value);
+                        setPincodeError(e.target.value.length === 6 ? (res.isValid ? null : (res.error || null)) : null);
+                      }}
+                      onBlur={() => {
+                        const res = validatePincode(pincode);
+                        setPincodeError(res.isValid ? null : (res.error || null));
+                      }}
                       className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"
                     />
                   </div>
-                </div>
+                </FormField>
+
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Detected Coverage Region

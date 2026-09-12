@@ -7,6 +7,8 @@ import { CoopnexLogo } from "../components/brand/CoopnexLogo";
 import { API_BASE } from "../services/api";
 import { LanguageSwitcher } from "../components/layout/LanguageSwitcher";
 import { HumanVisual } from "../components/HumanVisual";
+import { FormField } from "../components/common/FormField";
+import { validateRequired, validateEmailFormat } from "../utils/validation";
 import {
   ShieldCheck,
   Lock,
@@ -219,6 +221,12 @@ export const AdminLoginPage: React.FC = () => {
   const [isMfaStep, setIsMfaStep] = useState(false);
   const [mfaChallengeToken, setMfaChallengeToken] = useState("");
   const [mfaCode, setMfaCode] = useState("");
+
+  const [fieldErrors, setFieldErrors] = useState<{
+    emailOrId?: string;
+    password?: string;
+    mfaCode?: string;
+  }>({});
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -547,54 +555,95 @@ export const AdminLoginPage: React.FC = () => {
                 className="space-y-4"
               >
                 <motion.div variants={itemVariants}>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                    {t("auth.admin_email", "Admin Email / Identifier")}
-                  </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input
-                      type="text"
-                      value={emailOrId}
-                      onChange={(e) => setEmailOrId(e.target.value)}
-                      placeholder="admin@coopnex.local"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-1 focus:ring-blue-600 transition font-medium"
-                      required
-                    />
-                  </div>
+                  <FormField
+                    id="admin-email"
+                    label={t("auth.admin_email", "Admin Email / Identifier")}
+                    required
+                    error={fieldErrors.emailOrId}
+                  >
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        id="admin-email"
+                        type="text"
+                        value={emailOrId}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setEmailOrId(val);
+                          setError(null);
+                          if (!val.trim()) {
+                            setFieldErrors((prev) => ({ ...prev, emailOrId: "❌ Admin Email / Identifier is required. 👤" }));
+                          } else if (val.includes("@")) {
+                            const err = validateEmailFormat(val).error;
+                            setFieldErrors((prev) => ({ ...prev, emailOrId: err }));
+                          } else {
+                            setFieldErrors((prev) => ({ ...prev, emailOrId: undefined }));
+                          }
+                        }}
+                        onBlur={() => {
+                          if (!emailOrId.trim()) {
+                            setFieldErrors((prev) => ({ ...prev, emailOrId: "❌ Admin Email / Identifier is required. 👤" }));
+                          }
+                        }}
+                        placeholder="admin@coopnex.local"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-1 focus:ring-blue-600 transition font-medium"
+                        required
+                      />
+                    </div>
+                  </FormField>
                 </motion.div>
 
                 <motion.div variants={itemVariants}>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                    {t("auth.password", "Password")}
-                  </label>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-1 focus:ring-blue-600 transition font-medium"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition cursor-pointer"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
+                  <FormField
+                    id="admin-password"
+                    label={t("auth.password", "Password")}
+                    required
+                    error={fieldErrors.password}
+                  >
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        id="admin-password"
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setPassword(val);
+                          setError(null);
+                          if (!val) {
+                            setFieldErrors((prev) => ({ ...prev, password: "❌ Password is required. 🔒" }));
+                          } else {
+                            setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                          }
+                        }}
+                        onBlur={() => {
+                          if (!password) {
+                            setFieldErrors((prev) => ({ ...prev, password: "❌ Password is required. 🔒" }));
+                          }
+                        }}
+                        placeholder="••••••••••••"
+                        className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-1 focus:ring-blue-600 transition font-medium"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </FormField>
                 </motion.div>
 
                 <motion.button
                   variants={itemVariants}
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || !emailOrId.trim() || !password || !!fieldErrors.emailOrId || !!fieldErrors.password}
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
-                  className="w-full mt-2 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-sm transition shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="w-full mt-2 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-sm transition shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <span className="inline-flex items-center gap-2">
@@ -620,15 +669,27 @@ export const AdminLoginPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                    {t("auth.passcode", "6-Digit Security Passcode")}
-                  </label>
+                <FormField
+                  id="admin-mfa"
+                  label={t("auth.passcode", "6-Digit Security Passcode")}
+                  required
+                  error={fieldErrors.mfaCode}
+                >
                   <input
+                    id="admin-mfa"
                     type="text"
                     maxLength={6}
                     value={mfaCode}
-                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ""))}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "");
+                      setMfaCode(val);
+                      setError(null);
+                      if (val.length > 0 && val.length < 6) {
+                        setFieldErrors((prev) => ({ ...prev, mfaCode: "❌ Passcode must be 6 digits. 🔢" }));
+                      } else {
+                        setFieldErrors((prev) => ({ ...prev, mfaCode: undefined }));
+                      }
+                    }}
                     placeholder="123456"
                     className="w-full text-center text-2xl font-mono font-black tracking-widest py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-1 focus:ring-blue-600 transition"
                     autoFocus
@@ -637,7 +698,7 @@ export const AdminLoginPage: React.FC = () => {
                   <div className="text-[11px] text-slate-500 text-center mt-1.5 font-mono">
                     {t("auth.session_challenge", "Session Challenge:")} {mfaChallengeToken.slice(0, 14)}...
                   </div>
-                </div>
+                </FormField>
 
                 <div className="flex gap-2">
                   <button
@@ -646,6 +707,7 @@ export const AdminLoginPage: React.FC = () => {
                       setIsMfaStep(false);
                       setMfaCode("");
                       setError(null);
+                      setFieldErrors((prev) => ({ ...prev, mfaCode: undefined }));
                     }}
                     className="px-4 py-3 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50 transition cursor-pointer"
                   >
@@ -653,8 +715,8 @@ export const AdminLoginPage: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    disabled={isLoading || mfaCode.length !== 6}
-                    className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-sm transition shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    disabled={isLoading || mfaCode.length !== 6 || !!fieldErrors.mfaCode}
+                    className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-sm transition shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isLoading ? (
                       <span>{t("auth.verifying_code", "Verifying Code...")}</span>

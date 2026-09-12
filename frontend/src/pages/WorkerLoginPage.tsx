@@ -24,6 +24,19 @@ import { CoopnexLogo } from "../components/brand/CoopnexLogo";
 import { LanguageDropdown } from "../components/LanguageDropdown";
 import { ForgotPasswordModal } from "../components/auth/ForgotPasswordModal";
 import { ForgotEmployeeIdModal } from "../components/auth/ForgotEmployeeIdModal";
+import { FormField } from "../components/common/FormField";
+import { FormHumanCompanion } from "../components/common/FormHumanCompanion";
+import { validateEmailFormat, validateRequired } from "../utils/validation";
+
+const tradeBadges = [
+  { label: "Electrician", icon: "⚡" },
+  { label: "Plumber", icon: "🔧" },
+  { label: "Carpenter", icon: "🪚" },
+  { label: "Technician", icon: "🛠️" },
+  { label: "Painter", icon: "🎨" },
+  { label: "Driver", icon: "🚗" },
+  { label: "Caregiver", icon: "🤝" }
+];
 
 export const WorkerLoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -34,7 +47,9 @@ export const WorkerLoginPage: React.FC = () => {
 
   // Worker Credentials
   const [employeeId, setEmployeeId] = useState("");
+  const [employeeIdError, setEmployeeIdError] = useState<string | null>(null);
   const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -44,27 +59,49 @@ export const WorkerLoginPage: React.FC = () => {
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [showForgotIdModal, setShowForgotIdModal] = useState(false);
 
-  // Worker Trade Highlights
-  const tradeBadges = [
-    { label: "Electrician", icon: "⚡" },
-    { label: "Plumber", icon: "🔧" },
-    { label: "Carpenter", icon: "🪚" },
-    { label: "Technician", icon: "🛠️" },
-    { label: "Painter", icon: "🎨" },
-    { label: "Driver", icon: "🚗" },
-    { label: "Caregiver", icon: "🤝" }
-  ];
+  const getCompanionState = () => {
+    if (isSuccess) return "SUCCESS";
+    if (errorMessage?.includes("not registered") || errorMessage?.includes("Invalid email")) return "INVALID_EMAIL";
+    if (employeeIdError) return "INVALID_EMAIL";
+    if (passwordError) return "WEAK_PASSWORD";
+    if (employeeId && password && !employeeIdError && !passwordError) return "VALID_FORM";
+    if (employeeId || password) return "TYPING";
+    return "IDLE";
+  };
+
+  const isFormValid = Boolean(
+    employeeId.trim() &&
+    !employeeIdError &&
+    password &&
+    !passwordError
+  );
+
+  const validateWorkerIdOrEmail = (val: string): { isValid: boolean; error?: string } => {
+    const clean = val.trim();
+    if (!clean) {
+      return { isValid: false, error: "❌ Employee ID or registered email is required. 🪪" };
+    }
+    if (clean.includes("@")) {
+      return validateEmailFormat(clean);
+    }
+    if (clean.length < 3) {
+      return { isValid: false, error: "❌ Please enter a valid Employee ID (minimum 3 characters). 🪪" };
+    }
+    return { isValid: true };
+  };
 
   // Submit Worker Login with Employee ID or Email & Password
   const handleWorkerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanInput = employeeId.trim();
-    if (!cleanInput) {
-      setErrorMessage("Please enter your employee ID or registered email.");
+    const idCheck = validateWorkerIdOrEmail(cleanInput);
+    if (!idCheck.isValid) {
+      setEmployeeIdError(idCheck.error || null);
       return;
     }
-    if (!password) {
-      setErrorMessage("Please enter your password.");
+    const passCheck = validateRequired(password, "Password");
+    if (!passCheck.isValid) {
+      setPasswordError(passCheck.error || null);
       return;
     }
 
@@ -80,7 +117,11 @@ export const WorkerLoginPage: React.FC = () => {
         navigate(redirectUrl);
       }, 600);
     } else {
-      setErrorMessage(res.message || "Invalid Employee ID or password. Please try again.");
+      const msg = res.message || "Invalid Employee ID or password. Please try again.";
+      setErrorMessage(msg);
+      if (msg.toLowerCase().includes("id") || msg.toLowerCase().includes("not found")) {
+        setEmployeeIdError(msg);
+      }
     }
   };
 
@@ -227,9 +268,14 @@ export const WorkerLoginPage: React.FC = () => {
                 </Link>
               </div>
 
+              {/* Interactive Character Companion */}
+              <div className="flex justify-center pb-2">
+                <FormHumanCompanion state={getCompanionState()} />
+              </div>
+
               {/* Dedicated Employee ID Sign In Form */}
-              <div className="mt-6">
-                <form onSubmit={handleWorkerSubmit} className="space-y-5">
+              <div className="mt-4">
+                <form onSubmit={handleWorkerSubmit} className="space-y-4">
                   {/* Error Notification Alert with Gentle Shake Animation */}
                   <AnimatePresence>
                     {errorMessage && (
@@ -251,11 +297,12 @@ export const WorkerLoginPage: React.FC = () => {
                   </AnimatePresence>
 
                   {/* Field 1: Employee ID or Registered Email */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label htmlFor="worker-employee-id" className="block text-xs font-bold text-slate-700">
-                        Employee ID or Registered Email
-                      </label>
+                  <FormField
+                    id="worker-employee-id"
+                    label="Employee ID or Registered Email"
+                    required
+                    error={employeeIdError}
+                    rightElement={
                       <button
                         type="button"
                         onClick={() => setShowForgotIdModal(true)}
@@ -263,7 +310,8 @@ export const WorkerLoginPage: React.FC = () => {
                       >
                         Forgot Employee ID?
                       </button>
-                    </div>
+                    }
+                  >
                     <div className="relative">
                       <div className="absolute left-3.5 top-3 text-slate-400 font-mono text-xs font-bold">
                         ID:
@@ -275,21 +323,31 @@ export const WorkerLoginPage: React.FC = () => {
                         autoComplete="username"
                         placeholder="e.g. COOP-WRK-1234 or your email"
                         value={employeeId}
-                        onChange={(e) => setEmployeeId(e.target.value)}
+                        onChange={(e) => {
+                          setEmployeeId(e.target.value);
+                          if (errorMessage) setErrorMessage(null);
+                          const res = validateWorkerIdOrEmail(e.target.value);
+                          setEmployeeIdError(res.isValid ? null : (res.error || null));
+                        }}
+                        onBlur={() => {
+                          const res = validateWorkerIdOrEmail(employeeId);
+                          setEmployeeIdError(res.isValid ? null : (res.error || null));
+                        }}
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-3 text-xs sm:text-sm text-slate-900 font-mono tracking-wider placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] focus:bg-white transition shadow-xs"
                       />
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-1">
-                      Format: <span className="font-mono text-slate-700">COOP-EMP-0001</span>, <span className="font-mono text-slate-700">COOP-WRK-XXXX</span>, or your registered email.
-                    </p>
-                  </div>
+                  </FormField>
+                  <p className="text-[11px] text-slate-500 -mt-2">
+                    Format: <span className="font-mono text-slate-700">COOP-EMP-0001</span>, <span className="font-mono text-slate-700">COOP-WRK-XXXX</span>, or your registered email.
+                  </p>
 
                   {/* Field 2: Password */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label htmlFor="worker-password" className="block text-xs font-bold text-slate-700">
-                        Password
-                      </label>
+                  <FormField
+                    id="worker-password"
+                    label="Password"
+                    required
+                    error={passwordError}
+                    rightElement={
                       <button
                         type="button"
                         onClick={() => setShowForgotModal(true)}
@@ -297,8 +355,8 @@ export const WorkerLoginPage: React.FC = () => {
                       >
                         Forgot Password?
                       </button>
-                    </div>
-
+                    }
+                  >
                     <div className="relative">
                       <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                       <input
@@ -308,7 +366,16 @@ export const WorkerLoginPage: React.FC = () => {
                         autoComplete="current-password"
                         placeholder="••••••••••••"
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          if (errorMessage) setErrorMessage(null);
+                          const res = validateRequired(e.target.value, "Password");
+                          setPasswordError(res.isValid ? null : (res.error || null));
+                        }}
+                        onBlur={() => {
+                          const res = validateRequired(password, "Password");
+                          setPasswordError(res.isValid ? null : (res.error || null));
+                        }}
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-10 py-3 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] focus:bg-white transition shadow-xs"
                       />
                       <button
@@ -320,13 +387,13 @@ export const WorkerLoginPage: React.FC = () => {
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
-                  </div>
+                  </FormField>
 
                   {/* Submit Button with Loading & Success States */}
                   <button
                     type="submit"
-                    disabled={isLoading || isSuccess}
-                    className={`w-full font-black py-3 px-5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 ${
+                    disabled={isLoading || isSuccess || !isFormValid}
+                    className={`w-full font-black py-3 px-5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                       isSuccess
                         ? "bg-emerald-600 text-white"
                         : "bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white"

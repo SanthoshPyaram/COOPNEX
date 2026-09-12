@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, X, Check, Search } from "lucide-react";
+import { FormField } from "./common/FormField";
+import { validatePincode } from "../utils/validation";
 
 interface AreaOption {
   name: string;
@@ -38,6 +40,8 @@ export const CustomerLocationModal: React.FC<CustomerLocationModalProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [customPincode, setCustomPincode] = useState("");
+  const [pincodeError, setPincodeError] = useState<string | null>(null);
+  const [pincodeTouched, setPincodeTouched] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Lock body scroll while modal is open & listen for Escape
@@ -77,11 +81,15 @@ export const CustomerLocationModal: React.FC<CustomerLocationModalProps> = ({
 
   const handleApplyCustomPincode = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanPin = customPincode.replace(/\D/g, "");
-    if (cleanPin.length === 6) {
-      onSelectArea(`Ward PIN ${cleanPin}`, cleanPin);
-      onClose();
+    setPincodeTouched(true);
+    const pinRes = validatePincode(customPincode);
+    if (!pinRes.isValid) {
+      setPincodeError(pinRes.error || null);
+      return;
     }
+    const cleanPin = customPincode.replace(/\D/g, "");
+    onSelectArea(`Ward PIN ${cleanPin}`, cleanPin);
+    onClose();
   };
 
   return (
@@ -202,26 +210,41 @@ export const CustomerLocationModal: React.FC<CustomerLocationModalProps> = ({
 
           {/* Custom Pincode Form */}
           <form onSubmit={handleApplyCustomPincode} className="pt-3 border-t border-slate-100 shrink-0">
-            <label className="block text-[11px] font-bold text-slate-700 mb-1">
-              Enter Custom Pincode (Andhra Pradesh / Pan-India):
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                maxLength={6}
-                placeholder="e.g. 520008"
-                value={customPincode}
-                onChange={(e) => setCustomPincode(e.target.value.replace(/\D/g, ""))}
-                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono focus:outline-hidden focus:ring-2 focus:ring-[#2563EB] transition"
-              />
-              <button
-                type="submit"
-                disabled={customPincode.length !== 6}
-                className="px-4 py-2 bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white text-xs font-bold rounded-xl transition shadow-xs disabled:opacity-50 cursor-pointer"
-              >
-                Apply PIN
-              </button>
-            </div>
+            <FormField
+              id="custom-pincode-input"
+              label="Enter Custom Pincode (Andhra Pradesh / Pan-India):"
+              error={pincodeError}
+              touched={pincodeTouched}
+            >
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  id="custom-pincode-input"
+                  maxLength={6}
+                  placeholder="e.g. 520008"
+                  value={customPincode}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "");
+                    setCustomPincode(val);
+                    if (pincodeTouched) {
+                      setPincodeError(validatePincode(val).error || null);
+                    }
+                  }}
+                  onBlur={() => {
+                    setPincodeTouched(true);
+                    setPincodeError(validatePincode(customPincode).error || null);
+                  }}
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono focus:outline-hidden focus:ring-2 focus:ring-[#2563EB] transition"
+                />
+                <button
+                  type="submit"
+                  disabled={!customPincode || customPincode.length !== 6 || (pincodeTouched && !!pincodeError)}
+                  className="px-4 py-2 bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white text-xs font-bold rounded-xl transition shadow-xs disabled:opacity-50 cursor-pointer shrink-0"
+                >
+                  Apply PIN
+                </button>
+              </div>
+            </FormField>
           </form>
         </motion.div>
       </div>

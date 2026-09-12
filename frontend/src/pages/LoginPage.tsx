@@ -22,6 +22,9 @@ import { LanguageDropdown } from "../components/LanguageDropdown";
 import { AnimatedCoopBackground } from "../components/animations/AnimatedCoopBackground";
 import { CoopnexLogo } from "../components/brand/CoopnexLogo";
 import { ForgotPasswordModal } from "../components/auth/ForgotPasswordModal";
+import { FormField } from "../components/common/FormField";
+import { FormHumanCompanion } from "../components/common/FormHumanCompanion";
+import { validateEmailFormat, validateRequired } from "../utils/validation";
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -33,13 +36,31 @@ export const LoginPage: React.FC = () => {
 
   // Standard Customer Login State (Email + Password ONLY)
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Forgot Password Modal State
   const [showForgotModal, setShowForgotModal] = useState(false);
+
+  const getCompanionState = () => {
+    if (errorMessage?.includes("not registered") || errorMessage?.includes("Invalid email")) return "INVALID_EMAIL";
+    if (emailError) return "INVALID_EMAIL";
+    if (passwordError) return "WEAK_PASSWORD";
+    if (email && password && !emailError && !passwordError) return "VALID_FORM";
+    if (email || password) return "TYPING";
+    return "IDLE";
+  };
+
+  const isFormValid = Boolean(
+    email.trim() &&
+    !emailError &&
+    password &&
+    !passwordError
+  );
 
   const handleRoleNavigation = (role: string) => {
     if (redirectUrl) {
@@ -65,8 +86,14 @@ export const LoginPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail || !password) {
-      setErrorMessage("Please enter both your registered email address and password.");
+    const emailRes = validateEmailFormat(cleanEmail);
+    if (!emailRes.isValid) {
+      setEmailError(emailRes.error || null);
+      return;
+    }
+    const passRes = validateRequired(password, "Password");
+    if (!passRes.isValid) {
+      setPasswordError(passRes.error || null);
       return;
     }
 
@@ -79,7 +106,11 @@ export const LoginPage: React.FC = () => {
     if (res.success && res.role) {
       handleRoleNavigation(res.role);
     } else {
-      setErrorMessage(res.message || "Invalid email or password. Please check your credentials.");
+      const msg = res.message || "Invalid email or password. Please check your credentials.";
+      setErrorMessage(msg);
+      if (msg.toLowerCase().includes("not registered") || msg.toLowerCase().includes("email")) {
+        setEmailError(msg);
+      }
     }
   };
 
@@ -87,6 +118,8 @@ export const LoginPage: React.FC = () => {
   const handleAutoFillDemo = () => {
     setEmail("customer@sahakariseva.gov.in");
     setPassword("DemoPassword123!");
+    setEmailError(null);
+    setPasswordError(null);
     setErrorMessage(null);
   };
 
@@ -213,20 +246,34 @@ export const LoginPage: React.FC = () => {
                 )}
               </AnimatePresence>
 
+              {/* Character Companion */}
+              <div className="flex justify-center pb-1">
+                <FormHumanCompanion state={getCompanionState()} />
+              </div>
+
               {/* Form: Email + Password ONLY */}
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Email Address
-                  </label>
+                <FormField
+                  id="login-email"
+                  label="Email Address"
+                  required
+                  error={emailError}
+                >
                   <div className="relative">
                     <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
                     <input
+                      id="login-email"
                       type="email"
                       value={email}
                       onChange={(e) => {
                         setEmail(e.target.value);
                         if (errorMessage) setErrorMessage(null);
+                        const res = validateEmailFormat(e.target.value);
+                        setEmailError(res.isValid ? null : (res.error || null));
+                      }}
+                      onBlur={() => {
+                        const res = validateEmailFormat(email);
+                        setEmailError(res.isValid ? null : (res.error || null));
                       }}
                       placeholder="Enter your registered email"
                       required
@@ -234,13 +281,14 @@ export const LoginPage: React.FC = () => {
                       className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                     />
                   </div>
-                </div>
+                </FormField>
 
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Password
-                    </label>
+                <FormField
+                  id="login-password"
+                  label="Password"
+                  required
+                  error={passwordError}
+                  rightElement={
                     <button
                       type="button"
                       onClick={() => setShowForgotModal(true)}
@@ -248,15 +296,23 @@ export const LoginPage: React.FC = () => {
                     >
                       Forgot Password?
                     </button>
-                  </div>
+                  }
+                >
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
                     <input
+                      id="login-password"
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => {
                         setPassword(e.target.value);
                         if (errorMessage) setErrorMessage(null);
+                        const res = validateRequired(e.target.value, "Password");
+                        setPasswordError(res.isValid ? null : (res.error || null));
+                      }}
+                      onBlur={() => {
+                        const res = validateRequired(password, "Password");
+                        setPasswordError(res.isValid ? null : (res.error || null));
                       }}
                       placeholder="Enter your password"
                       required
@@ -272,12 +328,12 @@ export const LoginPage: React.FC = () => {
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                </div>
+                </FormField>
 
                 <button
                   type="submit"
-                  disabled={isLoading}
-                  className="w-full py-3 px-4 rounded-xl bg-[#0A66C2] hover:bg-[#084B8A] text-white font-bold text-sm shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  disabled={isLoading || !isFormValid}
+                  className="w-full py-3 px-4 rounded-xl bg-[#0A66C2] hover:bg-[#084B8A] text-white font-bold text-sm shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isLoading ? (
                     <>

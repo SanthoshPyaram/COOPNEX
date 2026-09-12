@@ -14,6 +14,8 @@ import {
   Trash2
 } from "lucide-react";
 import { API_BASE } from "../services/api";
+import { FormField } from "./common/FormField";
+import { validateMinLength } from "../utils/validation";
 
 export interface ReviewModalProps {
   isOpen: boolean;
@@ -46,6 +48,8 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
   const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [behaviourScore, setBehaviourScore] = useState(initialBehaviour);
   const [comment, setComment] = useState(initialComment);
+  const [commentError, setCommentError] = useState<string | null>(null);
+  const [commentTouched, setCommentTouched] = useState(false);
   const [workImages, setWorkImages] = useState<string[]>([
     "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&q=80",
     "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&q=80"
@@ -79,6 +83,13 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCommentTouched(true);
+    const commentRes = validateMinLength(comment, 5, "Feedback note", "✍️");
+    if (!commentRes.isValid) {
+      setCommentError(commentRes.error || null);
+      return;
+    }
+    setCommentError(null);
     setIsSubmitting(true);
 
     const token = localStorage.getItem("sahakari_token");
@@ -249,18 +260,32 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
               </div>
 
               {/* 3. Written Review & Experience */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Your Experience & Feedback Notes
-                </label>
+              <FormField
+                id="review-comment"
+                label="Your Experience & Feedback Notes"
+                error={commentError}
+                touched={commentTouched}
+                required
+              >
                 <textarea
+                  id="review-comment"
                   rows={3}
                   value={comment}
-                  onChange={(e) => setComment(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setComment(val);
+                    if (commentTouched) {
+                      setCommentError(validateMinLength(val, 5, "Feedback note", "✍️").error || null);
+                    }
+                  }}
+                  onBlur={() => {
+                    setCommentTouched(true);
+                    setCommentError(validateMinLength(comment, 5, "Feedback note", "✍️").error || null);
+                  }}
                   placeholder="e.g. Technician arrived within 15 minutes, wore safety gear, replaced the main circuit breaker cleanly, and demonstrated the fix."
                   className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"
                 />
-              </div>
+              </FormField>
 
               {/* 4. Completed Work Proof Images */}
               <div className="space-y-2">
@@ -344,8 +369,8 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
               <div className="pt-2 flex items-center gap-3">
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black py-3 px-5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  disabled={isSubmitting || !comment.trim() || (commentTouched && !!commentError)}
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black py-3 px-5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {isSubmitting ? (
                     <span className="flex items-center gap-2 text-xs">

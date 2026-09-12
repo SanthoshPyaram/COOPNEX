@@ -3,6 +3,8 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
+import { FormField } from "../components/common/FormField";
+import { validateEmailFormat, validateRequired } from "../utils/validation";
 import {
   ShieldCheck,
   Lock,
@@ -66,7 +68,11 @@ export const AdminPortalPage: React.FC = () => {
 
   const [selectedRoleTab, setSelectedRoleTab] = useState<"SUPER_ADMIN" | "FEDERATION_ADMIN" | "SOCIETY_ADMIN">("SUPER_ADMIN");
   const [email, setEmail] = useState("super.admin@coopnex.org");
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailTouched, setEmailTouched] = useState(false);
   const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordTouched, setPasswordTouched] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +94,10 @@ export const AdminPortalPage: React.FC = () => {
   const handleRoleTabChange = (role: "SUPER_ADMIN" | "FEDERATION_ADMIN" | "SOCIETY_ADMIN") => {
     setSelectedRoleTab(role);
     setError(null);
+    setEmailError(null);
+    setEmailTouched(false);
+    setPasswordError(null);
+    setPasswordTouched(false);
     if (role === "SUPER_ADMIN") {
       setEmail("super.admin@coopnex.org");
     } else if (role === "FEDERATION_ADMIN") {
@@ -99,10 +109,24 @@ export const AdminPortalPage: React.FC = () => {
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      setError("Please enter your administrator email and credentials.");
-      return;
+    setEmailTouched(true);
+    setPasswordTouched(true);
+    const emailRes = validateEmailFormat(email);
+    const passRes = validateRequired(password, "Security password", "🔑");
+    let hasErr = false;
+    if (!emailRes.isValid) {
+      setEmailError(emailRes.error || null);
+      hasErr = true;
+    } else {
+      setEmailError(null);
     }
+    if (!passRes.isValid) {
+      setPasswordError(passRes.error || null);
+      hasErr = true;
+    } else {
+      setPasswordError(null);
+    }
+    if (hasErr) return;
 
     setIsLoading(true);
     setError(null);
@@ -234,33 +258,60 @@ export const AdminPortalPage: React.FC = () => {
 
           {/* Form */}
           <form onSubmit={handleAdminLogin} className="space-y-4">
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
-                Administrator Email
-              </label>
+            <FormField
+              id="admin-email"
+              label="Administrator Email"
+              error={emailError}
+              touched={emailTouched}
+              required
+            >
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="email"
+                  id="admin-email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEmail(val);
+                    if (emailTouched) {
+                      setEmailError(validateEmailFormat(val).error || null);
+                    }
+                  }}
+                  onBlur={() => {
+                    setEmailTouched(true);
+                    setEmailError(validateEmailFormat(email).error || null);
+                  }}
                   placeholder="admin@coopnex.org"
                   className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-[#075E54] font-medium"
-                  required
                 />
               </div>
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
-                Security Password
-              </label>
+            <FormField
+              id="admin-password"
+              label="Security Password"
+              error={passwordError}
+              touched={passwordTouched}
+              required
+            >
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type={showPassword ? "text" : "password"}
+                  id="admin-password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPassword(val);
+                    if (passwordTouched) {
+                      setPasswordError(validateRequired(val, "Security password", "🔑").error || null);
+                    }
+                  }}
+                  onBlur={() => {
+                    setPasswordTouched(true);
+                    setPasswordError(validateRequired(password, "Security password", "🔑").error || null);
+                  }}
                   placeholder="••••••••••••"
                   className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-[#075E54] font-medium"
                 />
@@ -272,12 +323,12 @@ export const AdminPortalPage: React.FC = () => {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-            </div>
+            </FormField>
 
             <button
               type="submit"
-              disabled={isLoading}
-              className="w-full py-3 rounded-xl bg-[#0A66C2] hover:bg-[#004182] text-white text-xs font-black transition shadow-md flex items-center justify-center gap-2 mt-2"
+              disabled={isLoading || !email.trim() || !password || (emailTouched && !!emailError) || (passwordTouched && !!passwordError)}
+              className="w-full py-3 rounded-xl bg-[#0A66C2] hover:bg-[#004182] text-white text-xs font-black transition shadow-md flex items-center justify-center gap-2 mt-2 cursor-pointer disabled:opacity-50"
             >
               <span>{isLoading ? "Verifying Credentials..." : "Authenticate & Enter Command Center"}</span>
               <ArrowRight className="w-4 h-4" />

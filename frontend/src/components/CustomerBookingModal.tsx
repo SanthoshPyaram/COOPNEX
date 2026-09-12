@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { WorkerProfile, Booking } from "../types";
 import { api } from "../services/api";
 import { resolveWorkerAvatar } from "../utils/workerAvatar";
+import { FormField } from "./common/FormField";
+import { validateRequired, validateMinLength } from "../utils/validation";
 import {
   X,
   ArrowLeft,
@@ -45,6 +47,14 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
   const [landmark, setLandmark] = useState("Near Benz Circle");
   const [createdBooking, setCreatedBooking] = useState<any | null>(null);
 
+  // Validation State
+  const [descError, setDescError] = useState<string | null>(null);
+  const [descTouched, setDescTouched] = useState(false);
+  const [addressError, setAddressError] = useState<string | null>(null);
+  const [addressTouched, setAddressTouched] = useState(false);
+  const [landmarkError, setLandmarkError] = useState<string | null>(null);
+  const [landmarkTouched, setLandmarkTouched] = useState(false);
+
   React.useEffect(() => {
     if (worker?.skills?.[0]) {
       setServiceCategory(worker.skills[0]);
@@ -61,8 +71,34 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
   const totalAmount = hourlyRate * estimatedHours;
 
   const handleNextStep = () => {
-    if (step === 1 && !description.trim()) {
-      setDescription(`Standard scheduled ${serviceCategory} service and inspection`);
+    if (step === 1) {
+      setDescTouched(true);
+      const descRes = validateMinLength(description, 5, "Requirement description", "📝");
+      if (!descRes.isValid) {
+        setDescError(descRes.error || null);
+        return;
+      }
+      setDescError(null);
+    }
+    if (step === 3) {
+      setAddressTouched(true);
+      setLandmarkTouched(true);
+      const addrRes = validateRequired(address, "Service address", "🏠");
+      const lmRes = validateRequired(landmark, "Nearest landmark", "📍");
+      let hasErr = false;
+      if (!addrRes.isValid) {
+        setAddressError(addrRes.error || null);
+        hasErr = true;
+      } else {
+        setAddressError(null);
+      }
+      if (!lmRes.isValid) {
+        setLandmarkError(lmRes.error || null);
+        hasErr = true;
+      } else {
+        setLandmarkError(null);
+      }
+      if (hasErr) return;
     }
     setErrorMsg("");
     setStep((prev) => Math.min(prev + 1, 4));
@@ -176,21 +212,35 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-800 mb-1">
-                  Describe Your Issue or Requirement
-                </label>
+              <FormField
+                id="booking-description"
+                label="Describe Your Issue or Requirement"
+                error={descError}
+                touched={descTouched}
+                required
+              >
                 <textarea
+                  id="booking-description"
                   rows={3}
                   placeholder="e.g. Master bedroom switchboard sparking with burning smell, need rewiring check and MCB inspection..."
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setDescription(val);
+                    if (descTouched) {
+                      setDescError(validateMinLength(val, 5, "Requirement description", "📝").error || null);
+                    }
+                  }}
+                  onBlur={() => {
+                    setDescTouched(true);
+                    setDescError(validateMinLength(description, 5, "Requirement description", "📝").error || null);
+                  }}
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"
                 />
-                <span className="text-[10px] text-slate-400 mt-1 block">
-                  Provide specific details so the specialist brings the right diagnostic equipment.
-                </span>
-              </div>
+              </FormField>
+              <span className="text-[10px] text-slate-400 block -mt-2">
+                Provide specific details so the specialist brings the right diagnostic equipment.
+              </span>
 
               {/* Emergency Urgency Toggle */}
               <div
@@ -226,7 +276,8 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
 
               <button
                 onClick={handleNextStep}
-                className="w-full py-3 rounded-full bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white font-bold transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                disabled={!description.trim() || (descTouched && !!descError)}
+                className="w-full py-3 rounded-full bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white font-bold transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 <span>Continue to Schedule</span>
                 <ArrowRight className="w-4 h-4" />
@@ -297,27 +348,59 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
                 <p className="text-slate-500 text-[11px]">Confirm the residence or premises where assistance is needed</p>
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Full Street Address / Door No.</label>
+              <FormField
+                id="booking-address"
+                label="Full Street Address / Door No."
+                error={addressError}
+                touched={addressTouched}
+                required
+              >
                 <input
                   type="text"
+                  id="booking-address"
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setAddress(val);
+                    if (addressTouched) {
+                      setAddressError(validateRequired(val, "Service address", "🏠").error || null);
+                    }
+                  }}
+                  onBlur={() => {
+                    setAddressTouched(true);
+                    setAddressError(validateRequired(address, "Service address", "🏠").error || null);
+                  }}
                   placeholder="e.g. Flat 402, Sri Sai Residency, Benz Circle"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Nearest Landmark</label>
+              <FormField
+                id="booking-landmark"
+                label="Nearest Landmark"
+                error={landmarkError}
+                touched={landmarkTouched}
+                required
+              >
                 <input
                   type="text"
+                  id="booking-landmark"
                   value={landmark}
-                  onChange={(e) => setLandmark(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setLandmark(val);
+                    if (landmarkTouched) {
+                      setLandmarkError(validateRequired(val, "Nearest landmark", "📍").error || null);
+                    }
+                  }}
+                  onBlur={() => {
+                    setLandmarkTouched(true);
+                    setLandmarkError(validateRequired(landmark, "Nearest landmark", "📍").error || null);
+                  }}
                   placeholder="e.g. Opposite Trendset Mall, Benz Circle"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"
                 />
-              </div>
+              </FormField>
 
               <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-2xl flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-[#2563EB] shrink-0" />
@@ -337,7 +420,8 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
                 <button
                   type="button"
                   onClick={handleNextStep}
-                  className="flex-1 py-3 rounded-full bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white font-bold transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  disabled={!address.trim() || !landmark.trim() || (addressTouched && !!addressError) || (landmarkTouched && !!landmarkError)}
+                  className="flex-1 py-3 rounded-full bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white font-bold transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <span>Review Fair Wage</span>
                   <ArrowRight className="w-4 h-4" />

@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext";
 import { CartoonServiceAvailableAnimation } from "./animations/CartoonServiceAvailableAnimation";
 import { CartoonServiceSoonAnimation } from "./animations/CartoonServiceSoonAnimation";
+import { FormField } from "./common/FormField";
+import { validatePincode } from "../utils/validation";
 
 interface PincodeCheckerModalProps {
   isOpen: boolean;
@@ -25,6 +27,8 @@ export const PincodeCheckerModal: React.FC<PincodeCheckerModalProps> = ({
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"pincode" | "states">("pincode");
   const [pincode, setPincode] = useState(initialPincode);
+  const [pincodeError, setPincodeError] = useState<string | null>(null);
+  const [pincodeTouched, setPincodeTouched] = useState(false);
   const [selectedService, setSelectedService] = useState(initialService);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PincodeCheckResult | null>(null);
@@ -56,13 +60,14 @@ export const PincodeCheckerModal: React.FC<PincodeCheckerModalProps> = ({
 
   const handleCheck = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const clean = pincode.replace(/\D/g, "").trim();
-    if (!clean || clean.length !== 6) {
-      const fallbackPin = clean.length >= 2 ? clean.padEnd(6, "0") : "520001";
-      const localRes = checkLocalPincode(fallbackPin, selectedService || undefined);
-      setResult(localRes);
+    setPincodeTouched(true);
+    const pinRes = validatePincode(pincode);
+    if (!pinRes.isValid) {
+      setPincodeError(pinRes.error || null);
       return;
     }
+    setPincodeError(null);
+    const clean = pincode.replace(/\D/g, "").trim();
 
     setLoading(true);
     // Use high-precision local pincode match first
@@ -233,29 +238,43 @@ export const PincodeCheckerModal: React.FC<PincodeCheckerModalProps> = ({
           {activeTab === "pincode" && !result && (
             <div className="space-y-4">
               <form onSubmit={handleCheck} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Enter 6-Digit Indian PIN Code
-                  </label>
+                <FormField
+                  id="pincode-search-input"
+                  label="Enter 6-Digit Indian PIN Code"
+                  error={pincodeError}
+                  touched={pincodeTouched}
+                  required
+                >
                   <div className="relative">
                     <input
                       type="text"
+                      id="pincode-search-input"
                       maxLength={6}
                       value={pincode}
-                      onChange={(e) => setPincode(e.target.value.replace(/\D/g, ""))}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "");
+                        setPincode(val);
+                        if (pincodeTouched) {
+                          setPincodeError(validatePincode(val).error || null);
+                        }
+                      }}
+                      onBlur={() => {
+                        setPincodeTouched(true);
+                        setPincodeError(validatePincode(pincode).error || null);
+                      }}
                       placeholder="e.g. 518001 (Kurnool), 505001 (Karimnagar), 520001, 560001"
                       className="w-full pl-4 pr-28 py-3 text-sm font-semibold tracking-wider text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 focus:outline-hidden bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-800 transition placeholder:text-slate-400"
                     />
                     <button
                       type="submit"
-                      disabled={loading || pincode.length < 6}
+                      disabled={loading || !pincode || pincode.length !== 6 || (pincodeTouched && !!pincodeError)}
                       className="absolute right-1.5 top-1.5 bottom-1.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5 cursor-pointer shadow-xs"
                     >
                       <Search className="w-3.5 h-3.5" />
                       <span>{loading ? "Checking..." : "Detect Area"}</span>
                     </button>
                   </div>
-                </div>
+                </FormField>
 
                 {/* Optional Service Filter */}
                 <div>

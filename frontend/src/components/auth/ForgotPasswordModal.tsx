@@ -15,6 +15,9 @@ import {
 } from "lucide-react";
 import { SixDigitOtpInput } from "../SixDigitOtpInput";
 import { useAuth } from "../../context/AuthContext";
+import { FormField } from "../common/FormField";
+import { PasswordRequirements } from "../common/PasswordRequirements";
+import { validateEmailFormat, validatePassword, validateConfirmPassword } from "../../utils/validation";
 
 interface ForgotPasswordModalProps {
   isOpen: boolean;
@@ -40,6 +43,10 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -110,12 +117,19 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     e.preventDefault();
     const clean = identifier.trim();
     if (!clean) {
-      setErrorMessage("Please enter your registered email address.");
+      setEmailError("❌ Registered email address is required. 📧");
+      return;
+    }
+
+    const emailCheck = validateEmailFormat(clean);
+    if (!emailCheck.isValid) {
+      setEmailError(emailCheck.error || "❌ Please enter a valid email address. 📧");
       return;
     }
 
     setIsLoading(true);
     setErrorMessage(null);
+    setEmailError(null);
 
     const res = await forgotPasswordSendOtp(clean);
     setIsLoading(false);
@@ -124,7 +138,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
       setStep("ENTER_OTP");
       setCountdown(60);
     } else {
-      setErrorMessage(res.message || "Unable to send verification code. Please check your email.");
+      setEmailError(res.message || "❌ This email is not registered. Please use a registered email address. 📧");
     }
   };
 
@@ -133,6 +147,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     if (countdown > 0 || isLoading) return;
     setIsLoading(true);
     setErrorMessage(null);
+    setEmailError(null);
 
     const res = await forgotPasswordSendOtp(identifier.trim());
     setIsLoading(false);
@@ -156,12 +171,14 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
   // Step 3: Reset Password Submit
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword.length < 8) {
-      setErrorMessage("New password must be at least 8 characters long.");
+    const pCheck = validatePassword(newPassword);
+    if (!pCheck.isValid) {
+      setPasswordError(pCheck.error || null);
       return;
     }
-    if (newPassword !== confirmPassword) {
-      setErrorMessage("Passwords do not match. Please re-enter.");
+    const cCheck = validateConfirmPassword(newPassword, confirmPassword);
+    if (!cCheck.isValid) {
+      setConfirmError(cCheck.error || null);
       return;
     }
 
@@ -257,31 +274,52 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
           {/* STEP 1: ENTER REGISTERED EMAIL */}
           {step === "ENTER_IDENTIFIER" && (
             <form onSubmit={handleSendOtp} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Registered Email Address
-                </label>
+              <FormField
+                id="recovery-email"
+                label="Registered Email Address"
+                required
+                error={emailError}
+              >
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                   <input
+                    id="recovery-email"
                     type="email"
                     required
                     autoComplete="email"
                     placeholder="name@example.com"
                     value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setIdentifier(val);
+                      setErrorMessage(null);
+                      if (!val.trim()) {
+                        setEmailError("❌ Registered email address is required. 📧");
+                      } else {
+                        const check = validateEmailFormat(val);
+                        setEmailError(check.error || null);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (!identifier.trim()) {
+                        setEmailError("❌ Registered email address is required. 📧");
+                      } else {
+                        const check = validateEmailFormat(identifier);
+                        setEmailError(check.error || null);
+                      }
+                    }}
                     className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] focus:bg-white transition shadow-xs font-medium"
                   />
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1.5">
-                  If an account matches your details, an encrypted OTP code will be sent.
-                </p>
-              </div>
+              </FormField>
+              <p className="text-[11px] text-slate-500">
+                If an account matches your details, an encrypted OTP code will be sent.
+              </p>
 
               <button
                 type="submit"
-                disabled={isLoading || !identifier.trim()}
-                className="w-full bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white font-black py-3.5 rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-xs sm:text-sm"
+                disabled={isLoading || !identifier.trim() || !!emailError}
+                className="w-full bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white font-black py-3.5 rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
               >
                 {isLoading ? (
                   <span className="inline-flex items-center gap-2">
@@ -341,18 +379,31 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
           {step === "RESET_PASSWORD" && (
             <form onSubmit={handleResetPassword} className="space-y-4">
               {/* Field: New Password */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  New Password
-                </label>
+              <FormField
+                id="recovery-new-password"
+                label="New Password"
+                required
+                error={passwordError}
+              >
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                   <input
+                    id="recovery-new-password"
                     type={showPassword ? "text" : "password"}
                     required
                     placeholder="Minimum 8 characters"
                     value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewPassword(val);
+                      setErrorMessage(null);
+                      const pCheck = validatePassword(val);
+                      setPasswordError(pCheck.error || null);
+                      if (confirmPassword) {
+                        const cCheck = validateConfirmPassword(val, confirmPassword);
+                        setConfirmError(cCheck.error || null);
+                      }
+                    }}
                     className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] focus:bg-white transition shadow-xs"
                   />
                   <button
@@ -363,49 +414,37 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+              </FormField>
 
-                {/* Animated Password Strength Indicator */}
-                {newPassword && (
-                  <div className="mt-2 space-y-1.5 animate-fadeIn">
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-slate-500">Strength:</span>
-                      <strong className={strength.color}>{strength.label}</strong>
-                    </div>
-                    <div className="grid grid-cols-4 gap-1.5 h-1.5">
-                      {[1, 2, 3, 4].map((level) => (
-                        <div
-                          key={level}
-                          className={`rounded-full transition-all duration-300 ${
-                            strength.score >= level
-                              ? level === 1
-                                ? "bg-rose-500"
-                                : level === 2
-                                ? "bg-amber-500"
-                                : level === 3
-                                ? "bg-blue-500"
-                                : "bg-emerald-500"
-                              : "bg-slate-200"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* Dynamic 5-point Checklist */}
+              {newPassword && (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                  <PasswordRequirements password={newPassword} />
+                </div>
+              )}
 
               {/* Field: Confirm Password */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Confirm New Password
-                </label>
+              <FormField
+                id="recovery-confirm-password"
+                label="Confirm New Password"
+                required
+                error={confirmError}
+              >
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                   <input
+                    id="recovery-confirm-password"
                     type={showConfirmPassword ? "text" : "password"}
                     required
                     placeholder="Re-type new password"
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setConfirmPassword(val);
+                      setErrorMessage(null);
+                      const cCheck = validateConfirmPassword(newPassword, val);
+                      setConfirmError(cCheck.error || null);
+                    }}
                     className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] focus:bg-white transition shadow-xs"
                   />
                   <button
@@ -416,12 +455,20 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-              </div>
+              </FormField>
 
               <button
                 type="submit"
-                disabled={isLoading || newPassword.length < 8 || newPassword !== confirmPassword}
-                className="w-full bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white font-black py-3.5 rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-xs sm:text-sm"
+                disabled={
+                  isLoading ||
+                  !newPassword ||
+                  !confirmPassword ||
+                  !validatePassword(newPassword).isValid ||
+                  !validateConfirmPassword(newPassword, confirmPassword).isValid ||
+                  !!passwordError ||
+                  !!confirmError
+                }
+                className="w-full bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white font-black py-3.5 rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
               >
                 {isLoading ? (
                   <span className="inline-flex items-center gap-2">

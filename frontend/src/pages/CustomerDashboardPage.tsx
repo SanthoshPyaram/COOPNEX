@@ -17,6 +17,13 @@ import { CustomerBookingModal } from "../components/CustomerBookingModal";
 import { WhyThisWorkerModal } from "../components/WhyThisWorkerModal";
 import { ReviewModal } from "../components/ReviewModal";
 import { LeafletMap } from "../components/LeafletMap";
+import { FormField } from "../components/common/FormField";
+import {
+  validateName,
+  validatePhone,
+  validatePincode,
+  validateRequired
+} from "../utils/validation";
 import { resolveWorkerAvatar } from "../utils/workerAvatar";
 import {
   Search,
@@ -129,6 +136,66 @@ export const CustomerDashboardPage: React.FC = () => {
   });
   const [profileSaveSuccess, setProfileSaveSuccess] = useState<boolean>(false);
   const [profileSaveLoading, setProfileSaveLoading] = useState<boolean>(false);
+  const [profileErrors, setProfileErrors] = useState<{
+    name?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    city?: string | null;
+    district?: string | null;
+    pincode?: string | null;
+    emergencyContactName?: string | null;
+    emergencyContactPhone?: string | null;
+  }>({});
+  const [profileTouched, setProfileTouched] = useState<Record<string, boolean>>({});
+
+  const validateProfileFields = (data: typeof profileFormData) => {
+    const errs: Record<string, string | null> = {};
+    const nameRes = validateName(data.name, "Full Legal Name");
+    if (!nameRes.isValid) errs.name = nameRes.error || null;
+
+    const phoneRes = validatePhone(data.phone);
+    if (!phoneRes.isValid) errs.phone = phoneRes.error || null;
+
+    const addrRes = validateRequired(data.address, "Street address", "🏠");
+    if (!addrRes.isValid) errs.address = addrRes.error || null;
+
+    const cityRes = validateRequired(data.city, "City", "🏙️");
+    if (!cityRes.isValid) errs.city = cityRes.error || null;
+
+    const distRes = validateRequired(data.district, "District", "🏛️");
+    if (!distRes.isValid) errs.district = distRes.error || null;
+
+    const pinRes = validatePincode(data.pincode);
+    if (!pinRes.isValid) errs.pincode = pinRes.error || null;
+
+    if (data.emergencyContactName && data.emergencyContactName.trim()) {
+      const emgNameRes = validateName(data.emergencyContactName, "contact name");
+      if (!emgNameRes.isValid) errs.emergencyContactName = emgNameRes.error || null;
+    }
+
+    if (data.emergencyContactPhone && data.emergencyContactPhone.trim()) {
+      const emgPhoneRes = validatePhone(data.emergencyContactPhone);
+      if (!emgPhoneRes.isValid) errs.emergencyContactPhone = emgPhoneRes.error || null;
+    }
+
+    return errs;
+  };
+
+  const isProfileInvalid =
+    !profileFormData.name.trim() ||
+    !profileFormData.phone.trim() ||
+    !profileFormData.address.trim() ||
+    !profileFormData.city.trim() ||
+    !profileFormData.district.trim() ||
+    !profileFormData.pincode.trim() ||
+    Boolean(profileErrors.name) ||
+    Boolean(profileErrors.phone) ||
+    Boolean(profileErrors.address) ||
+    Boolean(profileErrors.city) ||
+    Boolean(profileErrors.district) ||
+    Boolean(profileErrors.pincode) ||
+    Boolean(profileErrors.emergencyContactName) ||
+    Boolean(profileErrors.emergencyContactPhone);
 
   // Bookings Filter State
   const [bookingFilterStatus, setBookingFilterStatus] = useState<"ALL" | "ACTIVE" | "COMPLETED" | "CANCELLED">("ALL");
@@ -262,6 +329,22 @@ export const CustomerDashboardPage: React.FC = () => {
   // Handle Profile Update
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errs = validateProfileFields(profileFormData);
+    setProfileTouched({
+      name: true,
+      phone: true,
+      address: true,
+      city: true,
+      district: true,
+      pincode: true,
+      emergencyContactName: true,
+      emergencyContactPhone: true
+    });
+    setProfileErrors(errs);
+    if (Object.values(errs).some(Boolean)) {
+      return;
+    }
+
     setProfileSaveLoading(true);
     setProfileSaveSuccess(false);
     try {
@@ -1205,40 +1288,90 @@ export const CustomerDashboardPage: React.FC = () => {
                   </h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Full Legal Name</label>
+                    <FormField
+                      id="profile-name"
+                      label="Full Legal Name"
+                      error={profileErrors.name}
+                      touched={profileTouched.name}
+                      required
+                    >
                       <input
                         type="text"
+                        id="profile-name"
                         value={profileFormData.name}
-                        onChange={(e) => setProfileFormData({ ...profileFormData, name: e.target.value })}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setProfileFormData((p) => ({ ...p, name: val }));
+                          if (profileTouched.name) {
+                            setProfileErrors((prev) => ({
+                              ...prev,
+                              name: validateName(val, "Full Legal Name").error || null
+                            }));
+                          }
+                        }}
+                        onBlur={() => {
+                          setProfileTouched((prev) => ({ ...prev, name: true }));
+                          setProfileErrors((prev) => ({
+                            ...prev,
+                            name: validateName(profileFormData.name, "Full Legal Name").error || null
+                          }));
+                        }}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"
                       />
-                    </div>
+                    </FormField>
 
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Registered Email (Verified)</label>
+                    <FormField
+                      id="profile-email"
+                      label="Registered Email (Verified)"
+                    >
                       <input
                         type="email"
+                        id="profile-email"
                         disabled
                         value={user?.email || ""}
                         className="w-full bg-slate-100 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-500 cursor-not-allowed"
                       />
-                    </div>
+                    </FormField>
 
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Phone Number</label>
+                    <FormField
+                      id="profile-phone"
+                      label="Phone Number"
+                      error={profileErrors.phone}
+                      touched={profileTouched.phone}
+                      required
+                    >
                       <input
                         type="tel"
-                        placeholder="e.g. +91 98490 12345"
+                        id="profile-phone"
+                        placeholder="e.g. 9849012345"
                         value={profileFormData.phone}
-                        onChange={(e) => setProfileFormData({ ...profileFormData, phone: e.target.value })}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setProfileFormData((p) => ({ ...p, phone: val }));
+                          if (profileTouched.phone) {
+                            setProfileErrors((prev) => ({
+                              ...prev,
+                              phone: validatePhone(val).error || null
+                            }));
+                          }
+                        }}
+                        onBlur={() => {
+                          setProfileTouched((prev) => ({ ...prev, phone: true }));
+                          setProfileErrors((prev) => ({
+                            ...prev,
+                            phone: validatePhone(profileFormData.phone).error || null
+                          }));
+                        }}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"
                       />
-                    </div>
+                    </FormField>
 
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Gender</label>
+                    <FormField
+                      id="profile-gender"
+                      label="Gender"
+                    >
                       <select
+                        id="profile-gender"
                         value={profileFormData.gender}
                         onChange={(e) => setProfileFormData({ ...profileFormData, gender: e.target.value })}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"
@@ -1248,7 +1381,7 @@ export const CustomerDashboardPage: React.FC = () => {
                         <option value="Male">Male</option>
                         <option value="Other">Other</option>
                       </select>
-                    </div>
+                    </FormField>
                   </div>
                 </div>
 
@@ -1260,44 +1393,136 @@ export const CustomerDashboardPage: React.FC = () => {
                   </h3>
 
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Street Address / House No.</label>
-                    <input
-                      type="text"
-                      value={profileFormData.address}
-                      onChange={(e) => setProfileFormData({ ...profileFormData, address: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"
-                    />
+                    <FormField
+                      id="profile-address"
+                      label="Street Address / House No."
+                      error={profileErrors.address}
+                      touched={profileTouched.address}
+                      required
+                    >
+                      <input
+                        type="text"
+                        id="profile-address"
+                        value={profileFormData.address}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setProfileFormData((p) => ({ ...p, address: val }));
+                          if (profileTouched.address) {
+                            setProfileErrors((prev) => ({
+                              ...prev,
+                              address: validateRequired(val, "Street address", "🏠").error || null
+                            }));
+                          }
+                        }}
+                        onBlur={() => {
+                          setProfileTouched((prev) => ({ ...prev, address: true }));
+                          setProfileErrors((prev) => ({
+                            ...prev,
+                            address: validateRequired(profileFormData.address, "Street address", "🏠").error || null
+                          }));
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"
+                      />
+                    </FormField>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">City</label>
+                    <FormField
+                      id="profile-city"
+                      label="City"
+                      error={profileErrors.city}
+                      touched={profileTouched.city}
+                      required
+                    >
                       <input
                         type="text"
+                        id="profile-city"
                         value={profileFormData.city}
-                        onChange={(e) => setProfileFormData({ ...profileFormData, city: e.target.value })}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setProfileFormData((p) => ({ ...p, city: val }));
+                          if (profileTouched.city) {
+                            setProfileErrors((prev) => ({
+                              ...prev,
+                              city: validateRequired(val, "City", "🏙️").error || null
+                            }));
+                          }
+                        }}
+                        onBlur={() => {
+                          setProfileTouched((prev) => ({ ...prev, city: true }));
+                          setProfileErrors((prev) => ({
+                            ...prev,
+                            city: validateRequired(profileFormData.city, "City", "🏙️").error || null
+                          }));
+                        }}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"
                       />
-                    </div>
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">District</label>
+                    </FormField>
+
+                    <FormField
+                      id="profile-district"
+                      label="District"
+                      error={profileErrors.district}
+                      touched={profileTouched.district}
+                      required
+                    >
                       <input
                         type="text"
+                        id="profile-district"
                         value={profileFormData.district}
-                        onChange={(e) => setProfileFormData({ ...profileFormData, district: e.target.value })}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setProfileFormData((p) => ({ ...p, district: val }));
+                          if (profileTouched.district) {
+                            setProfileErrors((prev) => ({
+                              ...prev,
+                              district: validateRequired(val, "District", "🏛️").error || null
+                            }));
+                          }
+                        }}
+                        onBlur={() => {
+                          setProfileTouched((prev) => ({ ...prev, district: true }));
+                          setProfileErrors((prev) => ({
+                            ...prev,
+                            district: validateRequired(profileFormData.district, "District", "🏛️").error || null
+                          }));
+                        }}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"
                       />
-                    </div>
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Pincode</label>
+                    </FormField>
+
+                    <FormField
+                      id="profile-pincode"
+                      label="Pincode"
+                      error={profileErrors.pincode}
+                      touched={profileTouched.pincode}
+                      required
+                    >
                       <input
                         type="text"
+                        id="profile-pincode"
                         maxLength={6}
                         value={profileFormData.pincode}
-                        onChange={(e) => setProfileFormData({ ...profileFormData, pincode: e.target.value.replace(/\D/g, "") })}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "");
+                          setProfileFormData((p) => ({ ...p, pincode: val }));
+                          if (profileTouched.pincode) {
+                            setProfileErrors((prev) => ({
+                              ...prev,
+                              pincode: validatePincode(val).error || null
+                            }));
+                          }
+                        }}
+                        onBlur={() => {
+                          setProfileTouched((prev) => ({ ...prev, pincode: true }));
+                          setProfileErrors((prev) => ({
+                            ...prev,
+                            pincode: validatePincode(profileFormData.pincode).error || null
+                          }));
+                        }}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-mono focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"
                       />
-                    </div>
+                    </FormField>
                   </div>
                 </div>
 
@@ -1309,9 +1534,12 @@ export const CustomerDashboardPage: React.FC = () => {
                   </h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Blood Group</label>
+                    <FormField
+                      id="profile-blood-group"
+                      label="Blood Group"
+                    >
                       <select
+                        id="profile-blood-group"
                         value={profileFormData.bloodGroup}
                         onChange={(e) => setProfileFormData({ ...profileFormData, bloodGroup: e.target.value })}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden font-bold"
@@ -1322,36 +1550,82 @@ export const CustomerDashboardPage: React.FC = () => {
                           </option>
                         ))}
                       </select>
-                    </div>
+                    </FormField>
 
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Emergency Contact Name</label>
+                    <FormField
+                      id="profile-emg-name"
+                      label="Emergency Contact Name"
+                      error={profileErrors.emergencyContactName}
+                      touched={profileTouched.emergencyContactName}
+                    >
                       <input
                         type="text"
+                        id="profile-emg-name"
                         placeholder="e.g. S. Ramesh (Brother)"
                         value={profileFormData.emergencyContactName}
-                        onChange={(e) => setProfileFormData({ ...profileFormData, emergencyContactName: e.target.value })}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setProfileFormData((p) => ({ ...p, emergencyContactName: val }));
+                          if (profileTouched.emergencyContactName) {
+                            setProfileErrors((prev) => ({
+                              ...prev,
+                              emergencyContactName: val.trim() ? validateName(val, "contact name").error || null : null
+                            }));
+                          }
+                        }}
+                        onBlur={() => {
+                          setProfileTouched((prev) => ({ ...prev, emergencyContactName: true }));
+                          setProfileErrors((prev) => ({
+                            ...prev,
+                            emergencyContactName: profileFormData.emergencyContactName.trim()
+                              ? validateName(profileFormData.emergencyContactName, "contact name").error || null
+                              : null
+                          }));
+                        }}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"
                       />
-                    </div>
+                    </FormField>
 
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Emergency Contact Phone</label>
+                    <FormField
+                      id="profile-emg-phone"
+                      label="Emergency Contact Phone"
+                      error={profileErrors.emergencyContactPhone}
+                      touched={profileTouched.emergencyContactPhone}
+                    >
                       <input
                         type="tel"
+                        id="profile-emg-phone"
                         placeholder="e.g. +91 98490 54321"
                         value={profileFormData.emergencyContactPhone}
-                        onChange={(e) => setProfileFormData({ ...profileFormData, emergencyContactPhone: e.target.value })}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setProfileFormData((p) => ({ ...p, emergencyContactPhone: val }));
+                          if (profileTouched.emergencyContactPhone) {
+                            setProfileErrors((prev) => ({
+                              ...prev,
+                              emergencyContactPhone: val.trim() ? validatePhone(val).error || null : null
+                            }));
+                          }
+                        }}
+                        onBlur={() => {
+                          setProfileTouched((prev) => ({ ...prev, emergencyContactPhone: true }));
+                          setProfileErrors((prev) => ({
+                            ...prev,
+                            emergencyContactPhone: profileFormData.emergencyContactPhone.trim()
+                              ? validatePhone(profileFormData.emergencyContactPhone).error || null
+                              : null
+                          }));
+                        }}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"
                       />
-                    </div>
+                    </FormField>
                   </div>
                 </div>
 
                 <div className="pt-4 flex justify-end">
                   <button
                     type="submit"
-                    disabled={profileSaveLoading}
+                    disabled={profileSaveLoading || isProfileInvalid}
                     className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white font-bold text-xs transition shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     {profileSaveLoading ? (

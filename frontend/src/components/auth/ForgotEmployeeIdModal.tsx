@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 import { SixDigitOtpInput } from "../SixDigitOtpInput";
 import { useAuth } from "../../context/AuthContext";
+import { FormField } from "../common/FormField";
+import { validateEmailFormat } from "../../utils/validation";
+import { API_BASE } from "../../services/api";
 
 interface ForgotEmployeeIdModalProps {
   isOpen: boolean;
@@ -30,6 +33,7 @@ export const ForgotEmployeeIdModal: React.FC<ForgotEmployeeIdModalProps> = ({
 
   const [step, setStep] = useState<"ENTER_EMAIL" | "ENTER_OTP" | "RECOVERED">("ENTER_EMAIL");
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [otpDigits, setOtpDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -60,6 +64,7 @@ export const ForgotEmployeeIdModal: React.FC<ForgotEmployeeIdModalProps> = ({
       setStep("ENTER_EMAIL");
       setOtpDigits(["", "", "", "", "", ""]);
       setErrorMessage(null);
+      setEmailError(null);
       setCopied(false);
       setRecoveredWorker(null);
     }
@@ -79,13 +84,34 @@ export const ForgotEmployeeIdModal: React.FC<ForgotEmployeeIdModalProps> = ({
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail || !cleanEmail.includes("@")) {
-      setErrorMessage("Please enter a valid registered email address.");
+    if (!cleanEmail) {
+      setEmailError("❌ Registered email address is required. 📧");
+      return;
+    }
+
+    // Stage 1: Format Validation
+    const formatCheck = validateEmailFormat(cleanEmail);
+    if (!formatCheck.isValid) {
+      setEmailError(formatCheck.error || "❌ Please enter a valid email address. 📧");
       return;
     }
 
     setIsLoading(true);
     setErrorMessage(null);
+    setEmailError(null);
+
+    // Stage 2: Database Existence Check
+    try {
+      const chkRes = await fetch(`${API_BASE}/auth/check-email?email=${encodeURIComponent(cleanEmail)}`);
+      const chkData = await chkRes.json();
+      if (chkData.success && chkData.exists === false) {
+        setIsLoading(false);
+        setEmailError("❌ This email is not registered. Please use a registered email address. 📧");
+        return;
+      }
+    } catch (err) {
+      console.warn("Pre-check email error:", err);
+    }
 
     const res = await sendOtp(cleanEmail, "RECOVER_EMPLOYEE_ID", "COOPNEX Specialist");
     setIsLoading(false);
@@ -94,7 +120,7 @@ export const ForgotEmployeeIdModal: React.FC<ForgotEmployeeIdModalProps> = ({
       setStep("ENTER_OTP");
       setCountdown(res.retryAfterSeconds || 60);
     } else {
-      setErrorMessage(res.message || "Failed to dispatch verification code. Please check your email.");
+      setEmailError(res.message || "❌ Failed to dispatch verification code. Please check your email. 📧");
     }
   };
 
@@ -240,33 +266,51 @@ export const ForgotEmployeeIdModal: React.FC<ForgotEmployeeIdModalProps> = ({
             {/* STEP 1: ENTER REGISTERED EMAIL */}
             {step === "ENTER_EMAIL" && (
               <form onSubmit={handleSendOtp} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Registered Email Address *
-                  </label>
+                <FormField
+                  id="recover-worker-email"
+                  label="Registered Email Address"
+                  required
+                  error={emailError}
+                >
                   <div className="relative">
                     <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                     <input
+                      id="recover-worker-email"
                       type="email"
                       required
                       placeholder="e.g. rajesh.kumar@example.com"
                       value={email}
                       onChange={(e) => {
-                        setEmail(e.target.value);
+                        const val = e.target.value;
+                        setEmail(val);
                         setErrorMessage(null);
+                        if (!val.trim()) {
+                          setEmailError("❌ Registered email address is required. 📧");
+                        } else {
+                          const check = validateEmailFormat(val);
+                          setEmailError(check.error || null);
+                        }
                       }}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600 shadow-xs"
+                      onBlur={() => {
+                        if (!email.trim()) {
+                          setEmailError("❌ Registered email address is required. 📧");
+                        } else {
+                          const check = validateEmailFormat(email);
+                          setEmailError(check.error || null);
+                        }
+                      }}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600 shadow-xs font-medium"
                     />
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    We will send a 6-digit verification code to confirm ownership of this account.
-                  </p>
-                </div>
+                </FormField>
+                <p className="text-[11px] text-slate-500">
+                  We will send a 6-digit verification code to confirm ownership of this account.
+                </p>
 
                 <button
                   type="submit"
-                  disabled={isLoading || !email.includes("@")}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shadow-md"
+                  disabled={isLoading || !email.trim() || !!emailError}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
                 >
                   {isLoading ? (
                     <span className="flex items-center gap-2">
