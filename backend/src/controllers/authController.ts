@@ -93,11 +93,8 @@ export const validateEmail = async (req: Request, res: Response): Promise<void> 
           }
         } else if (targetRole === USER_ROLES.CUSTOMER) {
           const alreadyCustomer = existingUser?.role === USER_ROLES.CUSTOMER || existingUser?.roles?.includes(USER_ROLES.CUSTOMER);
-          if (alreadyCustomer) {
-            isTaken = true;
-            conflictReason = "already_registered_customer";
-            conflictMessage = "❌ This email is already registered as a Customer. Please sign in.";
-          } else if (existingUser || existingWorker) {
+          if (alreadyCustomer || existingUser || existingWorker) {
+            // Allow OTP verification so the user can verify ownership and update or log into their account
             canConnectExisting = true;
           }
         } else {
@@ -517,6 +514,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       phoneVerified,
       authProviderUserId,
       state = "Andhra Pradesh",
+      stateCode = "AP",
       district = "Vijayawada",
       city = "Vijayawada",
       pincode,
@@ -740,15 +738,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           return;
         }
       } else if (role === USER_ROLES.CUSTOMER) {
-        const alreadyCustomer = existingUser.role === USER_ROLES.CUSTOMER || existingUser.roles?.includes(USER_ROLES.CUSTOMER);
-        if (alreadyCustomer) {
-          res.status(409).json({
-            success: false,
-            code: "CUSTOMER_PROFILE_EXISTS",
-            message: "❌ You already have a Customer account registered with this email. Please sign in."
-          });
-          return;
-        }
+        // If user already exists, OTP verification has already proven email ownership;
+        // seamlessly update credentials/profile and log in rather than blocking with 409.
       }
     }
 
@@ -867,17 +858,28 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       user = existingUser;
       const currentRoles = Array.isArray(user.roles) && user.roles.length > 0 ? user.roles : [user.role];
       user.roles = Array.from(new Set([...currentRoles, role]));
-      if (cleanPhone && !user.phone) user.phone = cleanPhone;
+      if (passwordHash) user.passwordHash = passwordHash;
+      if (resolvedName) user.name = resolvedName;
+      if (firstName) user.firstName = firstName;
+      if (lastName) user.lastName = lastName;
+      if (gender) user.gender = gender;
+      if (cleanPhone) user.phone = cleanPhone;
       if (assignedEmployeeId && !user.employeeId) user.employeeId = assignedEmployeeId;
-      if (parsedDob && !user.dateOfBirth) {
+      if (parsedDob) {
         user.dateOfBirth = parsedDob;
         user.age = actualAge;
         user.ageAtRegistration = actualAge;
       }
-      if (pincode && !user.pincode) user.pincode = pincode;
-      if (address && !user.address) user.address = address;
-      if (district && !user.district) user.district = district;
-      if (avatarUrl && !user.avatarUrl) user.avatarUrl = avatarUrl;
+      if (pincode) user.pincode = pincode;
+      if (address) user.address = address;
+      if (district) user.district = district;
+      if (city) user.city = city;
+      if (state) user.state = state;
+      if (stateCode) user.stateCode = stateCode;
+      if (avatarUrl) user.avatarUrl = avatarUrl;
+      if (Array.isArray(req.body.languages) && req.body.languages.length > 0) {
+        user.languages = req.body.languages;
+      }
       user.emailVerified = true;
       if (phoneVerified) user.phoneVerified = true;
       user.lastLoginAt = new Date();
@@ -1220,6 +1222,17 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error: any) {
     console.error("Registration error:", error);
+    if (error.code === 11000) {
+      const keyPattern = error.keyPattern || {};
+      const duplicateField = Object.keys(keyPattern)[0] || "detail";
+      const fieldName = duplicateField === "email" ? "email address" : duplicateField === "phone" ? "mobile number" : duplicateField;
+      res.status(409).json({
+        success: false,
+        code: "DUPLICATE_KEY_CONFLICT",
+        message: `❌ An account with this ${fieldName} already exists. Please sign in or use another ${fieldName}.`
+      });
+      return;
+    }
     res.status(500).json({
       success: false,
       message: "Server error during registration.",

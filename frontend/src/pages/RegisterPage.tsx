@@ -1293,6 +1293,39 @@ export const RegisterPage: React.FC = () => {
                 />
               </div>
 
+              {/* Submission Error Alert with Direct Sign In Action */}
+              <AnimatePresence>
+                {formError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 text-xs space-y-2.5 shadow-sm"
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="font-bold text-xs">{formError}</p>
+                        {(formError.toLowerCase().includes("already") || formError.toLowerCase().includes("exist") || formError.toLowerCase().includes("conflict") || formError.toLowerCase().includes("registered")) && (
+                          <div className="mt-2 pt-2 border-t border-rose-200 dark:border-rose-800/60 flex items-center justify-between gap-2 flex-wrap">
+                            <span className="text-[11px] text-rose-700 dark:text-rose-300 font-medium">
+                              Already registered? Access your account:
+                            </span>
+                            <Link
+                              to={`/login?email=${encodeURIComponent(email.trim().toLowerCase())}&role=customer`}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs transition shadow-sm"
+                            >
+                              <span>Sign In to Your Account</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </Link>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* ======================================================== */}
               {/* FINAL REGISTRATION SUBMISSION BUTTON */}
               {/* ======================================================== */}

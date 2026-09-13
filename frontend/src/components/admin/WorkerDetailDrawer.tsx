@@ -365,8 +365,10 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
 
     const updated = data.worker || {
       ...worker,
+      verificationStatus: "REUPLOAD_REQUESTED",
+      rejectionReason: feedback,
       kycDocuments: (worker.kycDocuments || []).map((d: any) =>
-        d.documentType === docType ? { ...d, verificationStatus: "REUPLOAD_REQUESTED", aiVerificationNotes: feedback } : d
+        d.documentType === docType ? { ...d, verificationStatus: "REUPLOAD_REQUESTED", aiVerificationNotes: feedback, rejectionReason: feedback } : d
       )
     };
 
@@ -395,6 +397,10 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
   const isVerified = worker.verificationStatus === "VERIFIED";
   const isRejected = worker.verificationStatus === "REJECTED";
   const isSuspicious = worker.verificationStatus === "SUSPECTED_FAKE";
+  const isReuploadPending =
+    worker.verificationStatus === "REUPLOAD_REQUESTED" ||
+    (Array.isArray(worker.kycDocuments) &&
+      worker.kycDocuments.some((d: any) => d.verificationStatus === "REUPLOAD_REQUESTED"));
 
   const lifecycleStages = [
     {
@@ -1052,7 +1058,7 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
                     </select>
                   </div>
 
-                  {/* Actions */}
+                  {/* Actions: Dynamically Reflects Current Admin Inspection State */}
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setIsRejecting(true)}
@@ -1061,15 +1067,46 @@ export const WorkerDetailDrawer: React.FC<WorkerDetailDrawerProps> = ({
                       Suspend / Flag
                     </button>
 
-                    <button
-                      onClick={() => {
-                        setShowApprovalConfirmModal(true);
-                      }}
-                      className="px-5 py-2 rounded-xl bg-[#075E54] hover:bg-[#064e46] text-white text-xs font-black shadow-md hover:shadow-emerald-900/20 flex items-center gap-2 transition cursor-pointer"
-                    >
-                      <Lock className="w-3.5 h-3.5 text-amber-300" />
-                      <span>Review & Authorize (PIN)</span>
-                    </button>
+                    {isReuploadPending ? (
+                      <button
+                        type="button"
+                        disabled
+                        className="px-5 py-2 rounded-xl bg-amber-500/15 dark:bg-amber-950/40 border border-amber-400 dark:border-amber-600 text-amber-800 dark:text-amber-300 text-xs font-black shadow-xs flex items-center gap-2 cursor-not-allowed transition"
+                        title="Document re-upload requested from worker. Authorization unlocks once revised documents are submitted."
+                      >
+                        <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 animate-spin" style={{ animationDuration: "4s" }} />
+                        <span>Requested to Re-upload (Awaiting Worker)</span>
+                      </button>
+                    ) : isVerified ? (
+                      <button
+                        onClick={() => {
+                          setShowApprovalConfirmModal(true);
+                        }}
+                        className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md flex items-center gap-2 transition cursor-pointer"
+                        title="Worker is certified. Click to change tier or re-certify."
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-amber-300" />
+                        <span>✓ Certified &amp; Authorized (Tier {worker.verificationLevel || selectedLevel})</span>
+                      </button>
+                    ) : isRejected ? (
+                      <button
+                        onClick={() => setIsRejecting(true)}
+                        className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-md flex items-center gap-2 transition cursor-pointer"
+                      >
+                        <AlertOctagon className="w-3.5 h-3.5 text-white" />
+                        <span>✕ Suspended / Blacklisted</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setShowApprovalConfirmModal(true);
+                        }}
+                        className="px-5 py-2 rounded-xl bg-[#075E54] hover:bg-[#064e46] text-white text-xs font-black shadow-md hover:shadow-emerald-900/20 flex items-center gap-2 transition cursor-pointer"
+                      >
+                        <Lock className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Review &amp; Authorize (PIN)</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

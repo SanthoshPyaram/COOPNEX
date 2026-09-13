@@ -433,3 +433,4 @@ export function getDistrictSocietiesAndAreas(districtInput: string): {
     ]
   };
 }
+

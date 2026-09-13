@@ -38,12 +38,14 @@ import {
   QrCode,
   Lock,
   Eye,
-  EyeOff
+  EyeOff,
+  Calendar
 } from "lucide-react";
 import { FormField } from "../components/common/FormField";
 import { PasswordRequirements } from "../components/common/PasswordRequirements";
 import {
   validateName,
+  validateDateOfBirth,
   validateAge,
   validateEmailFormat,
   validatePassword,
@@ -87,13 +89,50 @@ export const WorkerOnboardingPage: React.FC = () => {
   const [phone, setPhone] = useState(searchParams.get("phone") || "");
   const [email, setEmail] = useState(searchParams.get("email") || "");
   const [gender, setGender] = useState(searchParams.get("gender") || "");
+  const [dateOfBirth, setDateOfBirth] = useState(searchParams.get("dateOfBirth") || "");
+  const [calculatedAge, setCalculatedAge] = useState<number | null>(() => {
+    const pAge = searchParams.get("age");
+    return pAge ? Number(pAge) : null;
+  });
   const [age, setAge] = useState(searchParams.get("age") || "");
+  const [dobSuccessMsg, setDobSuccessMsg] = useState<string | null>(null);
   const [district, setDistrict] = useState("");
   const [address, setAddress] = useState("");
   const [addressData, setAddressData] = useState<Partial<AddressData>>({
     addressType: "WORK"
   });
   const [addressError, setAddressError] = useState<string | null>(null);
+
+  // Maximum selectable date is today, minimum is 120 years ago
+  const todayObj = new Date();
+  const todayFormatted = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, "0")}-${String(todayObj.getDate()).padStart(2, "0")}`;
+  const minDobFormatted = `${todayObj.getFullYear() - 120}-${String(todayObj.getMonth() + 1).padStart(2, "0")}-${String(todayObj.getDate()).padStart(2, "0")}`;
+
+  const handleDobChange = (val: string) => {
+    setDateOfBirth(val);
+    setError(null);
+    if (!val) {
+      setStep1Errors((prev) => ({ ...prev, age: "❌ Please enter your date of birth. 📅" }));
+      setCalculatedAge(null);
+      setAge("");
+      setDobSuccessMsg(null);
+      return;
+    }
+    const result = validateDateOfBirth(val);
+    setCalculatedAge(result.age);
+    if (result.isValid && result.age !== null) {
+      setAge(String(result.age));
+      setStep1Errors((prev) => ({ ...prev, age: undefined }));
+      setDobSuccessMsg(result.successMsg || `✅ Age: ${result.age} years — Verified (Eligible to register) 🎉`);
+    } else {
+      setAge(result.age ? String(result.age) : "");
+      setStep1Errors((prev) => ({
+        ...prev,
+        age: result.error || "🔴 Sorry! You must be at least 18 years old to register as a cooperative specialist. 🎂"
+      }));
+      setDobSuccessMsg(null);
+    }
+  };
 
   const [step1Errors, setStep1Errors] = useState<{
     name?: string;
@@ -607,7 +646,7 @@ export const WorkerOnboardingPage: React.FC = () => {
       const emailCheck = validateEmailFormat(email);
       const passCheck = validatePassword(password);
       const confirmCheck = validateConfirmPassword(password, confirmPassword);
-      const ageCheck = validateAge(age, 1, 120);
+      const dobCheck = validateDateOfBirth(dateOfBirth);
       const isAddressValid = Boolean(
         addressData.pincode &&
         addressData.pincode.length === 6 &&
@@ -623,7 +662,7 @@ export const WorkerOnboardingPage: React.FC = () => {
       if (!emailCheck.isValid) errors.email = emailCheck.error;
       if (!passCheck.isValid) errors.password = passCheck.error;
       if (!confirmCheck.isValid) errors.confirmPassword = confirmCheck.error;
-      if (!ageCheck.isValid) errors.age = ageCheck.error;
+      if (!dobCheck.isValid) errors.age = dobCheck.error || "🔴 Sorry! You must be at least 18 years old to register as a cooperative specialist. 🎂";
       if (!isAddressValid) errors.address = "Please complete your postal PIN code, street, and door number.";
 
       if (Object.keys(errors).length > 0) {
@@ -711,7 +750,8 @@ export const WorkerOnboardingPage: React.FC = () => {
         phone: phone.trim() || undefined,
         password,
         gender: gender || "Other",
-        age: age ? Number(age) : 28,
+        dateOfBirth: dateOfBirth || undefined,
+        age: calculatedAge || (age ? Number(age) : 28),
         district: addressData.district || district,
         state: addressData.state,
         stateCode: addressData.stateCode,
@@ -884,7 +924,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                   data={{
                     employeeId: trackingId || `SS-AP-2026-${Math.floor(1000 + Math.random() * 9000)}`,
                     name: name || "Registered Artisan",
-                    age: age || "32",
+                    age: calculatedAge ? `${calculatedAge}` : (age || "28"),
                     gender: gender,
                     skills: [primarySkill, ...(secondarySkills ? secondarySkills.split(",").map(s => s.trim()).filter(Boolean) : [])],
                     bloodGroup: bloodGroup || "O+",
@@ -1402,27 +1442,46 @@ export const WorkerOnboardingPage: React.FC = () => {
                   </div>
 
                   <FormField
-                    id="worker-onboarding-age"
-                    label="Age (Years)"
+                    id="worker-onboarding-dob"
+                    label="Date of Birth"
                     required
                     error={step1Errors.age}
                   >
-                    <input
-                      id="worker-onboarding-age"
-                      type="number"
-                      min={1}
-                      max={120}
-                      placeholder="e.g. 28"
-                      value={age}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setAge(val);
-                        setError(null);
-                        const check = validateAge(val, 1, 120);
-                        setStep1Errors((prev) => ({ ...prev, age: check.error }));
-                      }}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
-                    />
+                    <div className="space-y-1.5">
+                      <div className="relative">
+                        <Calendar className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
+                        <input
+                          id="worker-onboarding-dob"
+                          type="date"
+                          max={todayFormatted}
+                          min={minDobFormatted}
+                          required
+                          value={dateOfBirth}
+                          onChange={(e) => handleDobChange(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600 transition"
+                        />
+                      </div>
+
+                      {/* Dynamic Age Badge & Eligibility Indicator */}
+                      {calculatedAge !== null && (
+                        <div className="flex items-center gap-2 pt-0.5">
+                          {calculatedAge >= 18 ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-lg">
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Age: {calculatedAge} years — Verified (Eligible &gt; 18)</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-lg">
+                              <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                              <span>Age: {calculatedAge} years — Ineligible (Must be at least 18)</span>
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {dobSuccessMsg && !step1Errors.age && (
+                        <p className="text-[11px] text-emerald-600 font-semibold">{dobSuccessMsg}</p>
+                      )}
+                    </div>
                   </FormField>
 
                 {/* Hierarchical Postal & Locality Address Form */}

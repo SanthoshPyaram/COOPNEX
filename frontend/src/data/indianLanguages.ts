@@ -47,3 +47,4 @@ export function formatAadhaarNumber(val: string): string {
 export function cleanAadhaarNumber(val: string): string {
   return val.replace(/\D/g, "").slice(0, 12);
 }
+
