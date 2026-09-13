@@ -56,6 +56,8 @@ import {
   MessageSquare,
   RefreshCw,
   Search,
+  Camera,
+  Video,
   X
 } from "lucide-react";
 
@@ -119,7 +121,18 @@ export interface AdminPaymentTransaction {
 const loadCombinedWorkforce = () => {
   try {
     const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
-    return localWorkers.map((w: any) => ({
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const validToday = localWorkers.filter((w: any) => {
+      const isDemo =
+        (w.name && w.name.toLowerCase().includes("demo")) ||
+        (w.phone && (w.phone.includes("98480 00001") || w.phone.includes("98765 43210")));
+      if (isDemo) return false;
+      const d = w.registeredAt || w.createdAt;
+      if (!d) return false;
+      return new Date(d).getTime() >= startOfToday.getTime();
+    });
+    return validToday.map((w: any) => ({
       _id: w._id || w.id || `WRK-${w.employeeId}`,
       name: w.name,
       phone: w.phone || "+91 98765 43210",
@@ -231,6 +244,7 @@ export const SuperAdminPage: React.FC = () => {
   const [starReason, setStarReason] = useState<string>("");
   const [starSubmitting, setStarSubmitting] = useState<boolean>(false);
   const [starSuccessMsg, setStarSuccessMsg] = useState<string>("");
+  const [selectedAdminMedia, setSelectedAdminMedia] = useState<{ type: "IMAGE" | "VIDEO"; url: string } | null>(null);
 
   const loadAllUsers = async () => {
     setUsersLoading(true);
@@ -445,12 +459,8 @@ export const SuperAdminPage: React.FC = () => {
     }
   }, [activeTab]);
 
-  // Security Center state
-  const [securityEvents, setSecurityEvents] = useState<any[]>([
-    { eventId: "SEC-902", eventType: "LOGIN_SUCCESS", riskLevel: "LOW", ipAddress: "127.0.0.1", actionTaken: "MFA TOTP verified successfully (Session authorized)", time: "Today, 02:45 PM" },
-    { eventId: "SEC-901", eventType: "MFA_FAILED", riskLevel: "MEDIUM", ipAddress: "192.168.1.45", actionTaken: "Invalid 6-digit TOTP code entered (Attempt 1 of 5)", time: "Today, 01:20 PM" },
-    { eventId: "SEC-900", eventType: "CRITICAL_ACTION", riskLevel: "HIGH", ipAddress: "127.0.0.1", actionTaken: "Worker verification inspected by Super Admin", time: "Today, 10:15 AM" }
-  ]);
+  // Security Center state (strictly live audited events)
+  const [securityEvents, setSecurityEvents] = useState<any[]>([]);
 
   // Sync workforce with MongoDB backend & localStorage (strictly real records)
   const fetchBackendAndLocalWorkforce = async () => {
@@ -506,9 +516,20 @@ export const SuperAdminPage: React.FC = () => {
         console.warn("MongoDB KYC submissions fetch notice:", err);
       }
 
-      // Also load local registered workers
+      // Also load local registered workers (only non-demo registered today)
       const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
-      const mappedLocal = localWorkers.map((w: any) => ({
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const validToday = localWorkers.filter((w: any) => {
+        const isDemo =
+          (w.name && w.name.toLowerCase().includes("demo")) ||
+          (w.phone && (w.phone.includes("98480 00001") || w.phone.includes("98765 43210")));
+        if (isDemo) return false;
+        const d = w.registeredAt || w.createdAt;
+        if (!d) return false;
+        return new Date(d).getTime() >= startOfToday.getTime();
+      });
+      const mappedLocal = validToday.map((w: any) => ({
         _id: w._id || w.id || `WRK-${w.employeeId}`,
         name: w.name,
         phone: w.phone || "+91 98765 43210",
@@ -909,7 +930,7 @@ export const SuperAdminPage: React.FC = () => {
       onTabChange={setActiveTab}
       pendingKycCount={pendingCount}
       criticalFraudCount={criticalFraudCount}
-      activeEmergencyCount={2}
+      activeEmergencyCount={bookingsData.filter((b) => b.bookingType === "EMERGENCY" && b.status !== "COMPLETED").length}
     >
       <div className="space-y-6 max-w-7xl mx-auto">
         {/* =========================================================================
@@ -938,12 +959,12 @@ export const SuperAdminPage: React.FC = () => {
             {/* Compact 6-Card KPI Strip with Smooth Animated Counters - Pure Real Database Metrics */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
               {[
-                { title: "REGISTERED CITIZENS", value: usersData.length, prefix: "", suffix: " Users", trend: "Live DB", desc: "active platform accounts", color: "text-blue-600 dark:text-blue-400", icon: Users },
+                { title: "REGISTERED CITIZENS", value: usersData.filter((u) => u.role === "CUSTOMER").length, prefix: "", suffix: " Users", trend: "Live DB", desc: "active platform accounts", color: "text-blue-600 dark:text-blue-400", icon: Users },
                 { title: "VERIFIED WORKERS", value: workforceData.filter((w) => w.verificationStatus === "VERIFIED").length, prefix: "", suffix: " Artisans", trend: `${workforceData.length} Total`, desc: "registered workforce", color: "text-[#075E54] dark:text-emerald-400", icon: ShieldCheck },
                 { title: "PENDING KYC", value: pendingCount, prefix: "", suffix: " Dossiers", trend: "Review", desc: "statutory checks", color: "text-amber-600 dark:text-amber-400", icon: ShieldAlert },
                 { title: "TOTAL BOOKINGS", value: bookingsData.length, prefix: "", suffix: "", trend: `${bookingsData.filter((b) => b.workerAccepted).length} Accepted`, desc: "user service requests", color: "text-indigo-600 dark:text-indigo-400", icon: Activity },
-                { title: "ADMIN FEES / CORPUS", value: paymentTransactions.reduce((sum, p) => sum + (p.coopFee || 50), 0), prefix: "₹", suffix: "", trend: "₹50/order", desc: "welfare & maintenance", color: "text-emerald-600 dark:text-emerald-400", icon: CreditCard },
-                { title: "AVG SATISFACTION", value: federationKpis?.averageCustomerSatisfaction || 5.0, prefix: "★ ", suffix: " / 5", isDecimal: true, trend: "Audited", desc: "citizen rating", color: "text-purple-600 dark:text-purple-400", icon: Star }
+                { title: "ADMIN FEES / CORPUS", value: paymentTransactions.reduce((sum, p) => sum + (p.coopFee || 0), 0), prefix: "₹", suffix: "", trend: "₹50/order", desc: "welfare & maintenance", color: "text-emerald-600 dark:text-emerald-400", icon: CreditCard },
+                { title: "AVG SATISFACTION", value: reviewsData.length > 0 ? Number((reviewsData.reduce((s, r) => s + (r.rating || 5), 0) / reviewsData.length).toFixed(1)) : Number(federationKpis?.averageCustomerSatisfaction || 0), prefix: "★ ", suffix: " / 5", isDecimal: true, trend: "Audited", desc: "citizen rating", color: "text-purple-600 dark:text-purple-400", icon: Star }
               ].map((kpi, idx) => {
                 const Icon = kpi.icon;
                 return (
@@ -957,9 +978,9 @@ export const SuperAdminPage: React.FC = () => {
                     </div>
                     <div className={`text-xl font-black font-mono tracking-tight mt-1.5 ${kpi.color}`}>
                       {kpi.isDecimal ? (
-                        `${kpi.prefix}${kpi.value}${kpi.suffix}`
+                        `${kpi.prefix}${Number(kpi.value).toFixed(1)}${kpi.suffix}`
                       ) : (
-                        <AnimatedNumber value={kpi.value} prefix={kpi.prefix} suffix={kpi.suffix} />
+                        <AnimatedNumber value={Number(kpi.value)} prefix={kpi.prefix} suffix={kpi.suffix} />
                       )}
                     </div>
                     <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-1">
@@ -988,44 +1009,44 @@ export const SuperAdminPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-2.5 text-xs">
-                  <div
-                    onClick={() => setActiveTab("kyc")}
-                    className="p-2.5 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 cursor-pointer hover:bg-amber-50 transition"
-                  >
-                    <div className="flex items-center justify-between font-bold text-amber-900 dark:text-amber-200">
-                      <span>{pendingCount} KYC Applications Awaiting Review</span>
-                      <span className="text-[10px] font-mono">Inspect &rarr;</span>
+                  {pendingCount > 0 ? (
+                    <div
+                      onClick={() => setActiveTab("kyc")}
+                      className="p-2.5 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 cursor-pointer hover:bg-amber-50 transition"
+                    >
+                      <div className="flex items-center justify-between font-bold text-amber-900 dark:text-amber-200">
+                        <span>{pendingCount} KYC Applications Awaiting Review</span>
+                        <span className="text-[10px] font-mono">Inspect &rarr;</span>
+                      </div>
+                      <div className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">
+                        Police verification certificate inspection pending.
+                      </div>
                     </div>
-                    <div className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">
-                      Police verification certificate inspection pending.
-                    </div>
-                  </div>
+                  ) : null}
 
-                  <div
-                    onClick={() => setActiveTab("emergency")}
-                    className="p-2.5 rounded-xl bg-purple-50/60 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/60 cursor-pointer hover:bg-purple-50 transition"
-                  >
-                    <div className="flex items-center justify-between font-bold text-purple-900 dark:text-purple-200">
-                      <span>Live SOS: Proximity Electrician En Route</span>
-                      <span className="text-[10px] font-mono">View 3D &rarr;</span>
+                  {bookingsData.some((b) => b.bookingType === "EMERGENCY" && b.status !== "COMPLETED") ? (
+                    <div
+                      onClick={() => setActiveTab("emergency")}
+                      className="p-2.5 rounded-xl bg-purple-50/60 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/60 cursor-pointer hover:bg-purple-50 transition"
+                    >
+                      <div className="flex items-center justify-between font-bold text-purple-900 dark:text-purple-200">
+                        <span>Live SOS: Proximity Specialist En Route</span>
+                        <span className="text-[10px] font-mono">View 3D &rarr;</span>
+                      </div>
                     </div>
-                    <div className="text-[11px] text-purple-700 dark:text-purple-400 mt-0.5">
-                      Rajesh Kumar 1.2 km away. ETA 5.8 mins.
-                    </div>
-                  </div>
+                  ) : null}
 
-                  <div
-                    onClick={() => setActiveTab("security")}
-                    className="p-2.5 rounded-xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/60 cursor-pointer hover:bg-rose-50 transition"
-                  >
-                    <div className="flex items-center justify-between font-bold text-rose-900 dark:text-rose-200">
-                      <span>Hardware Collision Flagged</span>
-                      <span className="text-[10px] font-mono">View &rarr;</span>
+                  {pendingCount === 0 && !bookingsData.some((b) => b.bookingType === "EMERGENCY") && (
+                    <div className="p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-xs">
+                      <div className="font-bold flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>All Systems Operational &amp; Fresh</span>
+                      </div>
+                      <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5">
+                        No active emergencies or compliance flags. Fresh operational session active.
+                      </p>
                     </div>
-                    <div className="text-[11px] text-rose-700 dark:text-rose-400 mt-0.5">
-                      Forged precinct seal detected on suspect account WRK-KYC-004.
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1700,13 +1721,67 @@ export const SuperAdminPage: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Customer Feedback Body */}
-                        <div className="mt-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/80 text-xs">
+                        {/* Customer Feedback Body & Work Media Proof */}
+                        <div className="mt-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/80 text-xs space-y-2.5">
                           <p className="text-slate-700 dark:text-slate-300 italic">
-                            "{r.comment || "Work was carried out with high cooperative craftsmanship and safety standards."}"
+                            "{r.comment || r.experienceComment || "Work was carried out with high cooperative craftsmanship and safety standards."}"
                           </p>
-                          <div className="text-[10px] text-slate-400 mt-2 flex items-center justify-between">
-                            <span>Reviewed by: {r.customerId?.name || "Citizen"}</span>
+
+                          {/* Criteria scores */}
+                          <div className="flex flex-wrap gap-1.5 text-[10px]">
+                            <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-medium">
+                              Quality: <strong>{r.qualityScore || r.rating || 5}★</strong>
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-medium">
+                              Punctuality: <strong>{r.punctualityScore || r.rating || 5}★</strong>
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-medium">
+                              Behavior: <strong>{r.behaviourRating || 5}★</strong>
+                            </span>
+                          </div>
+
+                          {/* Work Photos Proof */}
+                          {Array.isArray(r.workImages) && r.workImages.length > 0 && (
+                            <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 space-y-1.5">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                                <Camera className="w-3.5 h-3.5 text-blue-500" />
+                                <span>Work Completion Photos ({r.workImages.length}):</span>
+                              </span>
+                              <div className="grid grid-cols-3 gap-1.5">
+                                {r.workImages.map((img: string, idx: number) => (
+                                  <div
+                                    key={idx}
+                                    onClick={() => setSelectedAdminMedia({ type: "IMAGE", url: img })}
+                                    className="relative aspect-video rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 cursor-pointer group"
+                                  >
+                                    <img src={img} alt={`Work proof ${idx + 1}`} className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                                      <Eye className="w-3.5 h-3.5 text-white" />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Work Video Proof */}
+                          {r.workVideo && (
+                            <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 space-y-1">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                                <Video className="w-3.5 h-3.5 text-purple-500" />
+                                <span>Work Video Demonstration:</span>
+                              </span>
+                              <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-black aspect-video max-h-48">
+                                <video controls className="w-full h-full object-cover">
+                                  <source src={r.workVideo} type="video/mp4" />
+                                  Your browser does not support HTML5 video.
+                                </video>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="text-[10px] text-slate-400 mt-2 flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-800">
+                            <span>Reviewed by: {r.customerId?.name || "Citizen"} {r.customerId?.phone ? `(${r.customerId.phone})` : ""}</span>
                             <span>{r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-IN") : "Recent"}</span>
                           </div>
                         </div>
@@ -1853,7 +1928,7 @@ export const SuperAdminPage: React.FC = () => {
                 <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-blue-200/90 dark:border-blue-900 shadow-xs space-y-1">
                   <div className="text-[10px] uppercase font-bold text-blue-700">Platform Fund (₹50/job)</div>
                   <div className="text-xl font-black font-mono text-blue-700">
-                    ₹{(adminLedgerSummary?.totalMaintenanceFund ?? 248560).toLocaleString()}
+                    ₹{(adminLedgerSummary?.totalMaintenanceFund ?? paymentTransactions.reduce((sum, p) => sum + (p.coopFee || 0), 0)).toLocaleString()}
                   </div>
                   <div className="text-[10px] text-blue-600 font-semibold">Flat Maintenance Corpus</div>
                 </div>
@@ -1862,16 +1937,16 @@ export const SuperAdminPage: React.FC = () => {
                 <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-amber-200/90 dark:border-amber-900 shadow-xs space-y-1 bg-amber-50/20">
                   <div className="text-[10px] uppercase font-bold text-amber-700">24H Warranty Escrow</div>
                   <div className="text-xl font-black font-mono text-amber-600">
-                    ₹{(adminLedgerSummary?.totalWorkerEarningsHeld ?? 48200).toLocaleString()}
+                    ₹{(adminLedgerSummary?.totalWorkerEarningsHeld ?? 0).toLocaleString()}
                   </div>
-                  <div className="text-[10px] text-amber-700 font-bold">{adminLedgerSummary?.activeEscrowHolds ?? 12} Defect Holds</div>
+                  <div className="text-[10px] text-amber-700 font-bold">{adminLedgerSummary?.activeEscrowHolds ?? 0} Defect Holds</div>
                 </div>
 
                 {/* 3. Matured / Released Wages */}
                 <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-emerald-200/90 dark:border-emerald-900 shadow-xs space-y-1 bg-emerald-50/30">
                   <div className="text-[10px] uppercase font-bold text-emerald-700">Released Wages</div>
                   <div className="text-xl font-black font-mono text-emerald-700">
-                    ₹{(adminLedgerSummary?.totalWorkerEarningsReleased ?? 2237040).toLocaleString()}
+                    ₹{(adminLedgerSummary?.totalWorkerEarningsReleased ?? 0).toLocaleString()}
                   </div>
                   <div className="text-[10px] text-emerald-600 font-semibold">100% Unlocked</div>
                 </div>
@@ -1880,7 +1955,7 @@ export const SuperAdminPage: React.FC = () => {
                 <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-1">
                   <div className="text-[10px] uppercase font-bold text-slate-400">Total DBT Disbursed</div>
                   <div className="text-xl font-black font-mono text-slate-700 dark:text-slate-300">
-                    ₹{(adminLedgerSummary?.totalDisbursedToWorkers ?? 1850000).toLocaleString()}
+                    ₹{(adminLedgerSummary?.totalDisbursedToWorkers ?? 0).toLocaleString()}
                   </div>
                   <div className="text-[10px] text-emerald-600 font-bold">IMPS / UPI Dispatched</div>
                 </div>
@@ -2396,17 +2471,21 @@ export const SuperAdminPage: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="p-5 rounded-2xl bg-white dark:bg-[#101828] border border-slate-200 dark:border-slate-800 space-y-1 shadow-xs">
                       <div className="text-[11px] font-bold text-slate-400 uppercase">Active Welfare Corpus</div>
-                      <div className="text-2xl font-black text-[#075E54] dark:text-emerald-400 font-mono">₹48,50,000</div>
+                      <div className="text-2xl font-black text-[#075E54] dark:text-emerald-400 font-mono">
+                        ₹{paymentTransactions.reduce((sum, p) => sum + (p.coopFee || 0), 0).toLocaleString()}
+                      </div>
                       <div className="text-xs text-slate-500">Held in District Cooperative Bank escrow</div>
                     </div>
                     <div className="p-5 rounded-2xl bg-white dark:bg-[#101828] border border-slate-200 dark:border-slate-800 space-y-1 shadow-xs">
                       <div className="text-[11px] font-bold text-slate-400 uppercase">Insured Artisans</div>
-                      <div className="text-2xl font-black text-blue-600 font-mono">12,480</div>
+                      <div className="text-2xl font-black text-blue-600 font-mono">
+                        {workforceData.filter((w) => w.verificationStatus === "VERIFIED").length}
+                      </div>
                       <div className="text-xs text-slate-500">₹2,00,000 group accidental cover active</div>
                     </div>
                     <div className="p-5 rounded-2xl bg-white dark:bg-[#101828] border border-slate-200 dark:border-slate-800 space-y-1 shadow-xs">
                       <div className="text-[11px] font-bold text-slate-400 uppercase">Claims Disbursed</div>
-                      <div className="text-2xl font-black text-amber-600 font-mono">14</div>
+                      <div className="text-2xl font-black text-amber-600 font-mono">0</div>
                       <div className="text-xs text-slate-500">100% emergency grant settlement SLA</div>
                     </div>
                   </div>
@@ -2439,29 +2518,13 @@ export const SuperAdminPage: React.FC = () => {
                     </div>
 
                     <div className="space-y-2">
-                      {[
-                        { id: "WLF-CLM-089", beneficiary: "Rajesh Kumar (Electrician)", benefit: "Accidental Hospitalization Reimbursement", amount: "₹45,000", hospital: "Apollo Vijayawada", status: "DISBURSED", date: "02 Sep 2026" },
-                        { id: "WLF-EDU-104", beneficiary: "Sunita Devi (Caregiver)", benefit: "Children School Education Aid", amount: "₹12,000", school: "Govt High School NTR", status: "DISBURSED", date: "28 Aug 2026" },
-                        { id: "WLF-LOAN-012", beneficiary: "Lakshmi Narayana (Plumber)", benefit: "Tool Equipment Upgrade Microloan (0% Int.)", amount: "₹25,000", supplier: "Bosch Tools Guild", status: "ACTIVE", date: "15 Aug 2026" }
-                      ].map((grant, i) => (
-                        <div key={i} className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                          <div>
-                            <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                              <span className="font-mono text-emerald-600">{grant.id}</span>
-                              <span>{grant.beneficiary}</span>
-                            </div>
-                            <div className="text-[11px] text-slate-500">
-                              {grant.benefit} • {grant.date}
-                            </div>
-                          </div>
-                          <div className="text-right font-mono">
-                            <div className="font-bold text-slate-900 dark:text-white">{grant.amount}</div>
-                            <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300">
-                              {grant.status}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                      <div className="p-8 text-center text-slate-400 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+                        <HeartHandshake className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                        <h4 className="font-bold text-slate-700 dark:text-slate-300 text-xs">No Welfare Claims Logged Yet</h4>
+                        <p className="text-[11px] text-slate-400 mt-1 max-w-sm mx-auto">
+                          Statutory 2% welfare contributions accumulate from active completed jobs. Approved disability, education, and hospitalization grants appear here.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2843,6 +2906,29 @@ export const SuperAdminPage: React.FC = () => {
                   </>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ENLARGED WORK MEDIA PREVIEW MODAL */}
+      {selectedAdminMedia && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-xs">
+          <div className="relative max-w-3xl w-full bg-slate-900 rounded-3xl overflow-hidden p-2">
+            <button
+              onClick={() => setSelectedAdminMedia(null)}
+              className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center cursor-pointer transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="p-2 flex items-center justify-center max-h-[80vh]">
+              {selectedAdminMedia.type === "IMAGE" ? (
+                <img src={selectedAdminMedia.url} alt="Enlarged work proof" className="max-h-[75vh] w-auto object-contain rounded-2xl" />
+              ) : (
+                <video controls autoPlay className="w-full rounded-2xl max-h-[75vh]">
+                  <source src={selectedAdminMedia.url} type="video/mp4" />
+                </video>
+              )}
             </div>
           </div>
         </div>

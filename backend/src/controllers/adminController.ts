@@ -50,7 +50,7 @@ export const getFederationIntelligence = async (_req: Request, res: Response): P
     ]);
     const averageCustomerSatisfaction = avgReviewAgg[0]?.avgRating
       ? Math.round(avgReviewAgg[0].avgRating * 10) / 10
-      : (totalBookings > 0 ? 4.9 : 5.0);
+      : 0.0;
 
     // Utilization Index by trade
     const trades = ["Electrician", "Plumber", "Carpenter", "Painter", "Caregiver", "Cleaner"];

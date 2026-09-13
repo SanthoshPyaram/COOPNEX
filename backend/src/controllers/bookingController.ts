@@ -460,3 +460,21 @@ export const getReviewByBookingId = async (req: AuthenticatedRequest, res: Respo
   }
 };
 
+export const getMyReviews = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const reviews = await Review.find({ customerId: req.user?._id })
+      .populate("workerId", "name primaryTrade phone rating reviewCount profilePhoto")
+      .populate("bookingId", "bookingNumber serviceType scheduledDate scheduledTime totalAmount status paymentStatus")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      count: reviews.length,
+      reviews
+    });
+  } catch (error: any) {
+    console.error("getMyReviews error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch customer reviews." });
+  }
+};
+

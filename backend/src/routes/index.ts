@@ -88,6 +88,7 @@ apiRouter.get("/bookings/my", authenticateJwt, bookingCtrl.getMyBookings);
 apiRouter.get("/bookings/:id", authenticateJwt, bookingCtrl.getBookingById);
 apiRouter.patch("/bookings/:id/status", authenticateJwt, bookingCtrl.updateBookingStatus);
 apiRouter.post("/reviews", authenticateJwt, bookingCtrl.submitReview);
+apiRouter.get("/reviews/my", authenticateJwt, bookingCtrl.getMyReviews);
 apiRouter.get("/reviews/booking/:bookingId", authenticateJwt, bookingCtrl.getReviewByBookingId);
 
 // --- EMERGENCY DISPATCH & BLOOD NETWORK ---

@@ -156,6 +156,15 @@ export const api = {
     return res.json();
   },
 
+  getMyReviews: async () => {
+    const res = await fetch(`${API_BASE}/reviews/my`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      }
+    });
+    return res.json();
+  },
+
   // Emergency
   triggerEmergency: async (body: any) => {
     const res = await fetch(`${API_BASE}/emergency`, {

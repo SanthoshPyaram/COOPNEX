@@ -50,13 +50,8 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
   const [comment, setComment] = useState(initialComment);
   const [commentError, setCommentError] = useState<string | null>(null);
   const [commentTouched, setCommentTouched] = useState(false);
-  const [workImages, setWorkImages] = useState<string[]>([
-    "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&q=80",
-    "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&q=80"
-  ]);
-  const [workVideo, setWorkVideo] = useState<string>(
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
-  );
+  const [workImages, setWorkImages] = useState<string[]>([]);
+  const [workVideo, setWorkVideo] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -64,8 +59,13 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      const imageUrl = URL.createObjectURL(file);
-      setWorkImages((prev) => [...prev, imageUrl]);
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          setWorkImages((prev) => [...prev, reader.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -76,8 +76,17 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      const videoUrl = URL.createObjectURL(file);
-      setWorkVideo(videoUrl);
+      if (file.size > 25 * 1024 * 1024) {
+        alert("Video size must be under 25MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          setWorkVideo(reader.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -310,26 +319,37 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                   </label>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {workImages.map((imgUrl, idx) => (
-                    <div key={idx} className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 aspect-video group">
-                      <img src={imgUrl} alt={`Work proof ${idx + 1}`} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveImage(idx)}
-                          className="p-1 rounded-full bg-rose-600 text-white hover:bg-rose-700 transition"
-                          title="Remove photo"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                {workImages.length === 0 ? (
+                  <label
+                    htmlFor="add-work-image"
+                    className="flex flex-col items-center justify-center p-5 border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-blue-500 rounded-2xl bg-slate-50/60 dark:bg-slate-800/40 text-center cursor-pointer transition"
+                  >
+                    <Camera className="w-7 h-7 text-slate-400 mb-1.5" />
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Click to Upload Work Completion Photos</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5">JPG, PNG, or direct camera photo</span>
+                  </label>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {workImages.map((imgUrl, idx) => (
+                      <div key={idx} className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 aspect-video group">
+                        <img src={imgUrl} alt={`Work proof ${idx + 1}`} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(idx)}
+                            className="p-1 rounded-full bg-rose-600 text-white hover:bg-rose-700 transition"
+                            title="Remove photo"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <span className="absolute bottom-1 right-1 bg-black/70 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                          Photo #{idx + 1}
+                        </span>
                       </div>
-                      <span className="absolute bottom-1 right-1 bg-black/70 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
-                        Photo #{idx + 1}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* 5. Video Demonstration Proof */}
@@ -339,12 +359,22 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                     <Video className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                     <span>Video Demonstration of Finished Work:</span>
                   </label>
+                  {workVideo && (
+                    <button
+                      type="button"
+                      onClick={() => setWorkVideo("")}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Remove Video</span>
+                    </button>
+                  )}
                   <label
                     htmlFor="add-work-video"
                     className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
                   >
                     <Upload className="w-3 h-3" />
-                    <span>Upload Video File</span>
+                    <span>{workVideo ? "Replace Video" : "Upload Video File"}</span>
                     <input
                       type="file"
                       id="add-work-video"
@@ -355,7 +385,16 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                   </label>
                 </div>
 
-                {workVideo && (
+                {!workVideo ? (
+                  <label
+                    htmlFor="add-work-video"
+                    className="flex flex-col items-center justify-center p-5 border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-purple-500 rounded-2xl bg-slate-50/60 dark:bg-slate-800/40 text-center cursor-pointer transition"
+                  >
+                    <Video className="w-7 h-7 text-slate-400 mb-1.5" />
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Click to Upload Work Video Demonstration</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5">Short MP4, WebM clip under 25MB (Optional)</span>
+                  </label>
+                ) : (
                   <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 aspect-video bg-black shadow-inner">
                     <video controls className="w-full h-full object-cover">
                       <source src={workVideo} type="video/mp4" />

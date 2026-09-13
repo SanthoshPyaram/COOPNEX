@@ -10,6 +10,7 @@ import { CustomerMessagesView } from "../components/customer/CustomerMessagesVie
 import { CustomerNotificationsView } from "../components/customer/CustomerNotificationsView";
 import { CustomerPaymentsView } from "../components/customer/CustomerPaymentsView";
 import { CustomerFavoritesView } from "../components/customer/CustomerFavoritesView";
+import { CustomerReviewsView } from "../components/customer/CustomerReviewsView";
 import { CustomerSettingsView } from "../components/customer/CustomerSettingsView";
 import { VerificationBadge } from "../components/VerificationBadge";
 import { SpecialistProfileModal } from "../components/SpecialistProfileModal";
@@ -1465,9 +1466,10 @@ export const CustomerDashboardPage: React.FC = () => {
                         {b.status === "COMPLETED" && (
                           <button
                             onClick={() => setReviewBooking(b)}
-                            className="px-4 py-1.5 rounded-full bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white font-bold transition shadow-xs cursor-pointer"
+                            className="px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:opacity-95 text-white font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
                           >
-                            {t("cards.rateReview")}
+                            <Star className="w-3.5 h-3.5 fill-current" />
+                            <span>{t("cards.rateReview", "Rate & Add Work Proof")}</span>
                           </button>
                         )}
                       </div>
@@ -1477,6 +1479,16 @@ export const CustomerDashboardPage: React.FC = () => {
               </div>
             )}
           </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* TAB: REVIEWS & WORK PROOFS */}
+        {/* ======================================================== */}
+        {activeTab === "reviews" && (
+          <CustomerReviewsView
+            myBookings={myBookings}
+            onOpenReviewModal={(booking) => setReviewBooking(booking)}
+          />
         )}
 
         {/* ======================================================== */}

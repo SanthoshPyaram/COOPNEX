@@ -29,7 +29,8 @@ import {
   Sparkles,
   Phone,
   Radio,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Star
 } from "lucide-react";
 
 export interface CustomerNavItem {
@@ -154,6 +155,7 @@ export const CustomerAppShell: React.FC<CustomerAppShellProps> = ({
       badge: activeBookingsCount > 0 ? activeBookingsCount : undefined,
       badgeColor: "bg-blue-600 text-white"
     },
+    { id: "reviews", label: "Reviews & Proofs", icon: Star },
     { id: "messages", label: t("nav.messages", "Messages"), icon: MessageSquare },
     {
       id: "notifications",
