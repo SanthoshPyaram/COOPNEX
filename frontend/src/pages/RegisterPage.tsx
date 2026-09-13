@@ -861,10 +861,10 @@ export const RegisterPage: React.FC = () => {
                     }`}
                   >
                     {isSendingEmailOtp ? (
-                      <>
+                      <span className="inline-flex items-center gap-1.5" aria-live="polite">
                         <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span>Sending...</span>
-                      </>
+                        <span>Sending OTP...</span>
+                      </span>
                     ) : emailVerified ? (
                       <>
                         <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 stroke-[3]" />

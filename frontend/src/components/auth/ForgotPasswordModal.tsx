@@ -147,12 +147,14 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
       setEmailError(t("auth.emailNotFound", "This email is not registered. Please try again with another email address."));
     } else if (res.code === "RATE_LIMITED") {
       setErrorMessage(res.message || t("auth.rateLimited", "Too many OTP requests. Please wait and try again."));
+    } else if (res.code === "OTP_PROVIDER_CONFIG_ERROR") {
+      setErrorMessage(t("auth.otpProviderConfigError", "OTP service is temporarily unavailable. Please try again later."));
     } else if (res.code === "TIMEOUT") {
-      setErrorMessage(t("auth.otpTimeout", "⏱️ OTP dispatch took too long. Please check your connection and try again."));
+      setErrorMessage(t("auth.otpTimeout", "The OTP service is taking too long to respond. Please try again."));
     } else if (res.code === "NETWORK_ERROR") {
       setErrorMessage(t("auth.networkError", "Unable to connect to the server. Please check your internet connection and try again."));
     } else {
-      setErrorMessage(t("auth.otpSendFailed", "We couldn't send the OTP to this email right now. Please try again."));
+      setErrorMessage(t("auth.otpSendFailed", "We couldn't send the OTP right now. Please try again."));
     }
   };
 
@@ -175,12 +177,14 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
       setErrorMessage(t("auth.emailNotFound", "This email is not registered. Please try again with another email address."));
     } else if (res.code === "RATE_LIMITED") {
       setErrorMessage(res.message || t("auth.rateLimited", "Too many OTP requests. Please wait and try again."));
+    } else if (res.code === "OTP_PROVIDER_CONFIG_ERROR") {
+      setErrorMessage(t("auth.otpProviderConfigError", "OTP service is temporarily unavailable. Please try again later."));
     } else if (res.code === "TIMEOUT") {
-      setErrorMessage(t("auth.otpTimeout", "⏱️ OTP dispatch took too long. Please check your connection and try again."));
+      setErrorMessage(t("auth.otpTimeout", "The OTP service is taking too long to respond. Please try again."));
     } else if (res.code === "NETWORK_ERROR") {
       setErrorMessage(t("auth.networkError", "Unable to connect to the server. Please check your internet connection and try again."));
     } else {
-      setErrorMessage(t("auth.otpSendFailed", "We couldn't send the OTP to this email right now. Please try again."));
+      setErrorMessage(t("auth.otpSendFailed", "We couldn't send the OTP right now. Please try again."));
     }
   };
 

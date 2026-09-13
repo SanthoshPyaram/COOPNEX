@@ -422,6 +422,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
         }
 
+        if (res.status === 503 || data?.code === "OTP_PROVIDER_CONFIG_ERROR") {
+          return {
+            success: false,
+            code: "OTP_PROVIDER_CONFIG_ERROR",
+            message: data?.message || "OTP service is temporarily unavailable. Please try again later.",
+            retryAfterSeconds: data?.retryAfterSeconds
+          };
+        }
+
         if (res.status === 504 || data?.code === "TIMEOUT") {
           return {
             success: false,
@@ -571,6 +580,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             code: "RATE_LIMITED",
             retryAfterSeconds: data?.retryAfterSeconds || 60,
             message: data?.message || "Too many OTP requests. Please wait and try again."
+          };
+        }
+
+        if (res.status === 503 || data?.code === "OTP_PROVIDER_CONFIG_ERROR") {
+          return {
+            success: false,
+            code: "OTP_PROVIDER_CONFIG_ERROR",
+            message: data?.message || "OTP service is temporarily unavailable. Please try again later."
           };
         }
 

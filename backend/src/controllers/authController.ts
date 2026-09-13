@@ -1595,6 +1595,16 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
       if (!emailResult.success) {
         // Rollback OTP on dispatch failure so un-sent OTP cannot be used
         await Otp.deleteMany({ identifier: target, purpose, verified: false });
+        if (emailResult.error === "OTP_PROVIDER_CONFIG_ERROR") {
+          tracer.finish("OTP_PROVIDER_CONFIG_ERROR");
+          res.status(503).json({
+            success: false,
+            safeToSendOtp: false,
+            code: "OTP_PROVIDER_CONFIG_ERROR",
+            message: "OTP service is temporarily unavailable. Please try again later."
+          });
+          return;
+        }
         if (emailResult.error === "TIMEOUT") {
           tracer.finish("TIMEOUT");
           res.status(504).json({
@@ -1606,7 +1616,7 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
           return;
         }
         tracer.finish("OTP_SEND_FAILED");
-        res.status(500).json({
+        res.status(502).json({
           success: false,
           safeToSendOtp: false,
           code: "OTP_SEND_FAILED",
@@ -1899,6 +1909,17 @@ export const forgotPasswordSendOtp = async (req: Request, res: Response): Promis
     if (!emailResult.success) {
       // Rollback un-dispatched OTP record so dead OTP cannot linger
       await Otp.deleteMany({ identifier: cleanTarget, purpose: "FORGOT_PASSWORD", verified: false });
+      if (emailResult.error === "OTP_PROVIDER_CONFIG_ERROR") {
+        tracer.finish("OTP_PROVIDER_CONFIG_ERROR");
+        res.status(503).json({
+          success: false,
+          exists: true,
+          otpSent: false,
+          code: "OTP_PROVIDER_CONFIG_ERROR",
+          message: "OTP service is temporarily unavailable. Please try again later."
+        });
+        return;
+      }
       if (emailResult.error === "TIMEOUT") {
         tracer.finish("TIMEOUT");
         res.status(504).json({
@@ -1911,7 +1932,7 @@ export const forgotPasswordSendOtp = async (req: Request, res: Response): Promis
         return;
       }
       tracer.finish("OTP_SEND_FAILED");
-      res.status(500).json({
+      res.status(502).json({
         success: false,
         exists: true,
         otpSent: false,

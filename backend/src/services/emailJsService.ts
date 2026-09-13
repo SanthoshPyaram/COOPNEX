@@ -76,25 +76,39 @@ export async function sendEmailJsOtp(
     payload.accessToken = privateKey;
   }
 
+  const startTime = Date.now();
   try {
+    const origin = process.env.FRONTEND_ORIGIN || "https://santhoshpyaram.github.io";
+    const referer = process.env.FRONTEND_ORIGIN ? `${process.env.FRONTEND_ORIGIN}/` : "https://santhoshpyaram.github.io/COOPNEX/";
+
     const response = await axios.post(
       "https://api.emailjs.com/api/v1.0/email/send",
       payload,
       {
         headers: {
           "Content-Type": "application/json",
-          "User-Agent": "COOPNEX-Server/1.0"
+          "Origin": origin,
+          "Referer": referer,
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
         },
         timeout: 8000
       }
     );
 
+    const durationMs = Date.now() - startTime;
     if (response.status === 200 || response.data === "OK") {
+      console.log(`[EMAIL DISPATCH] EmailJS delivered successfully in ${durationMs}ms`);
       return {
         success: true,
         message: `A 6-digit verification code has been dispatched to ${cleanEmail}.`
       };
     }
+
+    console.warn(`[OTP_SEND_ERROR]`, {
+      code: `HTTP_${response.status}`,
+      provider: "emailjs",
+      durationMs
+    });
 
     return {
       success: false,
@@ -102,8 +116,13 @@ export async function sendEmailJsOtp(
       error: String(response.data)
     };
   } catch (error: any) {
+    const durationMs = Date.now() - startTime;
     if (error.code === "ECONNABORTED") {
-      console.warn(`[EMAILJS TIMEOUT] Request to EmailJS API timed out (8s limit).`);
+      console.warn(`[OTP_SEND_ERROR]`, {
+        code: "TIMEOUT",
+        provider: "emailjs",
+        durationMs
+      });
       return {
         success: false,
         message: "The OTP service is taking too long to respond. Please try again.",
@@ -111,7 +130,12 @@ export async function sendEmailJsOtp(
       };
     }
     const errMsg = error.response?.data || error.message || "Failed to dispatch email via EmailJS";
-    console.error(`[EMAILJS ERROR] Failed to send email to ${cleanEmail}:`, typeof errMsg === "string" ? errMsg : JSON.stringify(errMsg));
+    console.error(`[OTP_SEND_ERROR]`, {
+      code: error.response?.status ? `HTTP_${error.response.status}` : "NETWORK_ERROR",
+      provider: "emailjs",
+      durationMs,
+      details: typeof errMsg === "string" ? errMsg : JSON.stringify(errMsg)
+    });
     return {
       success: false,
       message: "We couldn't send the OTP right now. Please try again.",

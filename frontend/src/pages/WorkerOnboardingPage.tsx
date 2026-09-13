@@ -1099,9 +1099,9 @@ export const WorkerOnboardingPage: React.FC = () => {
                           }`}
                         >
                           {isSendingEmailOtp ? (
-                            <span className="flex items-center gap-1.5">
+                            <span className="flex items-center gap-1.5" aria-live="polite">
                               <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              <span>Sending...</span>
+                              <span>Sending OTP...</span>
                             </span>
                           ) : emailOtpJustSent ? (
                             <span className="flex items-center gap-1">

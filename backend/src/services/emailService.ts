@@ -147,9 +147,17 @@ export async function sendOtpEmail(
     }
   }
 
+  const hasAnyConfig = Boolean(
+    (brevoKey && !brevoKey.includes("xxxxxxx")) ||
+    (process.env.EMAILJS_SERVICE_ID && !process.env.EMAILJS_SERVICE_ID.includes("xxxxxxx")) ||
+    (process.env.SMTP_HOST && process.env.SMTP_USER)
+  );
+
   return {
     success: false,
-    error: "OTP_PROVIDER_FAILURE",
-    message: "We couldn't send the OTP right now. Please try again."
+    error: hasAnyConfig ? "OTP_PROVIDER_FAILURE" : "OTP_PROVIDER_CONFIG_ERROR",
+    message: hasAnyConfig
+      ? "We couldn't send the OTP right now. Please try again."
+      : "OTP service is temporarily unavailable. Please try again later."
   };
 }

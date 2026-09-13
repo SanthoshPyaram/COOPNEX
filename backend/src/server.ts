@@ -141,6 +141,16 @@ if (fs.existsSync(frontendDist)) {
     }
     res.sendFile(path.join(frontendDist, "index.html"));
   });
+} else {
+  // If static files are not co-located (e.g. Render backend with separate GitHub Pages frontend),
+  // forward accidental direct browser navigation to the production frontend
+  app.get("*", (req: Request, res: Response, next: NextFunction) => {
+    if (req.path.startsWith("/api") || req.path.startsWith("/health")) {
+      return next();
+    }
+    const cleanPath = req.path.startsWith("/COOPNEX") ? req.path : `/COOPNEX${req.path}`;
+    res.redirect(302, `https://santhoshpyaram.github.io${cleanPath}`);
+  });
 }
 
 // Global Error Handler
