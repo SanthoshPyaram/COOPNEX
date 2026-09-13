@@ -63,13 +63,17 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
 
   if (!isOpen || !worker) return null;
 
-  // Pricing calculations: e.g. Worker wage ₹300 + flat ₹50 platform maintenance = ₹350 total
+  // Transparent Pricing & Distance Calculations
   const baseRate = worker.baseHourlyRate || 300;
   const rateMultiplier = isEmergency ? 1.35 : 1.0;
   const workerWage = Math.round(baseRate * rateMultiplier);
-  const adminMaintenanceFee = 50;
+  const distanceKm = Number((worker as any).distanceKm || (worker as any).distance || 3.8);
+  const isLongDistance = distanceKm > 15;
+  const travelFee = Math.max(30, Math.round(distanceKm * 6));
+  const returnTravelFee = Math.max(30, Math.round(distanceKm * 6));
+  const adminMaintenanceFee = 40;
   const estimatedHours = 1;
-  const totalAmount = workerWage * estimatedHours + adminMaintenanceFee;
+  const totalAmount = workerWage * estimatedHours + travelFee + returnTravelFee + adminMaintenanceFee;
 
   const handleNextStep = () => {
     if (step === 1) {
@@ -294,6 +298,35 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
                 <p className="text-slate-500 text-[11px]">Specialist will arrive within the selected cooperative window</p>
               </div>
 
+              {/* Long Distance Operational Advisory */}
+              {isLongDistance && (
+                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-2">
+                  <div className="flex items-center gap-2 font-bold">
+                    <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>This worker is farther away ({distanceKm.toFixed(1)} km).</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800 leading-relaxed">
+                    We recommend scheduling this service tomorrow to allow enough travel time.
+                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setTimeSlot("Tomorrow Morning (9:00 AM - 12:00 PM)")}
+                      className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] transition shadow-xs cursor-pointer"
+                    >
+                      Schedule Tomorrow
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="px-3 py-1.5 rounded-xl border border-amber-300 text-amber-800 hover:bg-amber-100 font-bold text-[11px] transition cursor-pointer"
+                    >
+                      Choose Nearby Worker
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 {[
                   "Today Morning (9:00 AM - 12:00 PM)",
@@ -445,12 +478,20 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
 
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2.5 font-mono text-xs">
                 <div className="flex justify-between text-slate-700">
-                  <span className="font-sans">Artisan Fair Wage ({worker.name})</span>
-                  <span>₹{workerWage}</span>
+                  <span className="font-sans">Service Labor ({worker.name})</span>
+                  <span>₹{workerWage * estimatedHours}</span>
                 </div>
                 <div className="flex justify-between text-slate-700">
-                  <span className="font-sans">Estimated Service Duration</span>
-                  <span>{estimatedHours} Hour</span>
+                  <span className="font-sans">Travel Allowance (Transit to Location)</span>
+                  <span>₹{travelFee}</span>
+                </div>
+                <div className="flex justify-between text-slate-700">
+                  <span className="font-sans">Return Travel (Cooperative Transit Fund)</span>
+                  <span>₹{returnTravelFee}</span>
+                </div>
+                <div className="flex justify-between text-blue-800 font-semibold">
+                  <span className="font-sans">Platform &amp; Welfare Service Fee</span>
+                  <span className="font-bold text-blue-700">₹{adminMaintenanceFee}</span>
                 </div>
                 {isEmergency && (
                   <div className="flex justify-between text-rose-700">
@@ -458,10 +499,6 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
                     <span>Included</span>
                   </div>
                 )}
-                <div className="flex justify-between text-blue-800 font-semibold">
-                  <span className="font-sans">Platform Maintenance &amp; Welfare Fund</span>
-                  <span className="font-bold text-blue-700">₹{adminMaintenanceFee}</span>
-                </div>
                 <div className="flex justify-between text-emerald-800 font-semibold">
                   <span className="font-sans">PMSBY Safety &amp; Accidental Cover</span>
                   <span className="font-bold text-emerald-700">₹0 (Govt Subsidized)</span>

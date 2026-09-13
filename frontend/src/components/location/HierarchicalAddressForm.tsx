@@ -29,7 +29,7 @@ export interface AddressData {
   street: string;
   houseNumber: string;
   landmark?: string;
-  addressType: "PERMANENT" | "WORK";
+  addressType: "PERMANENT" | "WORK" | "BOTH";
   coordinates?: [number, number]; // [lng, lat]
   precision?: string;
   serviceAvailable?: boolean;
@@ -78,7 +78,7 @@ export const HierarchicalAddressForm: React.FC<HierarchicalAddressFormProps> = (
   const [street, setStreet] = useState(value.street || "");
   const [houseNumber, setHouseNumber] = useState(value.houseNumber || "");
   const [landmark, setLandmark] = useState(value.landmark || "");
-  const [addressType, setAddressType] = useState<"PERMANENT" | "WORK">(value.addressType || "PERMANENT");
+  const [addressType, setAddressType] = useState<"PERMANENT" | "WORK" | "BOTH">(value.addressType || "PERMANENT");
 
   // Geolocation & Service Availability
   const [coordinates, setCoordinates] = useState<[number, number] | undefined>(value.coordinates);
@@ -305,9 +305,9 @@ export const HierarchicalAddressForm: React.FC<HierarchicalAddressFormProps> = (
             Postal PIN Code (6 Digits) {required && <span className="text-rose-500">*</span>}
           </label>
           {isLoading && (
-            <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-              <span className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-              <span>Verifying with India Post...</span>
+            <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 animate-pulse">
+              <span className="w-3.5 h-3.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              <span>Finding your location...</span>
             </span>
           )}
         </div>
@@ -357,6 +357,22 @@ export const HierarchicalAddressForm: React.FC<HierarchicalAddressFormProps> = (
             transition={{ duration: 0.25 }}
             className="space-y-3"
           >
+            {/* Elegant Location Found Summary Pill */}
+            <div className="p-3 bg-blue-50 dark:bg-slate-800/80 border border-blue-200 dark:border-slate-700 rounded-xl flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-black text-blue-900 dark:text-blue-200">
+                  Location found:
+                </span>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                  {stateName} • {districtName}
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                {selectedMandal && <span>Mandal: <strong className="text-slate-700 dark:text-slate-200">{selectedMandal}</strong></span>}
+                {selectedPostOffice && <span> • PO: <strong className="text-slate-700 dark:text-slate-200">{selectedPostOffice}</strong></span>}
+              </div>
+            </div>
             {/* Service Availability Notice Card */}
             {serviceStatus === "AVAILABLE" ? (
               <div className="p-3 bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-start gap-2.5">
@@ -682,23 +698,23 @@ export const HierarchicalAddressForm: React.FC<HierarchicalAddressFormProps> = (
             {/* 6. Address Type Selector: Permanent vs Work */}
             <div className="pt-1">
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Address Type
+                Address Type *
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => {
                     setAddressType("PERMANENT");
                     emitChange({ addressType: "PERMANENT" });
                   }}
-                  className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition ${
+                  className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition ${
                     addressType === "PERMANENT"
                       ? "bg-blue-50 dark:bg-blue-950/60 border-blue-600 text-blue-700 dark:text-blue-300 shadow-xs"
                       : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50"
                   }`}
                 >
-                  <Home className="w-3.5 h-3.5" />
-                  <span>Permanent Address</span>
+                  <Home className="w-3.5 h-3.5 shrink-0" />
+                  <span>Permanent</span>
                 </button>
 
                 <button
@@ -707,14 +723,30 @@ export const HierarchicalAddressForm: React.FC<HierarchicalAddressFormProps> = (
                     setAddressType("WORK");
                     emitChange({ addressType: "WORK" });
                   }}
-                  className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition ${
+                  className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition ${
                     addressType === "WORK"
                       ? "bg-blue-50 dark:bg-blue-950/60 border-blue-600 text-blue-700 dark:text-blue-300 shadow-xs"
                       : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50"
                   }`}
                 >
-                  <Building2 className="w-3.5 h-3.5" />
-                  <span>Work / Service Address</span>
+                  <Building2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>Work</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddressType("BOTH");
+                    emitChange({ addressType: "BOTH" });
+                  }}
+                  className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition ${
+                    addressType === "BOTH"
+                      ? "bg-blue-50 dark:bg-blue-950/60 border-blue-600 text-blue-700 dark:text-blue-300 shadow-xs"
+                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50"
+                  }`}
+                >
+                  <Compass className="w-3.5 h-3.5 shrink-0" />
+                  <span>Both</span>
                 </button>
               </div>
             </div>

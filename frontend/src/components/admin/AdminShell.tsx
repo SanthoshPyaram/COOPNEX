@@ -491,7 +491,7 @@ export const AdminShell: React.FC<AdminShellProps> = ({
         )}
 
         {/* MAIN SCROLLABLE CONTENT */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-24 md:pb-8">
           {children}
         </main>
       </div>
@@ -640,6 +640,75 @@ export const AdminShell: React.FC<AdminShellProps> = ({
           </div>
         </div>
       )}
+
+      {/* 5. ADMIN MOBILE BOTTOM NAVIGATION BAR */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#101828]/95 backdrop-blur-md border-t border-[#E4E9F0] dark:border-slate-800 px-2 py-1 flex items-center justify-around shadow-lg">
+        <button
+          type="button"
+          onClick={() => onTabChange("command")}
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition cursor-pointer ${
+            activeTab === "command"
+              ? "text-emerald-700 dark:text-emerald-400 font-black"
+              : "text-slate-500 font-medium hover:text-slate-900"
+          }`}
+        >
+          <LayoutDashboard className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">Command</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onTabChange("bookings")}
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition cursor-pointer ${
+            activeTab === "bookings"
+              ? "text-emerald-700 dark:text-emerald-400 font-black"
+              : "text-slate-500 font-medium hover:text-slate-900"
+          }`}
+        >
+          <CalendarCheck className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">Operations</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onTabChange("security")}
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition cursor-pointer ${
+            activeTab === "security"
+              ? "text-emerald-700 dark:text-emerald-400 font-black"
+              : "text-slate-500 font-medium hover:text-slate-900"
+          }`}
+        >
+          <div className="relative">
+            <ShieldAlert className="w-5 h-5" />
+            {criticalFraudCount > 0 && (
+              <span className="absolute -top-1 -right-1.5 w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+            )}
+          </div>
+          <span className="text-[10px] mt-0.5">Alerts</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onTabChange("settings")}
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition cursor-pointer ${
+            activeTab === "settings"
+              ? "text-emerald-700 dark:text-emerald-400 font-black"
+              : "text-slate-500 font-medium hover:text-slate-900"
+          }`}
+        >
+          <Settings className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">Profile</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setIsMobileNavOpen(true)}
+          className="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-slate-500 font-medium hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
+        >
+          <Menu className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">More</span>
+        </button>
+      </div>
     </div>
   );
 };

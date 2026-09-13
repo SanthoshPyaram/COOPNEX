@@ -69,7 +69,8 @@ import { AIDemandForecast3D } from "../components/3d/webgl/AIDemandForecast3D";
 import { EmergencyRadar3D } from "../components/3d/webgl/EmergencyRadar3D";
 import { CooperativeGlobe3D } from "../components/3d/webgl/CooperativeGlobe3D";
 import { HolographicArtisanCard3D } from "../components/3d/webgl/HolographicArtisanCard3D";
-import { Soundbox3DViewer } from "../components/3d/webgl/Soundbox3DViewer";
+import { HeroWorkflowPipeline } from "../components/home/HeroWorkflowPipeline";
+import { HowCoopnexWorksContinuousPath } from "../components/home/HowCoopnexWorksContinuousPath";
 import { TharDoorstepRoadAnimation } from "../components/animations/TharDoorstepRoadAnimation";
 import { CooperativeMottoPrinciples } from "../components/animations/CooperativeMottoPrinciples";
 import { EmergencyBloodCoopBanner } from "../components/animations/EmergencyBloodCoopBanner";
@@ -593,6 +594,11 @@ export const LandingPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Hero Connected System Pipeline */}
+          <div className="mt-10 animate-fadeIn">
+            <HeroWorkflowPipeline />
+          </div>
+
           {/* Interactive 3D Pincode Location Matcher (Expands when 6-digits typed) */}
           {showLocationMatcher && (
             <div className="mt-8 animate-fadeIn">
@@ -670,6 +676,13 @@ export const LandingPage: React.FC = () => {
           </div>
         )}
       </section>
+
+      {/* ========================================================================= */}
+      {/* 2C. 6-STAGE CONTINUOUS INTERACTIVE JOURNEY (HOW COOPNEX WORKS)            */}
+      {/* ========================================================================= */}
+      <div id="how-it-works-journey" className="border-t border-b border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
+        <HowCoopnexWorksContinuousPath />
+      </div>
 
       {/* ========================================================================= */}
       {/* 3. 24/7 RAPID EMERGENCY DISPATCH RADAR (WEBGL)                            */}

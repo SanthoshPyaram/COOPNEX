@@ -124,10 +124,10 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
 
   // Mobile Bottom Navigation
   const mobileNavItems = [
-    { id: "dashboard", label: "Home", icon: LayoutDashboard },
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "jobs", label: "Jobs", icon: Briefcase, badge: newRequestsCount },
-    { id: "earnings", label: "Earnings", icon: TrendingUp },
-    { id: "notifications", label: "Alerts", icon: Bell, badge: unreadNotificationsCount },
+    { id: "schedule", label: "Schedule", icon: Calendar },
+    { id: "messages", label: "Messages", icon: MessageSquare },
     { id: "profile", label: "Profile", icon: User }
   ];
 
