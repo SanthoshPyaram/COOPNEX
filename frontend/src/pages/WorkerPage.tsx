@@ -448,6 +448,7 @@ export const WorkerPage: React.FC = () => {
             <WorkerWalletTab
               walletBalance={walletBalance}
               onInstantPayout={handleInstantPayout}
+              workerProfile={wp}
               lastWithdrawal={lastWithdrawal}
             />
           )}

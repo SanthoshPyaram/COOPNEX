@@ -16,6 +16,7 @@ import {
 interface WorkerWalletTabProps {
   walletBalance: number;
   onInstantPayout: () => void;
+  workerProfile?: any;
   lastWithdrawal: {
     amount: number;
     txId: string;
@@ -29,6 +30,7 @@ interface WorkerWalletTabProps {
 export const WorkerWalletTab: React.FC<WorkerWalletTabProps> = ({
   walletBalance,
   onInstantPayout,
+  workerProfile,
   lastWithdrawal
 }) => {
   const [withdrawalProcessing, setWithdrawalProcessing] = useState(false);
@@ -132,15 +134,15 @@ export const WorkerWalletTab: React.FC<WorkerWalletTabProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1 font-mono text-slate-700">
           <div className="p-3 bg-white rounded-xl border border-slate-200">
             <span className="text-[10px] text-slate-400 block font-sans">Bank Name</span>
-            <span className="font-bold text-slate-900 block mt-0.5">Andhra Pragathi Grameena Bank</span>
+            <span className="font-bold text-slate-900 block mt-0.5">{workerProfile?.bankName || "Aadhaar Linked DBT Bank"}</span>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200">
             <span className="text-[10px] text-slate-400 block font-sans">Account Number</span>
-            <span className="font-bold text-slate-900 block mt-0.5">APGB-0021-99821</span>
+            <span className="font-bold text-slate-900 block mt-0.5">{workerProfile?.accountNumber || "Verified Direct DBT Account"}</span>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200">
             <span className="text-[10px] text-slate-400 block font-sans">IFSC Code</span>
-            <span className="font-bold text-slate-900 block mt-0.5">APGB0001042</span>
+            <span className="font-bold text-slate-900 block mt-0.5">{workerProfile?.ifsc || "NPCI-DBT-DIRECT"}</span>
           </div>
         </div>
       </div>

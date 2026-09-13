@@ -949,53 +949,7 @@ export async function seedDatabase() {
     }
   ]);
 
-  console.log("[Seed] Creating past completed bookings for demonstration...");
-  await Booking.create({
-    bookingNumber: "BK-2026-881294",
-    customerId: demoCustomer._id,
-    customerName: demoCustomer.name,
-    customerPhone: demoCustomer.phone,
-    workerId: rajWorker._id,
-    workerName: rajWorker.name,
-    workerPhone: rajWorker.phone,
-    societyId: societyVijayawada._id,
-    serviceCategory: "Electrician",
-    requirementDescription: "Full home rewiring inspection and MCB board replacement.",
-    serviceLocation: {
-      address: "Flat 402, Sri Sai Residency, Near Benz Circle, Vijayawada",
-      coordinates: [80.6480, 16.5062]
-    },
-    bookingType: "STANDARD",
-    status: "COMPLETED",
-    statusTimeline: [
-      { status: "REQUESTED", timestamp: new Date(Date.now() - 86400000), note: "Booking scheduled." },
-      { status: "ASSIGNED", timestamp: new Date(Date.now() - 86000000), note: "Raj Kumar assigned." },
-      { status: "ACCEPTED", timestamp: new Date(Date.now() - 85500000), note: "Worker confirmed." },
-      { status: "COMPLETED", timestamp: new Date(Date.now() - 72000000), note: "Job completed to perfection." }
-    ],
-    scheduledAt: new Date(Date.now() - 86400000),
-    aiMatchScore: 97,
-    aiMatchReasons: [
-      "✓ Level 4 State Certified Electrician",
-      "✓ 1.4 km away - ETA 7 min",
-      "✓ 4.9★ Customer Satisfaction"
-    ],
-    fairWageBreakdown: {
-      customerPaid: 764,
-      baseWorkerWage: 450,
-      skillPremium: 70,
-      experiencePremium: 40,
-      travelAllowance: 30,
-      emergencyAllowance: 60,
-      workerEarning: 650,
-      cooperativeContribution: 78,
-      taxGst: 36
-    },
-    paymentStatus: "PAID",
-    rating: 5,
-    reviewComment: "Raj Kumar was extremely punctual, polite, and resolved the hazardous sparking safely. Wonderful cooperative service!",
-    completedAt: new Date(Date.now() - 72000000)
-  });
+  console.log("[Seed] Fresh database initialized with zero default bookings and zero default payments.");
 
   console.log("===================================================================");
   console.log(" 🎉 COOPNEX DATABASE SEEDING COMPLETED SUCCESSFULLY!");

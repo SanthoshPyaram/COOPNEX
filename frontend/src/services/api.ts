@@ -1,4 +1,5 @@
 import { WorkerProfile, Booking, WorkforceExchangeProposal, HeatmapZone } from "../types";
+import { resolveClientPincode, ClientLocationResult } from "../utils/clientLocationResolver";
 
 // Production Backend API Base URL
 // In production, fallback to the deployed production backend if VITE_API_URL is omitted
@@ -263,6 +264,45 @@ export const api = {
   getStates: async () => {
     const res = await fetch(`${API_BASE}/location/states`);
     return res.json();
+  },
+
+  // Official Postal & LGD Location Resolver with automatic offline client fallback
+  getPincodeDetails: async (pincode: string, signal?: AbortSignal): Promise<ClientLocationResult> => {
+    const cleanPin = (pincode || "").replace(/\D/g, "").trim();
+    if (cleanPin.length !== 6) {
+      return resolveClientPincode(cleanPin);
+    }
+
+    // 1. First attempt: configured API endpoint (local :5000 or production backend)
+    try {
+      const res = await fetch(`${API_BASE}/location/pincode/${encodeURIComponent(cleanPin)}`, { signal });
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.success && json.data) {
+          return json.data;
+        }
+      }
+    } catch (err: any) {
+      if (err.name === "AbortError") throw err;
+    }
+
+    // 2. Second attempt: direct relative path /api in case Vite proxy is running
+    try {
+      if (API_BASE !== "/api") {
+        const res2 = await fetch(`/api/location/pincode/${encodeURIComponent(cleanPin)}`, { signal });
+        if (res2.ok) {
+          const json2 = await res2.json();
+          if (json2 && json2.success && json2.data) {
+            return json2.data;
+          }
+        }
+      }
+    } catch (err2: any) {
+      if (err2.name === "AbortError") throw err2;
+    }
+
+    // 3. Resilient fallback: Instant client-side LGD and India Post directory resolution
+    return resolveClientPincode(cleanPin);
   },
 
   // KYC Verification & Anti-Fraud Engine

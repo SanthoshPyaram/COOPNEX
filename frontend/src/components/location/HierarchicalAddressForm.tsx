@@ -14,6 +14,8 @@ import {
   Map as MapIcon
 } from "lucide-react";
 import { LeafletMap } from "../LeafletMap";
+import { api } from "../../services/api";
+import { resolveClientPincode } from "../../utils/clientLocationResolver";
 
 export interface AddressData {
   pincode: string;
@@ -107,14 +109,10 @@ export const HierarchicalAddressForm: React.FC<HierarchicalAddressFormProps> = (
     setLookupError(null);
 
     try {
-      const res = await fetch(`/api/location/pincode/${encodeURIComponent(rawPin)}`, {
-        signal: controller.signal
-      });
-      const json = await res.json();
+      const d = await api.getPincodeDetails(rawPin, controller.signal);
       setIsLoading(false);
 
-      if (json.success && json.data) {
-        const d = json.data;
+      if (d && d.state && d.status !== "INVALID_PINCODE") {
         setLookupSuccess(true);
         setLookupError(null);
 
@@ -175,14 +173,57 @@ export const HierarchicalAddressForm: React.FC<HierarchicalAddressFormProps> = (
         });
       } else {
         setLookupSuccess(false);
-        setLookupError(json.message || "Unrecognized Indian postal PIN code. Please verify your 6-digit code.");
+        setLookupError(d?.message || "Unrecognized Indian postal PIN code. Please verify your 6-digit code.");
         setServiceStatus("INVALID_PINCODE");
       }
     } catch (err: any) {
       if (err.name !== "AbortError") {
+        // Bulletproof client-side fallback
+        const fallback = resolveClientPincode(rawPin);
         setIsLoading(false);
-        setLookupSuccess(false);
-        setLookupError("Unable to verify PIN code right now. Please check your connection or re-enter.");
+        if (fallback.state && fallback.status !== "INVALID_PINCODE") {
+          setLookupSuccess(true);
+          setLookupError(null);
+          setStateName(fallback.state);
+          setStateCode(fallback.stateCode);
+          setDistrictName(fallback.district);
+          setServiceStatus(fallback.status);
+          setServiceMessage(fallback.message);
+          setPrecision(fallback.precision);
+          setPostOfficesList(fallback.postOffices);
+          const initialPo = fallback.postOffices.length > 0 ? fallback.postOffices[0].name : "";
+          setSelectedPostOffice(initialPo);
+          setMandalsList(fallback.mandals);
+          const initialMandal = fallback.mandals.length > 0 ? fallback.mandals[0] : "";
+          setSelectedMandal(initialMandal);
+          setCitiesList(fallback.cities);
+          setSelectedCity(fallback.cities[0] || fallback.district);
+          setVillagesList(fallback.villages);
+          setSelectedVillage(fallback.villages[0]?.name || "");
+          if (fallback.coordinates) setCoordinates(fallback.coordinates);
+          emitChange({
+            pincode: rawPin,
+            state: fallback.state,
+            stateCode: fallback.stateCode,
+            district: fallback.district,
+            mandal: initialMandal,
+            postOffice: initialPo,
+            city: fallback.cities[0] || fallback.district,
+            village: fallback.villages[0]?.name || "",
+            street,
+            houseNumber,
+            landmark,
+            addressType,
+            coordinates: fallback.coordinates,
+            precision: fallback.precision,
+            serviceAvailable: fallback.serviceAvailable,
+            status: fallback.status
+          });
+        } else {
+          setLookupSuccess(false);
+          setLookupError("Please enter a valid 6-digit Indian postal PIN code.");
+          setServiceStatus("INVALID_PINCODE");
+        }
       }
     }
   };

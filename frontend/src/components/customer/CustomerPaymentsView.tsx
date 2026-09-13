@@ -48,45 +48,7 @@ export const CustomerPaymentsView: React.FC<CustomerPaymentsViewProps> = ({ book
       });
     }
 
-    // Default high-fidelity ledger
-    return [
-      {
-        id: "p-1",
-        bookingNumber: "BK-VJA-2026-801",
-        serviceCategory: "Electrician (Emergency MCB Spark)",
-        artisanName: "Arjun Kumar (COOP-EMP-0001)",
-        date: "Today, 14:30",
-        totalAmount: 800,
-        workerWage: 720,
-        welfare: 40,
-        escrowStatus: "HELD_IN_ESCROW",
-        transactionId: "TXN-ESC-904128"
-      },
-      {
-        id: "p-2",
-        bookingNumber: "BK-VJA-2026-794",
-        serviceCategory: "Plumber (Main Pipe Repair)",
-        artisanName: "Lakshmi Narayana (WRK-KYC-002)",
-        date: "05 Sep 2026",
-        totalAmount: 650,
-        workerWage: 585,
-        welfare: 32.5,
-        escrowStatus: "RELEASED",
-        transactionId: "TXN-ESC-892110"
-      },
-      {
-        id: "p-3",
-        bookingNumber: "BK-VJA-2026-712",
-        serviceCategory: "Carpenter (Door Latch & Hinge Alignment)",
-        artisanName: "S. Rama Rao",
-        date: "28 Aug 2026",
-        totalAmount: 450,
-        workerWage: 405,
-        welfare: 22.5,
-        escrowStatus: "RELEASED",
-        transactionId: "TXN-ESC-881204"
-      }
-    ];
+    return [];
   }, [bookings]);
 
   const totalSpent = paymentRecords.reduce((acc, p) => acc + (p.escrowStatus !== "REFUNDED" ? p.totalAmount : 0), 0);
@@ -180,57 +142,71 @@ export const CustomerPaymentsView: React.FC<CustomerPaymentsViewProps> = ({ book
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {paymentRecords.map((record) => (
-                <tr key={record.id} className="hover:bg-slate-50/70 transition">
-                  <td className="py-3.5 px-4 font-bold text-slate-900">
-                    <div>{record.serviceCategory}</div>
-                    <span className="text-[10px] text-slate-400 font-mono font-normal">
-                      #{record.bookingNumber}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-700 font-medium">
-                    {record.artisanName}
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-500">
-                    {record.date}
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-black text-slate-900">
-                    ₹{record.totalAmount}
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-bold text-emerald-700">
-                    ₹{record.workerWage}
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-bold text-amber-700">
-                    ₹{record.welfare}
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    {record.escrowStatus === "HELD_IN_ESCROW" ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
-                        <Lock className="w-3 h-3" />
-                        In Escrow
+              {paymentRecords.length > 0 ? (
+                paymentRecords.map((record) => (
+                  <tr key={record.id} className="hover:bg-slate-50/70 transition">
+                    <td className="py-3.5 px-4 font-bold text-slate-900">
+                      <div>{record.serviceCategory}</div>
+                      <span className="text-[10px] text-slate-400 font-mono font-normal">
+                        #{record.bookingNumber}
                       </span>
-                    ) : record.escrowStatus === "RELEASED" ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Released (DBT)
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                        Refunded
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <button
-                      onClick={() => setSelectedReceipt(record)}
-                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-[#2563EB] transition cursor-pointer"
-                      title="View Official Receipt"
-                    >
-                      <FileText className="w-4 h-4" />
-                    </button>
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-700 font-medium">
+                      {record.artisanName}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-500">
+                      {record.date}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-black text-slate-900">
+                      ₹{record.totalAmount}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-bold text-emerald-700">
+                      ₹{record.workerWage}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-bold text-amber-700">
+                      ₹{record.welfare}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      {record.escrowStatus === "HELD_IN_ESCROW" ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                          <Lock className="w-3 h-3" />
+                          In Escrow
+                        </span>
+                      ) : record.escrowStatus === "RELEASED" ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Released (DBT)
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                          Refunded
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <button
+                        onClick={() => setSelectedReceipt(record)}
+                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-[#2563EB] transition cursor-pointer"
+                        title="View Official Receipt"
+                      >
+                        <FileText className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <CreditCard className="w-8 h-8 text-slate-300" />
+                      <p className="font-bold text-slate-600 text-sm">No payment records on file</p>
+                      <p className="text-xs text-slate-400 max-w-sm">
+                        When you book a service and complete it with verified OTP, itemized escrow statements and receipts will appear here.
+                      </p>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
