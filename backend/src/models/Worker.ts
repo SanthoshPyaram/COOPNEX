@@ -99,7 +99,7 @@ export interface IWorker extends Document {
 
 const WorkerSchema = new Schema<IWorker>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, unique: true, index: true },
     workerIdNumber: { type: String, required: true, unique: true, index: true },
     employeeId: { type: String, sparse: true, uppercase: true, trim: true, index: true },
     name: { type: String, required: true, trim: true },

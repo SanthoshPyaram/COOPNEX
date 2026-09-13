@@ -15,6 +15,7 @@ export interface UserData {
   email: string;
   phone: string;
   role: UserRole;
+  roles?: UserRole[];
   status?: string;
   emailVerified?: boolean;
   phoneVerified?: boolean;
@@ -41,8 +42,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (identifier: string, pass: string, expectedRole?: UserRole) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
   workerLogin: (employeeIdOrEmail: string, pass: string) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
-  validateEmail: (email: string, mode?: string) => Promise<{ success: boolean; status: string; safeToSendOtp: boolean; message: string; reason?: string }>;
-  sendOtp: (identifier: string, purpose?: string, name?: string) => Promise<{ success: boolean; code?: string; message?: string; emailDispatched?: boolean; retryAfterSeconds?: number; notRegistered?: boolean }>;
+  validateEmail: (email: string, mode?: string, targetRole?: string) => Promise<{ success: boolean; status: string; safeToSendOtp: boolean; message: string; reason?: string; isExistingUser?: boolean; canRegisterAs?: boolean }>;
+  sendOtp: (identifier: string, purpose?: string, name?: string, targetRole?: string) => Promise<{ success: boolean; code?: string; message?: string; emailDispatched?: boolean; retryAfterSeconds?: number; notRegistered?: boolean }>;
   verifyOtp: (identifier: string, otpCode: string, purpose?: string) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
   forgotPasswordSendOtp: (identifier: string) => Promise<{ success: boolean; code?: string; message?: string; otpCode?: string; emailDispatched?: boolean; previewUrl?: string; notRegistered?: boolean; retryAfterSeconds?: number }>;
   forgotPasswordReset: (identifier: string, otpCode: string, newPass: string) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
@@ -282,8 +283,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const validateEmail = async (
     email: string,
-    mode: string = "REGISTER"
-  ): Promise<{ success: boolean; status: string; safeToSendOtp: boolean; message: string; reason?: string }> => {
+    mode: string = "REGISTER",
+    targetRole?: string
+  ): Promise<{ success: boolean; status: string; safeToSendOtp: boolean; message: string; reason?: string; isExistingUser?: boolean; canRegisterAs?: boolean }> => {
     const cleanEmail = email.trim().toLowerCase();
     const fmt = validateEmailFormat(cleanEmail);
     if (!fmt.isValid) {
@@ -300,10 +302,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
+      const payload = { email: cleanEmail, mode, role: targetRole, targetRole };
       let res = await fetch(`${API_BASE}/auth/validate-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: cleanEmail, mode }),
+        body: JSON.stringify(payload),
         signal: controller.signal
       });
 
@@ -312,7 +315,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         res = await fetch(`${API_BASE}/validate-email`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: cleanEmail, mode }),
+          body: JSON.stringify(payload),
           signal: controller.signal
         });
       }
@@ -324,6 +327,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         status: data.status || (res.ok ? "valid" : "invalid"),
         safeToSendOtp: Boolean(data.safeToSendOtp === true),
         reason: data.reason,
+        isExistingUser: Boolean(data.isExistingUser),
+        canRegisterAs: Boolean(data.canRegisterAs),
         message: data.message || (res.ok ? "Email address is valid." : "❌ This email address could not be verified. Please check it and try again. 📧")
       };
     } catch (err: any) {
@@ -350,7 +355,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const sendOtp = async (
     identifier: string,
     purpose: string = "REGISTER",
-    name?: string
+    name?: string,
+    targetRole?: string
   ): Promise<{ success: boolean; code?: string; message?: string; emailDispatched?: boolean; retryAfterSeconds?: number; notRegistered?: boolean }> => {
     try {
       const cleanEmail = identifier.trim().toLowerCase();
@@ -366,14 +372,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const timeoutId = setTimeout(() => controller.abort(), 45000);
 
       try {
+        const payload = {
+          identifier: cleanEmail,
+          purpose,
+          name,
+          role: targetRole,
+          targetRole
+        };
         let res = await fetch(`${API_BASE}/auth/send-otp`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            identifier: cleanEmail,
-            purpose,
-            name
-          }),
+          body: JSON.stringify(payload),
           signal: controller.signal
         });
 
@@ -381,11 +390,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           res = await fetch(`${API_BASE}/send-otp`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              identifier: cleanEmail,
-              purpose,
-              name
-            }),
+            body: JSON.stringify(payload),
             signal: controller.signal
           });
         }

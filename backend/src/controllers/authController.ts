@@ -61,23 +61,72 @@ export const validateEmail = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // Account duplicate check for registration mode
+    // Account duplicate check for registration mode (role-aware: same person can be Customer + Worker)
     const mode = (req.body.mode || req.query.mode || "REGISTER").toString().trim().toUpperCase();
+    const targetRole = (req.body.role || req.body.targetRole || req.query.role || req.query.targetRole || "").toString().trim().toUpperCase();
+
     if (mode === "REGISTER") {
       let isTaken = false;
+      let conflictReason = "already_registered";
+      let conflictMessage = "❌ This email is already registered. Please sign in or use another email. 📧";
+      let canConnectExisting = false;
+
       if (mongoose.connection.readyState === 1) {
         const existingUser = await User.findOne({ email: result.normalizedEmail });
-        const existingWorker = existingUser ? null : await Worker.findOne({ email: result.normalizedEmail });
+        const existingWorker = existingUser
+          ? await Worker.findOne({ userId: existingUser._id })
+          : await Worker.findOne({ email: result.normalizedEmail });
         const existingAdmin = (existingUser || existingWorker) ? null : await Admin.findOne({ email: result.normalizedEmail });
-        isTaken = Boolean(existingUser || existingWorker || existingAdmin);
+
+        if (existingAdmin || existingUser?.role === USER_ROLES.SUPER_ADMIN || existingUser?.roles?.includes(USER_ROLES.SUPER_ADMIN)) {
+          isTaken = true;
+          conflictReason = "admin_account";
+          conflictMessage = "❌ Administrative accounts cannot register via public registration.";
+        } else if (targetRole === USER_ROLES.WORKER) {
+          const alreadyWorker = Boolean(existingWorker) || existingUser?.role === USER_ROLES.WORKER || existingUser?.roles?.includes(USER_ROLES.WORKER);
+          if (alreadyWorker) {
+            isTaken = true;
+            conflictReason = "already_registered_worker";
+            conflictMessage = "❌ You already have a Worker profile registered with this email. Please sign in to the Worker Portal.";
+          } else if (existingUser) {
+            canConnectExisting = true;
+          }
+        } else if (targetRole === USER_ROLES.CUSTOMER) {
+          const alreadyCustomer = existingUser?.role === USER_ROLES.CUSTOMER || existingUser?.roles?.includes(USER_ROLES.CUSTOMER);
+          if (alreadyCustomer) {
+            isTaken = true;
+            conflictReason = "already_registered_customer";
+            conflictMessage = "❌ This email is already registered as a Customer. Please sign in.";
+          } else if (existingUser || existingWorker) {
+            canConnectExisting = true;
+          }
+        } else {
+          isTaken = Boolean(existingUser || existingWorker || existingAdmin);
+        }
       }
+
       if (isTaken) {
         res.status(409).json({
           success: false,
           status: "invalid",
           safeToSendOtp: false,
-          reason: "already_registered",
-          message: "❌ This email is already registered. Please sign in or use another email. 📧"
+          reason: conflictReason,
+          message: conflictMessage
+        });
+        return;
+      }
+
+      if (canConnectExisting) {
+        res.json({
+          success: true,
+          status: "valid",
+          safeToSendOtp: true,
+          isExistingUser: true,
+          canRegisterAs: true,
+          message: targetRole === USER_ROLES.WORKER
+            ? "Your existing COOPNEX account will be connected to your new Worker profile."
+            : "Your existing COOPNEX account will be connected to your Customer profile.",
+          details: result.details
         });
         return;
       }
@@ -139,11 +188,19 @@ export const checkEmail = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
+    const targetRole = (req.body.role || req.body.targetRole || req.query.role || req.query.targetRole || "").toString().trim().toUpperCase();
+
     let exists = false;
+    let existingUser: any = null;
+    let existingWorker: any = null;
+    let existingAdmin: any = null;
+
     if (mongoose.connection.readyState === 1) {
-      const existingUser = await User.findOne({ email: rawEmail });
-      const existingWorker = existingUser ? null : await Worker.findOne({ email: rawEmail });
-      const existingAdmin = (existingUser || existingWorker) ? null : await Admin.findOne({ email: rawEmail });
+      existingUser = await User.findOne({ email: rawEmail });
+      existingWorker = existingUser
+        ? await Worker.findOne({ userId: existingUser._id })
+        : await Worker.findOne({ email: rawEmail });
+      existingAdmin = (existingUser || existingWorker) ? null : await Admin.findOne({ email: rawEmail });
       exists = Boolean(existingUser || existingWorker || existingAdmin);
     } else {
       // Demo accounts fallback when offline
@@ -160,7 +217,64 @@ export const checkEmail = async (req: Request, res: Response): Promise<void> => 
     }
 
     if (mode === "REGISTER") {
-      if (exists) {
+      if (existingAdmin || existingUser?.role === USER_ROLES.SUPER_ADMIN || existingUser?.roles?.includes(USER_ROLES.SUPER_ADMIN)) {
+        res.json({
+          success: true,
+          exists: true,
+          available: false,
+          roleConflict: true,
+          message: "❌ Administrative accounts cannot register via public registration."
+        });
+        return;
+      }
+
+      if (targetRole === USER_ROLES.WORKER) {
+        const alreadyWorker = Boolean(existingWorker) || existingUser?.role === USER_ROLES.WORKER || existingUser?.roles?.includes(USER_ROLES.WORKER);
+        if (alreadyWorker) {
+          res.json({
+            success: true,
+            exists: true,
+            available: false,
+            roleConflict: true,
+            message: "❌ You already have a Worker profile registered with this email. Please sign in to the Worker Portal."
+          });
+          return;
+        } else if (existingUser) {
+          // Existing customer can acquire Worker role
+          res.json({
+            success: true,
+            exists: true,
+            available: true,
+            canRegisterAs: true,
+            existingUser: true,
+            message: "Your existing COOPNEX account will be connected to your Worker profile."
+          });
+          return;
+        }
+      } else if (targetRole === USER_ROLES.CUSTOMER) {
+        const alreadyCustomer = existingUser?.role === USER_ROLES.CUSTOMER || existingUser?.roles?.includes(USER_ROLES.CUSTOMER);
+        if (alreadyCustomer) {
+          res.json({
+            success: true,
+            exists: true,
+            available: false,
+            roleConflict: true,
+            message: "❌ This email is already registered as a Customer. Please sign in."
+          });
+          return;
+        } else if (existingUser || existingWorker) {
+          // Existing worker can acquire Customer role
+          res.json({
+            success: true,
+            exists: true,
+            available: true,
+            canRegisterAs: true,
+            existingUser: true,
+            message: "Your existing COOPNEX account will be connected to your Customer profile."
+          });
+          return;
+        }
+      } else if (exists) {
         res.json({
           success: true,
           exists: true,
@@ -252,13 +366,120 @@ export const checkPhone = async (req: Request, res: Response): Promise<void> => 
       });
       return;
     }
+    const targetRole = (req.query.role || req.body.role || req.query.targetRole || req.body.targetRole || "").toString().trim().toUpperCase();
+    const email = (req.query.email || req.body.email || "").toString().trim().toLowerCase();
+
     const last10 = cleanDigits.slice(-10);
     const existingUser = await User.findOne({ phone: { $regex: `${last10}$` } });
-    const existingWorker = existingUser ? null : await Worker.findOne({ phone: { $regex: `${last10}$` } });
+    const existingWorker = existingUser
+      ? await Worker.findOne({ userId: existingUser._id })
+      : await Worker.findOne({ phone: { $regex: `${last10}$` } });
+
+    const exists = Boolean(existingUser || existingWorker);
+
+    if (!exists) {
+      res.json({
+        success: true,
+        exists: false,
+        available: true,
+        message: "Phone number is available."
+      });
+      return;
+    }
+
+    // Phone belongs to existing user - check if it's the same person or different person
+    if (email && existingUser && existingUser.email.toLowerCase() === email) {
+      // Same person!
+      if (targetRole === USER_ROLES.WORKER) {
+        const alreadyWorker = Boolean(existingWorker) || existingUser.role === USER_ROLES.WORKER || existingUser.roles?.includes(USER_ROLES.WORKER);
+        if (alreadyWorker) {
+          res.json({
+            success: true,
+            exists: true,
+            available: false,
+            roleConflict: true,
+            message: "❌ This phone number is already registered for your Worker profile."
+          });
+          return;
+        }
+        res.json({
+          success: true,
+          exists: true,
+          available: true,
+          canRegisterAs: true,
+          message: "Phone number verified from your existing COOPNEX account."
+        });
+        return;
+      }
+      if (targetRole === USER_ROLES.CUSTOMER) {
+        const alreadyCustomer = existingUser.role === USER_ROLES.CUSTOMER || existingUser.roles?.includes(USER_ROLES.CUSTOMER);
+        if (alreadyCustomer) {
+          res.json({
+            success: true,
+            exists: true,
+            available: false,
+            roleConflict: true,
+            message: "❌ This phone number is already registered for your Customer account."
+          });
+          return;
+        }
+        res.json({
+          success: true,
+          exists: true,
+          available: true,
+          canRegisterAs: true,
+          message: "Phone number verified from your existing COOPNEX account."
+        });
+        return;
+      }
+    } else if (email && existingUser && existingUser.email.toLowerCase() !== email) {
+      // Different person attempting to use someone else's phone!
+      res.json({
+        success: true,
+        exists: true,
+        available: false,
+        roleConflict: true,
+        message: "❌ This phone number is already registered to another user account. Please use your own phone number."
+      });
+      return;
+    }
+
+    // Role-specific check when email is not provided
+    if (targetRole === USER_ROLES.WORKER) {
+      const alreadyWorker = Boolean(existingWorker) || existingUser?.role === USER_ROLES.WORKER || existingUser?.roles?.includes(USER_ROLES.WORKER);
+      res.json({
+        success: true,
+        exists: true,
+        available: !alreadyWorker,
+        canRegisterAs: !alreadyWorker,
+        roleConflict: alreadyWorker,
+        message: alreadyWorker
+          ? "❌ This phone number is already registered for a Worker profile."
+          : "Phone number associated with your existing account."
+      });
+      return;
+    }
+
+    if (targetRole === USER_ROLES.CUSTOMER) {
+      const alreadyCustomer = existingUser?.role === USER_ROLES.CUSTOMER || existingUser?.roles?.includes(USER_ROLES.CUSTOMER);
+      res.json({
+        success: true,
+        exists: true,
+        available: !alreadyCustomer,
+        canRegisterAs: !alreadyCustomer,
+        roleConflict: alreadyCustomer,
+        message: alreadyCustomer
+          ? "❌ This phone number is already registered for a Customer account."
+          : "Phone number associated with your existing account."
+      });
+      return;
+    }
+
     res.json({
       success: true,
-      exists: Boolean(existingUser || existingWorker),
-      message: existingUser || existingWorker ? "Phone number already registered. Please use another number." : "Phone number is available."
+      exists: true,
+      available: false,
+      message: "Phone number already registered. Please use another number."
     });
   } catch (error: any) {
     res.status(500).json({ success: false, message: "Error checking phone availability." });
@@ -470,24 +691,61 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       }
     }
 
-    const existingEmail = await User.findOne({ email: cleanEmail });
-    if (existingEmail) {
-      res.status(409).json({
-        success: false,
-        message: "Email already exists. Please use another email."
-      });
-      return;
-    }
+    const existingUser = await User.findOne({ email: cleanEmail });
 
+    // Enforce phone uniqueness per person: phone cannot belong to a DIFFERENT user account
     if (cleanPhone) {
       const cleanDigits = cleanPhone.replace(/\D/g, "");
       const last10 = cleanDigits.slice(-10);
       if (last10.length === 10) {
-        const existingPhone = await User.findOne({ phone: { $regex: `${last10}$` } });
-        if (existingPhone) {
+        const otherUserWithPhone = await User.findOne({
+          phone: { $regex: `${last10}$` },
+          email: { $ne: cleanEmail }
+        });
+        if (otherUserWithPhone) {
           res.status(409).json({
             success: false,
-            message: "Phone number already registered. Please use another number."
+            message: "❌ This phone number is already registered to another user account. Please use your own phone number."
+          });
+          return;
+        }
+      }
+    }
+
+    if (existingUser) {
+      // Public signup cannot claim administrative accounts
+      if (existingUser.role === USER_ROLES.SUPER_ADMIN || existingUser.roles?.includes(USER_ROLES.SUPER_ADMIN)) {
+        res.status(403).json({
+          success: false,
+          message: "Administrative accounts cannot register via public registration."
+        });
+        return;
+      }
+
+      // Check if user already possesses the requested role/profile
+      if (role === USER_ROLES.WORKER) {
+        const existingWorker = await Worker.findOne({
+          $or: [
+            { userId: existingUser._id },
+            { email: cleanEmail }
+          ]
+        });
+        const alreadyWorker = Boolean(existingWorker) || existingUser.role === USER_ROLES.WORKER || existingUser.roles?.includes(USER_ROLES.WORKER);
+        if (alreadyWorker) {
+          res.status(409).json({
+            success: false,
+            code: "WORKER_PROFILE_EXISTS",
+            message: "❌ You already have a Worker profile registered with this account. Please sign in to the Worker Portal."
+          });
+          return;
+        }
+      } else if (role === USER_ROLES.CUSTOMER) {
+        const alreadyCustomer = existingUser.role === USER_ROLES.CUSTOMER || existingUser.roles?.includes(USER_ROLES.CUSTOMER);
+        if (alreadyCustomer) {
+          res.status(409).json({
+            success: false,
+            code: "CUSTOMER_PROFILE_EXISTS",
+            message: "❌ You already have a Customer account registered with this email. Please sign in."
           });
           return;
         }
@@ -602,34 +860,60 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       avatarUrl = rawPhoto;
     }
 
-    const user = await User.create({
-      authProviderUserId,
-      employeeId: assignedEmployeeId,
-      name: resolvedName,
-      firstName,
-      lastName,
-      gender,
-      dateOfBirth: parsedDob,
-      ageAtRegistration: actualAge,
-      age: actualAge,
-      email: cleanEmail,
-      phone: cleanPhone,
-      passwordHash,
-      role,
-      status: "ACTIVE",
-      profileCompleted: true,
-      emailVerified: true,
-      phoneVerified: Boolean(phoneVerified),
-      lastLoginAt: new Date(),
-      state,
-      district,
-      city,
-      pincode,
-      address,
-      societyId,
-      avatarUrl,
-      bloodGroup: req.body.bloodGroup || undefined
-    });
+    let user: any = null;
+    let isNewUser = false;
+
+    if (existingUser) {
+      user = existingUser;
+      const currentRoles = Array.isArray(user.roles) && user.roles.length > 0 ? user.roles : [user.role];
+      user.roles = Array.from(new Set([...currentRoles, role]));
+      if (cleanPhone && !user.phone) user.phone = cleanPhone;
+      if (assignedEmployeeId && !user.employeeId) user.employeeId = assignedEmployeeId;
+      if (parsedDob && !user.dateOfBirth) {
+        user.dateOfBirth = parsedDob;
+        user.age = actualAge;
+        user.ageAtRegistration = actualAge;
+      }
+      if (pincode && !user.pincode) user.pincode = pincode;
+      if (address && !user.address) user.address = address;
+      if (district && !user.district) user.district = district;
+      if (avatarUrl && !user.avatarUrl) user.avatarUrl = avatarUrl;
+      user.emailVerified = true;
+      if (phoneVerified) user.phoneVerified = true;
+      user.lastLoginAt = new Date();
+      await user.save();
+    } else {
+      isNewUser = true;
+      user = await User.create({
+        authProviderUserId,
+        employeeId: assignedEmployeeId,
+        name: resolvedName,
+        firstName,
+        lastName,
+        gender,
+        dateOfBirth: parsedDob,
+        ageAtRegistration: actualAge,
+        age: actualAge,
+        email: cleanEmail,
+        phone: cleanPhone,
+        passwordHash,
+        role,
+        roles: [role],
+        status: "ACTIVE",
+        profileCompleted: true,
+        emailVerified: true,
+        phoneVerified: Boolean(phoneVerified),
+        lastLoginAt: new Date(),
+        state,
+        district,
+        city,
+        pincode,
+        address,
+        societyId,
+        avatarUrl,
+        bloodGroup: req.body.bloodGroup || undefined
+      });
+    }
 
     let workerProfile = null;
     if (role === USER_ROLES.WORKER) {
@@ -869,9 +1153,14 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           });
         }
       } catch (workerErr: any) {
-        // ATOMIC ROLLBACK: delete created user to prevent orphaned unassociated user records
-        console.error("Worker profile creation failed. Rolling back user creation:", workerErr);
-        await User.findByIdAndDelete(user._id);
+        // ATOMIC ROLLBACK: delete created user only if brand new, or revert added role if existing user
+        console.error("Worker profile creation failed. Rolling back:", workerErr);
+        if (isNewUser) {
+          await User.findByIdAndDelete(user._id);
+        } else {
+          user.roles = (user.roles || []).filter((r: string) => r !== USER_ROLES.WORKER);
+          await user.save();
+        }
         res.status(500).json({
           success: false,
           message: "Failed to create worker profile. Registration was rolled back.",
@@ -887,11 +1176,13 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       await Otp.deleteMany({ identifier: { $regex: cleanPhone.slice(-10) } });
     }
 
-    const token = signToken(user._id.toString(), user.role as UserRole);
+    const token = signToken(user._id.toString(), (role || user.role) as UserRole);
 
     res.status(201).json({
       success: true,
-      message: `COOPNEX ${role === USER_ROLES.WORKER ? "Worker" : "Customer"} account created successfully.`,
+      message: role === USER_ROLES.WORKER
+        ? (!isNewUser ? "Worker profile created and linked to your existing account." : "COOPNEX Worker account created successfully.")
+        : (!isNewUser ? "Customer profile activated and linked to your existing account." : "COOPNEX Customer account created successfully."),
       token,
       user: {
         id: user._id,
@@ -902,8 +1193,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         age: user.age,
         email: user.email,
         phone: user.phone,
-        employeeId: assignedEmployeeId,
-        role: user.role,
+        employeeId: assignedEmployeeId || user.employeeId,
+        role: role || user.role,
+        roles: user.roles || [user.role],
         status: user.status,
         verificationStatus: workerProfile?.verificationStatus || (role === USER_ROLES.WORKER ? "PENDING" : "APPROVED"),
         verificationLevel: workerProfile?.verificationLevel || 1,
@@ -949,19 +1241,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Role-specific query: If authenticating as CUSTOMER, find exclusively CUSTOMER account.
-    // This strictly prevents "This is customer's mail" collisions with worker records.
-    let user = null;
-    if (expectedRole === USER_ROLES.CUSTOMER) {
-      user = await User.findOne({
-        role: USER_ROLES.CUSTOMER,
-        $or: [{ email: target }, { phone: target }]
-      });
-    } else {
-      user = await User.findOne({
-        $or: [{ email: target }, { phone: target }]
-      });
-    }
+    // Unified Identity Lookup: Find the person by email or phone across all roles
+    const user = await User.findOne({
+      $or: [{ email: target }, { phone: target }]
+    });
 
     if (!user) {
       res.status(401).json({ success: false, message: "Invalid credentials. Please check your email/phone and password." });
@@ -982,19 +1265,25 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    const userRoles: string[] = Array.isArray(user.roles) && user.roles.length > 0
+      ? user.roles
+      : [user.role || USER_ROLES.CUSTOMER];
+
     // Role Enforcement & Portal Isolation
-    if (user.role === USER_ROLES.SUPER_ADMIN) {
-      res.status(403).json({
-        success: false,
-        message: "Administrative accounts must sign in via the dedicated Admin Command Gateway (/admin/login)."
-      });
-      return;
+    if (user.role === USER_ROLES.SUPER_ADMIN || userRoles.includes(USER_ROLES.SUPER_ADMIN)) {
+      if (expectedRole !== USER_ROLES.SUPER_ADMIN) {
+        res.status(403).json({
+          success: false,
+          message: "Administrative accounts must sign in via the dedicated Admin Command Gateway (/admin/login)."
+        });
+        return;
+      }
     }
 
-    if (expectedRole === USER_ROLES.CUSTOMER && user.role !== USER_ROLES.CUSTOMER) {
+    if (expectedRole === USER_ROLES.CUSTOMER && !userRoles.includes(USER_ROLES.CUSTOMER)) {
       res.status(403).json({
         success: false,
-        message: "This account is not registered as a customer."
+        message: "This account is not registered as a customer. Please sign in via the Worker portal or register as a customer."
       });
       return;
     }
@@ -1003,7 +1292,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     user.lastLoginAt = new Date();
     await user.save();
 
-    const token = signToken(user._id.toString(), user.role as UserRole);
+    const effectiveRole = (expectedRole && userRoles.includes(expectedRole as UserRole))
+      ? (expectedRole as UserRole)
+      : (userRoles.includes(USER_ROLES.CUSTOMER) ? USER_ROLES.CUSTOMER : (user.role as UserRole));
+
+    const token = signToken(user._id.toString(), effectiveRole);
 
     res.json({
       success: true,
@@ -1015,7 +1308,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         lastName: user.lastName,
         email: user.email,
         phone: user.phone,
-        role: user.role,
+        role: effectiveRole,
+        roles: userRoles,
         status: user.status,
         emailVerified: user.emailVerified,
         phoneVerified: user.phoneVerified,
@@ -1072,9 +1366,8 @@ export const workerLogin = async (req: Request, res: Response): Promise<void> =>
         }
       }
     } else {
-      // Also check User document directly by employeeId, email, or phone
+      // Check User document directly by employeeId, email, or phone
       user = await User.findOne({
-        role: USER_ROLES.WORKER,
         $or: [
           { employeeId: cleanId },
           { email: cleanEmail },
@@ -1116,11 +1409,16 @@ export const workerLogin = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    // 2. Verify worker role
-    if (user.role !== USER_ROLES.WORKER) {
+    const userRoles: string[] = Array.isArray(user.roles) && user.roles.length > 0
+      ? user.roles
+      : [user.role || USER_ROLES.CUSTOMER];
+
+    // 2. Verify worker role authorization
+    const isWorkerAuthorized = userRoles.includes(USER_ROLES.WORKER) || user.role === USER_ROLES.WORKER || Boolean(workerProfile);
+    if (!isWorkerAuthorized) {
       res.status(403).json({
         success: false,
-        message: "This account is not registered as a worker."
+        message: "This account is not registered as a worker. Please register through the Worker Onboarding portal."
       });
       return;
     }
@@ -1177,6 +1475,7 @@ export const workerLogin = async (req: Request, res: Response): Promise<void> =>
         phone: user.phone,
         employeeId: resolvedEmployeeId,
         role: USER_ROLES.WORKER,
+        roles: userRoles.includes(USER_ROLES.WORKER) ? userRoles : [...userRoles, USER_ROLES.WORKER],
         status: user.status,
         verificationStatus: workerProfile?.verificationStatus || "PENDING",
         verificationLevel: workerProfile?.verificationLevel || 1,
@@ -1253,8 +1552,12 @@ export const getMe = async (req: AuthenticatedRequest, res: Response): Promise<v
       return;
     }
 
+    const userRoles: string[] = Array.isArray(req.user.roles) && req.user.roles.length > 0
+      ? req.user.roles
+      : [req.user.role || USER_ROLES.CUSTOMER];
+
     let workerProfile = null;
-    if (req.user.role === USER_ROLES.WORKER) {
+    if (req.user.role === USER_ROLES.WORKER || userRoles.includes(USER_ROLES.WORKER)) {
       workerProfile = await Worker.findOne({
         $or: [
           { userId: req.user._id },
@@ -1280,6 +1583,7 @@ export const getMe = async (req: AuthenticatedRequest, res: Response): Promise<v
         email: req.user.email,
         phone: req.user.phone,
         role: req.user.role,
+        roles: userRoles,
         status: req.user.status || "ACTIVE",
         gender: req.user.gender,
         address: req.user.address,
@@ -1457,8 +1761,9 @@ export const recordEmailJsOtp = async (req: Request, res: Response): Promise<voi
 export const sendOtp = async (req: Request, res: Response): Promise<void> => {
   const tracer = new OtpRequestTracer(req.body?.identifier || req.body?.email || req.body?.phone || "");
   try {
-    const { identifier, phone, email, name, purpose = "REGISTER" } = req.body;
+    const { identifier, phone, email, name, purpose = "REGISTER", role, targetRole } = req.body;
     const target = (identifier || email || phone || "").trim().toLowerCase();
+    const requestedRole = ((role || targetRole || "") as string).toUpperCase().trim();
 
     if (!target) {
       tracer.finish("INVALID_TARGET");
@@ -1495,18 +1800,65 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
       tracer.mark("user lookup started");
       if (purpose === "REGISTER") {
         if (mongoose.connection.readyState === 1) {
-          const existingUser = await User.findOne({ email: target }).select("_id email");
-          const existingWorker = existingUser ? null : await Worker.findOne({ email: target }).select("_id email");
-          const existingAdmin = (existingUser || existingWorker) ? null : await Admin.findOne({ email: target }).select("_id email");
-          if (existingUser || existingWorker || existingAdmin) {
-            tracer.finish("EMAIL_ALREADY_EXISTS");
+          const existingUser = await User.findOne({ email: target }).select("_id email role roles");
+          const existingWorker = await Worker.findOne({
+            $or: [
+              { email: target },
+              ...(existingUser ? [{ userId: existingUser._id }] : [])
+            ]
+          }).select("_id email");
+          const existingAdmin = await Admin.findOne({ email: target }).select("_id email");
+
+          if (existingAdmin || existingUser?.role === USER_ROLES.SUPER_ADMIN || existingUser?.roles?.includes(USER_ROLES.SUPER_ADMIN)) {
+            tracer.finish("ADMIN_EMAIL_RESTRICTED");
             res.status(409).json({
               success: false,
               safeToSendOtp: false,
               code: "EMAIL_ALREADY_REGISTERED",
-              message: "❌ This email is already registered. Please sign in or use another email. 📧"
+              message: "❌ Administrative accounts cannot register via public registration."
             });
             return;
+          }
+
+          if (requestedRole === USER_ROLES.WORKER) {
+            const userRoles = existingUser ? (Array.isArray(existingUser.roles) && existingUser.roles.length > 0 ? existingUser.roles : [existingUser.role]) : [];
+            const alreadyWorker = Boolean(existingWorker) || userRoles.includes(USER_ROLES.WORKER) || existingUser?.role === USER_ROLES.WORKER;
+            if (alreadyWorker) {
+              tracer.finish("WORKER_ALREADY_EXISTS");
+              res.status(409).json({
+                success: false,
+                safeToSendOtp: false,
+                code: "WORKER_ALREADY_REGISTERED",
+                message: "❌ A Worker profile with this email already exists. Please sign in to the Worker Portal."
+              });
+              return;
+            }
+            // Customer registering as Worker is permitted - proceed to send OTP!
+          } else if (requestedRole === USER_ROLES.CUSTOMER) {
+            const userRoles = existingUser ? (Array.isArray(existingUser.roles) && existingUser.roles.length > 0 ? existingUser.roles : [existingUser.role]) : [];
+            const alreadyCustomer = userRoles.includes(USER_ROLES.CUSTOMER) || existingUser?.role === USER_ROLES.CUSTOMER;
+            if (alreadyCustomer) {
+              tracer.finish("CUSTOMER_ALREADY_EXISTS");
+              res.status(409).json({
+                success: false,
+                safeToSendOtp: false,
+                code: "CUSTOMER_ALREADY_REGISTERED",
+                message: "❌ An account with this email is already registered as a Customer. Please sign in."
+              });
+              return;
+            }
+            // Worker registering as Customer is permitted - proceed to send OTP!
+          } else {
+            if (existingUser || existingWorker) {
+              tracer.finish("EMAIL_ALREADY_EXISTS");
+              res.status(409).json({
+                success: false,
+                safeToSendOtp: false,
+                code: "EMAIL_ALREADY_REGISTERED",
+                message: "❌ This email is already registered. Please sign in or use another email. 📧"
+              });
+              return;
+            }
           }
         }
       } else if (purpose === "RECOVER_EMPLOYEE_ID" || purpose === "FORGOT_PASSWORD") {
@@ -1748,10 +2100,14 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
     user.lastLoginAt = new Date();
     await user.save();
 
+    const userRoles: string[] = Array.isArray(user.roles) && user.roles.length > 0
+      ? user.roles
+      : [user.role || USER_ROLES.CUSTOMER];
+
     const token = signToken(user._id.toString(), user.role as UserRole);
 
     let workerProfile = null;
-    if (user.role === USER_ROLES.WORKER) {
+    if (user.role === USER_ROLES.WORKER || userRoles.includes(USER_ROLES.WORKER)) {
       workerProfile = await Worker.findOne({ userId: user._id });
     }
 
@@ -1765,6 +2121,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        roles: userRoles,
         district: user.district,
         workerProfile
       }

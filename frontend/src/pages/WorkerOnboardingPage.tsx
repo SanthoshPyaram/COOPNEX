@@ -306,12 +306,12 @@ export const WorkerOnboardingPage: React.FC = () => {
 
     try {
       // STEP 2: Server-Side Real Email Validation (ZeroBounce + DNS MX + Disposable Blocklists)
-      const valRes = await validateEmail(cleanEmail, "REGISTER");
+      const valRes = await validateEmail(cleanEmail, "REGISTER", "WORKER");
 
       if (!valRes.safeToSendOtp) {
         setIsSendingEmailOtp(false);
         setIsCheckingEmail(false);
-        if (valRes.reason === "already_registered") {
+        if (valRes.reason === "already_registered_worker" || valRes.reason === "already_registered") {
           setEmailDuplicateError(valRes.message);
         } else {
           setEmailErrorMsg(valRes.message || "❌ We couldn't verify this email address. Please check it and try again. 📧");
@@ -320,7 +320,7 @@ export const WorkerOnboardingPage: React.FC = () => {
       }
 
       // STEP 3: Cryptographic OTP dispatch via backend
-      const res = await sendOtp(cleanEmail, "REGISTER", name.trim() || undefined);
+      const res = await sendOtp(cleanEmail, "REGISTER", name.trim() || undefined, "WORKER");
 
       setIsSendingEmailOtp(false);
       setIsCheckingEmail(false);
@@ -330,13 +330,16 @@ export const WorkerOnboardingPage: React.FC = () => {
         setEmailOtpJustSent(true);
         setTimeout(() => setEmailOtpJustSent(false), 2000);
         setEmailCountdown(res.retryAfterSeconds || 60);
-        setEmailStatusMsg("✅ Verification code sent! Please check your email inbox. 📩");
+        const infoMsg = valRes.isExistingUser
+          ? `✅ Verification code sent! ${valRes.message || "Your existing account will be connected to your new Worker profile."} 📩`
+          : "✅ Verification code sent! Please check your email inbox. 📩";
+        setEmailStatusMsg(infoMsg);
         setTimeout(() => emailOtpInputs.current[0]?.focus(), 100);
       } else {
         if (res.retryAfterSeconds) {
           setEmailCountdown(res.retryAfterSeconds);
         }
-        if (res.message?.includes("already registered")) {
+        if (res.message?.includes("already registered") || res.message?.includes("already exists")) {
           setEmailDuplicateError(res.message);
         } else {
           setEmailErrorMsg(res.message || "❌ We couldn't send the verification code. Please try again. 📩");

@@ -132,12 +132,13 @@ export const RegisterPage: React.FC = () => {
     setPhoneError(null);
     try {
       setIsCheckingPhone(true);
-      const res = await fetch(`${API_BASE}/auth/check-phone?phone=${encodeURIComponent(cleanDigits.slice(-10))}`);
+      const cleanMail = (email || "").trim().toLowerCase();
+      const res = await fetch(`${API_BASE}/auth/check-phone?phone=${encodeURIComponent(cleanDigits.slice(-10))}&role=CUSTOMER&email=${encodeURIComponent(cleanMail)}`);
       const data = await res.json();
       setIsCheckingPhone(false);
       setPhoneChecked(true);
-      if (data.exists) {
-        setPhoneDuplicateError("❌ This phone number is already registered. 📱");
+      if (data.exists && !data.available) {
+        setPhoneDuplicateError(data.message || "❌ This phone number is already registered. 📱");
       } else {
         setPhoneDuplicateError(null);
       }
@@ -242,12 +243,12 @@ export const RegisterPage: React.FC = () => {
 
     try {
       // STEP 2: Server-Side Real Email Validation (ZeroBounce + DNS MX + Disposable Blocklists)
-      const valRes = await validateEmail(cleanEmail, "REGISTER");
+      const valRes = await validateEmail(cleanEmail, "REGISTER", "CUSTOMER");
 
       if (!valRes.safeToSendOtp) {
         setIsSendingEmailOtp(false);
         setIsCheckingEmail(false);
-        if (valRes.reason === "already_registered") {
+        if (valRes.reason === "already_registered_customer" || valRes.reason === "already_registered") {
           setEmailDuplicateError(valRes.message);
         } else {
           setEmailErrorMsg(valRes.message || "❌ We couldn't verify this email address. Please check it and try again. 📧");
@@ -256,7 +257,7 @@ export const RegisterPage: React.FC = () => {
       }
 
       // STEP 3: Dispatch Cryptographically Secure OTP via Backend (Brevo/EmailJS server)
-      const res = await sendOtp(cleanEmail, "REGISTER", firstName.trim() || undefined);
+      const res = await sendOtp(cleanEmail, "REGISTER", firstName.trim() || undefined, "CUSTOMER");
 
       setIsSendingEmailOtp(false);
       setIsCheckingEmail(false);
@@ -266,13 +267,16 @@ export const RegisterPage: React.FC = () => {
         setEmailOtpJustSent(true);
         setTimeout(() => setEmailOtpJustSent(false), 2000);
         setEmailCountdown(res.retryAfterSeconds || 60);
-        setEmailStatusMsg("✅ OTP sent successfully! 📩");
+        const infoMsg = valRes.isExistingUser
+          ? `✅ OTP sent successfully! ${valRes.message || "Your existing account will be connected to your Customer profile."} 📩`
+          : "✅ OTP sent successfully! 📩";
+        setEmailStatusMsg(infoMsg);
         setTimeout(() => emailOtpInputs.current[0]?.focus(), 100);
       } else {
         if (res.retryAfterSeconds) {
           setEmailCountdown(res.retryAfterSeconds);
         }
-        if (res.message?.includes("already registered")) {
+        if (res.message?.includes("already registered") || res.message?.includes("already exists")) {
           setEmailDuplicateError(res.message);
         } else {
           setEmailErrorMsg(res.message || "❌ We couldn't send the verification code. Please try again. 📩");

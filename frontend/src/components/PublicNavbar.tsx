@@ -29,7 +29,15 @@ export const PublicNavbar: React.FC = () => {
     { name: t("nav.workers", "Workers"), path: "/for-workers" }
   ];
 
+  const userRoles = Array.isArray(user?.roles) && user.roles.length > 0 ? user.roles : (role ? [role] : []);
+  const hasCustomerRole = role === "CUSTOMER" || userRoles.includes("CUSTOMER");
+  const hasWorkerRole = role === "WORKER" || userRoles.includes("WORKER");
+  const isDualRole = hasCustomerRole && hasWorkerRole;
+
   const getDashboardRoute = () => {
+    if (location.pathname.startsWith("/worker")) {
+      return hasWorkerRole ? "/worker" : "/app";
+    }
     if (role === "CUSTOMER") return "/app";
     if (role === "WORKER") return "/worker";
     if (role === "SOCIETY_ADMIN") return "/society";
@@ -95,6 +103,25 @@ export const PublicNavbar: React.FC = () => {
             {/* Sign In Options */}
             {isAuthenticated ? (
               <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+                {isDualRole && (
+                  <Link
+                    to={location.pathname.startsWith("/worker") ? "/app" : "/worker"}
+                    className="flex items-center gap-1.5 h-9 px-2.5 rounded-xl font-bold text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 hover:bg-amber-100 transition shadow-xs"
+                    title={location.pathname.startsWith("/worker") ? "Switch to Customer Portal" : "Switch to Worker Portal"}
+                  >
+                    {location.pathname.startsWith("/worker") ? (
+                      <>
+                        <UserCheck className="w-3.5 h-3.5" />
+                        <span>Customer</span>
+                      </>
+                    ) : (
+                      <>
+                        <Briefcase className="w-3.5 h-3.5" />
+                        <span>Worker</span>
+                      </>
+                    )}
+                  </Link>
+                )}
                 <Link
                   to={getDashboardRoute()}
                   className="flex items-center gap-1.5 h-9 px-4 rounded-xl font-bold text-xs text-white bg-[#0A66C2] hover:bg-[#004182] transition shadow-xs"
@@ -182,26 +209,47 @@ export const PublicNavbar: React.FC = () => {
           {/* Mobile Sign In */}
           <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
             {isAuthenticated ? (
-              <div className="flex items-center gap-2">
-                <Link
-                  to={getDashboardRoute()}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-[#0A66C2] text-white font-bold text-xs shadow-sm"
-                >
-                  <UserCheck className="w-3.5 h-3.5" />
-                  <span>{user?.name?.split(" ")[0] || "Dashboard"}</span>
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => {
-                    logout();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-red-600"
-                  title="Sign Out"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
+              <div className="space-y-2">
+                {isDualRole && (
+                  <Link
+                    to={location.pathname.startsWith("/worker") ? "/app" : "/worker"}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 font-bold text-xs"
+                  >
+                    {location.pathname.startsWith("/worker") ? (
+                      <>
+                        <UserCheck className="w-3.5 h-3.5" />
+                        <span>Switch to Customer Portal</span>
+                      </>
+                    ) : (
+                      <>
+                        <Briefcase className="w-3.5 h-3.5" />
+                        <span>Switch to Worker Portal</span>
+                      </>
+                    )}
+                  </Link>
+                )}
+                <div className="flex items-center gap-2">
+                  <Link
+                    to={getDashboardRoute()}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-[#0A66C2] text-white font-bold text-xs shadow-sm"
+                  >
+                    <UserCheck className="w-3.5 h-3.5" />
+                    <span>{user?.name?.split(" ")[0] || "Dashboard"}</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      logout();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-red-600"
+                    title="Sign Out"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="space-y-2">

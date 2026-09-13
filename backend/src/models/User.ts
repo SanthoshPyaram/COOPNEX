@@ -15,6 +15,7 @@ export interface IUser extends Document {
   phone?: string;
   passwordHash: string;
   role: UserRole;
+  roles?: UserRole[];
   state?: string;
   district: string;
   city: string;
@@ -50,14 +51,20 @@ const UserSchema = new Schema<IUser>(
     dateOfBirth: { type: Date, index: true },
     ageAtRegistration: { type: Number },
     age: { type: Number },
-    email: { type: String, required: true, lowercase: true, trim: true, index: true },
-    phone: { type: String, required: false, sparse: true, trim: true, index: true },
+    email: { type: String, required: true, lowercase: true, trim: true },
+    phone: { type: String, required: false, trim: true },
     passwordHash: { type: String, required: true },
     role: {
       type: String,
       enum: Object.values(USER_ROLES),
       default: USER_ROLES.CUSTOMER,
       required: true,
+      index: true
+    },
+    roles: {
+      type: [String],
+      enum: Object.values(USER_ROLES),
+      default: [USER_ROLES.CUSTOMER],
       index: true
     },
     state: { type: String, default: "Andhra Pradesh" },
@@ -84,8 +91,8 @@ const UserSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-// Compound Unique Indexes to support identical customer and worker emails without collision
-UserSchema.index({ email: 1, role: 1 }, { unique: true });
-UserSchema.index({ phone: 1, role: 1 }, { unique: true, sparse: true });
+// Person-Level Unique Indexes: One User account per email and phone
+UserSchema.index({ email: 1 }, { unique: true });
+UserSchema.index({ phone: 1 }, { unique: true, sparse: true });
 
 export const User = mongoose.model<IUser>("User", UserSchema);
