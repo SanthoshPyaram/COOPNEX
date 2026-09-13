@@ -26,8 +26,10 @@ import {
   Info,
   Sparkles,
   Shield,
-  Calendar
+  Calendar,
+  Globe
 } from "lucide-react";
+import { ALL_INDIAN_LANGUAGES } from "../data/indianLanguages";
 import { FormField } from "../components/common/FormField";
 import { PasswordRequirements } from "../components/common/PasswordRequirements";
 import { FormHumanCompanion } from "../components/common/FormHumanCompanion";
@@ -67,6 +69,14 @@ export const RegisterPage: React.FC = () => {
   const [dobError, setDobError] = useState<string | null>(null);
   const [calculatedAge, setCalculatedAge] = useState<number | null>(null);
   const [dobSuccessMsg, setDobSuccessMsg] = useState<string | null>(null);
+
+  // Customer Languages Known (Official Indian Languages + English)
+  const [languagesKnown, setLanguagesKnown] = useState<string[]>(["Telugu", "English"]);
+  const toggleLanguage = (lang: string) => {
+    setLanguagesKnown((prev) =>
+      prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang]
+    );
+  };
 
   // Maximum selectable date is today (no future DOB), minimum is 120 years ago
   const todayObj = new Date();
@@ -433,6 +443,7 @@ export const RegisterPage: React.FC = () => {
       email: email.trim().toLowerCase(),
       password,
       role: "CUSTOMER",
+      languages: languagesKnown,
       emailVerified: true,
       phoneVerified: false,
       authProviderUserId,
@@ -815,6 +826,48 @@ export const RegisterPage: React.FC = () => {
                     )}
                   </div>
                 </FormField>
+              </div>
+
+              {/* Languages Known Multi-Select Checkboxes */}
+              <div className="p-3.5 sm:p-4 bg-slate-50/80 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    <span>Languages Known (Choose Multiple) *</span>
+                  </label>
+                  <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
+                    {languagesKnown.length} Selected
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Select languages you speak comfortably for communication with cooperative specialists:
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 pt-1 max-h-52 overflow-y-auto pr-1">
+                  {ALL_INDIAN_LANGUAGES.map((lang) => {
+                    const isSelected = languagesKnown.includes(lang.name);
+                    return (
+                      <label
+                        key={lang.code}
+                        className={`flex items-center gap-2 p-2 rounded-xl border text-xs font-semibold cursor-pointer transition ${
+                          isSelected
+                            ? "bg-blue-50 dark:bg-blue-950/50 border-blue-500 text-blue-900 dark:text-blue-200 shadow-xs"
+                            : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleLanguage(lang.name)}
+                          className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                        />
+                        <div className="truncate">
+                          <span className="block truncate text-[11px] font-bold">{lang.name}</span>
+                          <span className="text-[10px] text-slate-400 block truncate">{lang.nativeName}</span>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* ======================================================== */}

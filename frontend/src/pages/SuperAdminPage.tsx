@@ -1313,10 +1313,10 @@ export const SuperAdminPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E4E9F0] dark:border-slate-800 pb-4">
               <div>
                 <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                  Cooperative Societies &amp; 9-District Oversight
+                  Andhra Pradesh &amp; Telangana Cooperative Grid &amp; 9-Hub Regional Oversight
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Regional federation coverage, emergency response SLAs, and welfare fund corpus.
+                  Strategic AP &amp; Telangana federation coverage, emergency response SLAs, and welfare fund corpus.
                 </p>
               </div>
             </div>
@@ -1331,7 +1331,7 @@ export const SuperAdminPage: React.FC = () => {
 
               <div className="lg:col-span-5 bg-white dark:bg-[#101828] p-5 rounded-2xl border border-[#E4E9F0] dark:border-slate-800 shadow-xs space-y-3">
                 <h3 className="text-sm font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                  9 Operating Districts Overview
+                  AP &amp; Telangana 9 Operating Hubs Overview
                 </h3>
 
                 <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1 text-xs">

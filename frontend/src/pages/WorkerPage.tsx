@@ -26,7 +26,11 @@ import {
   Globe,
   VolumeX,
   Radio,
-  Lock
+  Lock,
+  UploadCloud,
+  FileText,
+  AlertCircle,
+  RefreshCw
 } from "lucide-react";
 
 export const WorkerPage: React.FC = () => {
@@ -52,6 +56,7 @@ export const WorkerPage: React.FC = () => {
   const getInitialWorkerStatus = (): string => {
     const raw = (user as any)?.workerProfile?.verificationStatus || user?.verificationStatus;
     if (raw === "VERIFIED" || raw === "APPROVED") return "VERIFIED";
+    if (raw === "REUPLOAD_REQUESTED") return "REUPLOAD_REQUESTED";
     if (raw === "REJECTED") return "REJECTED";
     if (raw === "UNDER_REVIEW") return "UNDER_REVIEW";
     return "PENDING";
@@ -59,6 +64,78 @@ export const WorkerPage: React.FC = () => {
 
   const [workerStatus, setWorkerStatus] = useState<string>(getInitialWorkerStatus);
   const [statusCheckMsg, setStatusCheckMsg] = useState<string | null>(null);
+  const [adminRejectionNote, setAdminRejectionNote] = useState<string>(() => {
+    return (user as any)?.workerProfile?.rejectionReason || (user as any)?.rejectionReason || "";
+  });
+
+  // Re-upload Document Form State
+  const [reuploadDocType, setReuploadDocType] = useState<string>("AADHAAR");
+  const [reuploadDocNumber, setReuploadDocNumber] = useState<string>("");
+  const [reuploadFileBase64, setReuploadFileBase64] = useState<string>("");
+  const [reuploadFileName, setReuploadFileName] = useState<string>("");
+  const [reuploadNotes, setReuploadNotes] = useState<string>("");
+  const [isSubmittingReupload, setIsSubmittingReupload] = useState<boolean>(false);
+  const [reuploadSuccessMsg, setReuploadSuccessMsg] = useState<string | null>(null);
+  const [reuploadErrorMsg, setReuploadErrorMsg] = useState<string | null>(null);
+
+  const handleReuploadFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setReuploadErrorMsg("File size must be under 10MB.");
+      return;
+    }
+    setReuploadFileName(file.name);
+    setReuploadErrorMsg(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setReuploadFileBase64(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleReuploadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reuploadFileBase64) {
+      setReuploadErrorMsg("Please choose a valid document file (PDF, JPG, PNG) to re-upload.");
+      return;
+    }
+    setIsSubmittingReupload(true);
+    setReuploadErrorMsg(null);
+    try {
+      const token = localStorage.getItem("sahakari_token");
+      const res = await fetch(`${API_BASE}/workers/me/reupload-document`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          documentType: reuploadDocType,
+          documentNumber: reuploadDocNumber,
+          fileBase64: reuploadFileBase64,
+          originalFilename: reuploadFileName,
+          notes: reuploadNotes
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to re-upload document.");
+      }
+      setReuploadSuccessMsg("Document successfully re-uploaded! Your application is now queued for Super Administrator re-verification.");
+      setReuploadFileBase64("");
+      setReuploadFileName("");
+      setReuploadNotes("");
+      setWorkerStatus("UNDER_REVIEW");
+      setAdminRejectionNote("");
+      if (refreshUser) await refreshUser();
+      setTimeout(() => setReuploadSuccessMsg(null), 6000);
+    } catch (err: any) {
+      setReuploadErrorMsg(err.message || "Network error while submitting document.");
+    } finally {
+      setIsSubmittingReupload(false);
+    }
+  };
 
   const refreshWorkerStatus = async (isManualClick = false) => {
     // Query live MongoDB backend via /auth/me with JWT
@@ -75,13 +152,23 @@ export const WorkerPage: React.FC = () => {
           const data = await res.json();
           if (data && data.user) {
             const raw = data.user.workerProfile?.verificationStatus || data.user.verificationStatus;
-            const newStatus = (raw === "VERIFIED" || raw === "APPROVED") ? "VERIFIED" : (raw || "PENDING");
+            const note = data.user.workerProfile?.rejectionReason || data.user.rejectionReason || "";
+            setAdminRejectionNote(note);
+
+            const newStatus = (raw === "VERIFIED" || raw === "APPROVED")
+              ? "VERIFIED"
+              : raw === "REUPLOAD_REQUESTED"
+              ? "REUPLOAD_REQUESTED"
+              : (raw || "PENDING");
             setWorkerStatus(newStatus);
+
             if (isManualClick) {
               if (newStatus === "VERIFIED") {
                 setStatusCheckMsg("Your credentials are officially verified by the Super Administrator.");
+              } else if (newStatus === "REUPLOAD_REQUESTED") {
+                setStatusCheckMsg("Super Administrator requested re-upload of your documents. Please check the feedback below.");
               } else if (newStatus === "REJECTED") {
-                setStatusCheckMsg("Your application was reviewed and rejected. Please contact your society administrator.");
+                setStatusCheckMsg("Your application was reviewed and rejected. Please check instructions below.");
               } else {
                 setStatusCheckMsg("Application is under review by the Super Administrator.");
               }
@@ -363,15 +450,150 @@ export const WorkerPage: React.FC = () => {
                 <Radio className="w-3.5 h-3.5 animate-pulse" />
                 <span>Refresh Review Status</span>
               </button>
-              <Link
-                to="/admin/login"
-                className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs transition flex items-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Super Admin Verification Portal →</span>
-              </Link>
             </div>
           </div>
+
+          {/* ADMIN RE-UPLOAD ACTION REQUIRED CALLOUT & RE-UPLOAD FORM */}
+          {(workerStatus === "REUPLOAD_REQUESTED" || Boolean(adminRejectionNote)) && (
+            <div className="bg-amber-50/90 border-2 border-amber-300 rounded-3xl p-5 sm:p-6 space-y-4 animate-fadeIn">
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 rounded-2xl bg-amber-100 text-amber-800 shrink-0 border border-amber-300">
+                  <AlertCircle className="w-6 h-6 text-amber-700" />
+                </div>
+                <div className="space-y-1">
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-200/80 px-2.5 py-0.5 rounded-full">
+                    Action Required by Worker
+                  </span>
+                  <h3 className="text-base sm:text-lg font-black text-amber-950">
+                    Administrator Requested Document Re-Upload
+                  </h3>
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    The Super Administrator audited your submission and requested a clearer copy or corrected details. Please review the feedback below, attach your updated file, and resubmit for verification.
+                  </p>
+                </div>
+              </div>
+
+              {adminRejectionNote && (
+                <div className="p-4 bg-white/95 rounded-2xl border border-amber-300 shadow-xs space-y-1">
+                  <div className="text-[11px] font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                    <span>Official Administrator Feedback:</span>
+                  </div>
+                  <p className="text-xs font-semibold text-slate-800 leading-relaxed">
+                    "{adminRejectionNote}"
+                  </p>
+                </div>
+              )}
+
+              {reuploadSuccessMsg && (
+                <div className="p-3.5 bg-emerald-100 border border-emerald-300 rounded-xl text-xs font-bold text-emerald-900 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                  <span>{reuploadSuccessMsg}</span>
+                </div>
+              )}
+
+              {reuploadErrorMsg && (
+                <div className="p-3.5 bg-rose-100 border border-rose-300 rounded-xl text-xs font-bold text-rose-900 flex items-center gap-2">
+                  <X className="w-4 h-4 text-rose-700 shrink-0" />
+                  <span>{reuploadErrorMsg}</span>
+                </div>
+              )}
+
+              {/* Interactive Re-upload Form */}
+              <form onSubmit={handleReuploadSubmit} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                  <UploadCloud className="w-4 h-4 text-blue-600" />
+                  <span>Upload Corrected Document Scan</span>
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-700">Document Type *</label>
+                    <select
+                      value={reuploadDocType}
+                      onChange={(e) => setReuploadDocType(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-blue-600"
+                    >
+                      <option value="AADHAAR">1. Aadhaar Card (12-Digit UIDAI)</option>
+                      <option value="PAN">2. PAN Card (Permanent Account Number)</option>
+                      <option value="POLICE_CLEARANCE">3. Police Clearance Certificate (PCC)</option>
+                      <option value="TRADE_CERTIFICATE">4. Trade / Skill Certificate</option>
+                      <option value="BANK_PROOF">5. Bank Account Proof / Passbook</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-700">Document / Identification Number (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 5482-9103-8476 or ABCPS1234F"
+                      value={reuploadDocNumber}
+                      onChange={(e) => setReuploadDocNumber(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-800 focus:ring-2 focus:ring-blue-600"
+                    >
+                    </input>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700">Document File (PDF, JPG, PNG - Max 10MB) *</label>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <input
+                      type="file"
+                      id="worker-reupload-file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={handleReuploadFileChange}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="worker-reupload-file"
+                      className="px-4 py-2.5 rounded-xl border-2 border-dashed border-blue-400 hover:border-blue-600 bg-blue-50/60 hover:bg-blue-50 text-blue-800 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition shadow-xs"
+                    >
+                      <UploadCloud className="w-4 h-4 text-blue-600" />
+                      <span>{reuploadFileName ? "Replace Selected File" : "Choose New File to Upload"}</span>
+                    </label>
+
+                    {reuploadFileName && (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-xl border border-slate-200 text-xs font-mono font-semibold text-slate-700 truncate">
+                        <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="truncate">{reuploadFileName}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700">Worker Clarification Note (Optional)</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Provide additional details regarding the re-uploaded scan (e.g., 'Attached high-res scan taken without flash glare')."
+                    value={reuploadNotes}
+                    onChange={(e) => setReuploadNotes(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 focus:ring-2 focus:ring-blue-600"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmittingReupload || !reuploadFileBase64}
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs transition flex items-center gap-2 shadow-md cursor-pointer"
+                  >
+                    {isSubmittingReupload ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Submitting to Super Administrator...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Submit Re-Uploaded Document for Verification</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
 
           {/* Registered Worker Profile Summary */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -394,7 +616,7 @@ export const WorkerPage: React.FC = () => {
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-1">
               <span className="text-[11px] font-bold uppercase text-slate-400">Trade Specialization</span>
               <div className="font-bold text-blue-700 text-sm">
-                {(user as any)?.workerProfile?.trade || "Electrician"}
+                {(user as any)?.workerProfile?.trade || (user as any)?.workerProfile?.skills?.[0] || "Electrician"}
               </div>
               <span className="text-[10px] text-slate-500">Tier 1 Apprentice &rarr; Tier 4 Master</span>
             </div>
@@ -402,9 +624,11 @@ export const WorkerPage: React.FC = () => {
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-1">
               <span className="text-[11px] font-bold uppercase text-slate-400">Affiliated Society</span>
               <div className="font-bold text-slate-900 text-sm truncate">
-                Vijayawada Central Labour Co-op
+                {(user as any)?.workerProfile?.societyName || (user as any)?.societyName || `${(user as any)?.workerProfile?.district || user?.district || "District"} Labour Co-op`}
               </div>
-              <span className="text-[10px] text-slate-500 font-mono">PACS-04 • Andhra Pradesh</span>
+              <span className="text-[10px] text-slate-500 font-mono">
+                {(user as any)?.workerProfile?.district || user?.district || "Andhra Pradesh / Telangana"}
+              </span>
             </div>
           </div>
 
@@ -429,7 +653,7 @@ export const WorkerPage: React.FC = () => {
               <div className="flex items-center gap-2.5 text-amber-900">
                 <Clock className="w-4 h-4 text-amber-500 animate-spin shrink-0" />
                 <span>
-                  <strong>Step 3: Primary Society Administrator Audit:</strong> In Review (The administrator inspects physical trade certs &amp; PCC at <code className="bg-amber-100 px-1 py-0.5 rounded font-mono text-[11px]">/admin</code> or <code className="bg-amber-100 px-1 py-0.5 rounded font-mono text-[11px]">/society</code>).
+                  <strong>Step 3: Primary Society Administrator Audit:</strong> {workerStatus === "REUPLOAD_REQUESTED" ? "Re-upload Requested (Action Required Above)" : "In Review (The administrator manually audits submitted documents & certificates)."}
                 </span>
               </div>
               <div className="flex items-center gap-2.5 text-slate-500">
@@ -532,6 +756,7 @@ export const WorkerPage: React.FC = () => {
               district={workerCardData.district}
               societyName={workerCardData.societyName}
               verificationStatus={workerStatus}
+              rejectionReason={adminRejectionNote}
               kycDocuments={wp?.kycDocuments || []}
               experienceYears={wp?.experienceYears || (user as any)?.experienceYears || 3}
               rating={wp?.rating || 5.0}

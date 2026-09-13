@@ -10,7 +10,7 @@ export interface IKYCDocument {
   mimeType?: string;
   checksumValid?: boolean;
   formatValid?: boolean;
-  verificationStatus: "PENDING" | "VERIFIED" | "SUSPECTED_FAKE" | "REJECTED";
+  verificationStatus: "PENDING" | "VERIFIED" | "SUSPECTED_FAKE" | "REJECTED" | "REUPLOAD_REQUESTED";
   fraudRiskScore: number; // 0 - 100
   fraudFlags: string[];
   aiVerificationNotes: string;
@@ -59,8 +59,9 @@ export interface IWorker extends Document {
   skills: string[];
   experienceYears: number;
   languages: string[];
+  selectedServiceAreas?: string[];
   verificationLevel: number; // 1 to 5
-  verificationStatus: "PENDING" | "UNDER_REVIEW" | "VERIFIED" | "REJECTED";
+  verificationStatus: "PENDING" | "UNDER_REVIEW" | "VERIFIED" | "REJECTED" | "REUPLOAD_REQUESTED";
   preliminaryRiskScore?: number;
   approvedBy?: mongoose.Types.ObjectId | string;
   approvedAt?: Date;
@@ -160,10 +161,11 @@ const WorkerSchema = new Schema<IWorker>(
     skills: { type: [String], required: true, index: true },
     experienceYears: { type: Number, default: 3 },
     languages: { type: [String], default: ["Telugu", "Hindi", "English"] },
+    selectedServiceAreas: { type: [String], default: [] },
     verificationLevel: { type: Number, default: 1, min: 1, max: 5, index: true },
     verificationStatus: {
       type: String,
-      enum: ["PENDING", "UNDER_REVIEW", "VERIFIED", "REJECTED"],
+      enum: ["PENDING", "UNDER_REVIEW", "VERIFIED", "REJECTED", "REUPLOAD_REQUESTED"],
       default: "PENDING",
       index: true
     },
@@ -190,7 +192,7 @@ const WorkerSchema = new Schema<IWorker>(
         mimeType: { type: String },
         checksumValid: { type: Boolean, default: false },
         formatValid: { type: Boolean, default: false },
-        verificationStatus: { type: String, enum: ["PENDING", "VERIFIED", "SUSPECTED_FAKE", "REJECTED"], default: "PENDING" },
+        verificationStatus: { type: String, enum: ["PENDING", "VERIFIED", "SUSPECTED_FAKE", "REJECTED", "REUPLOAD_REQUESTED"], default: "PENDING" },
         fraudRiskScore: { type: Number, default: 0 },
         fraudFlags: { type: [String], default: [] },
         aiVerificationNotes: { type: String, default: "" },

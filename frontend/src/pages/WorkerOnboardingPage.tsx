@@ -63,19 +63,12 @@ import {
   generateValidAadhaar,
   generateValidPan
 } from "../utils/identityValidation";
-
-const ONBOARDING_LANGUAGES = [
-  "Telugu",
-  "Hindi",
-  "English",
-  "Tamil",
-  "Kannada",
-  "Malayalam",
-  "Marathi",
-  "Bengali",
-  "Gujarati",
-  "Punjabi"
-];
+import {
+  ALL_INDIAN_LANGUAGES,
+  formatAadhaarNumber,
+  cleanAadhaarNumber
+} from "../data/indianLanguages";
+import { getDistrictSocietiesAndAreas } from "../data/apTelanganaServiceAreas";
 
 const ONBOARDING_BLOOD_GROUPS = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"];
 
@@ -117,9 +110,18 @@ export const WorkerOnboardingPage: React.FC = () => {
   // Blood Group & Multi-Language Selection for Smart ID
   const paramLangs = searchParams.get("languages")
     ? searchParams.get("languages")!.split(",").map((s) => s.trim()).filter(Boolean)
-    : [];
+    : ["Telugu", "English"];
   const [bloodGroup, setBloodGroup] = useState(searchParams.get("bloodGroup") || "");
   const [languagesKnown, setLanguagesKnown] = useState<string[]>(paramLangs);
+
+  // Selected AP & Telangana Service Areas Checkboxes
+  const [selectedServiceAreas, setSelectedServiceAreas] = useState<string[]>([]);
+
+  const toggleServiceArea = (area: string) => {
+    setSelectedServiceAreas((prev) =>
+      prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]
+    );
+  };
 
   // Photo & Digital Signature for Official Smart ID Card (Starts Empty - No Default Photo)
   const [photoPreview, setPhotoPreview] = useState<string>("");
@@ -677,9 +679,12 @@ export const WorkerOnboardingPage: React.FC = () => {
       }
     }
     if (step === 4) {
-      if (!selectedSociety) {
-        setError("Please select your local primary cooperative society.");
-        return;
+      const cfg = getDistrictSocietiesAndAreas(addressData.district || district || "Tirupati");
+      if (!selectedSociety && cfg.societies.length > 0) {
+        setSelectedSociety(cfg.societies[0].name);
+      }
+      if (selectedServiceAreas.length === 0 && cfg.serviceAreas.length > 0) {
+        setSelectedServiceAreas(cfg.serviceAreas.slice(0, 3));
       }
     }
     setStep(step + 1);
@@ -694,7 +699,7 @@ export const WorkerOnboardingPage: React.FC = () => {
     setIsSubmitting(true);
     setError(null);
 
-    const cleanAadhaar = aadhaarNumber.replace(/\s+/g, "");
+    const cleanAadhaar = cleanAadhaarNumber(aadhaarNumber);
     const cleanPan = panNumber.toUpperCase().trim();
 
     try {
@@ -729,6 +734,9 @@ export const WorkerOnboardingPage: React.FC = () => {
         coordinates: addressData.coordinates,
         bloodGroup: bloodGroup || "O+",
         languages: languagesKnown.length > 0 ? languagesKnown : ["Telugu", "Hindi", "English"],
+        selectedServiceAreas: selectedServiceAreas.length > 0
+          ? selectedServiceAreas
+          : [addressData.mandal || addressData.district || "Central Zone"],
         avatarUrl: photoPreview || "",
         photoPreview: photoPreview || "",
         signatureText: signatureText || name,
@@ -1536,23 +1544,29 @@ export const WorkerOnboardingPage: React.FC = () => {
                     <p className="text-[11px] text-slate-500">
                       Select all languages you speak comfortably for job alerts, customer calls, and voice guidance:
                     </p>
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {ONBOARDING_LANGUAGES.map((lang) => {
-                        const isSelected = languagesKnown.includes(lang);
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 pt-1 max-h-60 overflow-y-auto pr-1">
+                      {ALL_INDIAN_LANGUAGES.map((lang) => {
+                        const isSelected = languagesKnown.includes(lang.name);
                         return (
-                          <button
-                            key={lang}
-                            type="button"
-                            onClick={() => toggleLanguage(lang)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                          <label
+                            key={lang.code}
+                            className={`flex items-center gap-2 p-2 rounded-xl border text-xs font-semibold cursor-pointer transition ${
                               isSelected
-                                ? "bg-blue-600 text-white shadow-xs scale-105"
-                                : "bg-white text-slate-700 border border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                                ? "bg-blue-50 border-blue-500 text-blue-900 shadow-xs"
+                                : "bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                             }`}
                           >
-                            {isSelected && <Check className="w-3 h-3 text-amber-300" />}
-                            <span>{lang}</span>
-                          </button>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleLanguage(lang.name)}
+                              className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
+                            />
+                            <div className="truncate">
+                              <span className="block truncate text-[11px] font-bold">{lang.name}</span>
+                              <span className="text-[10px] text-slate-400 block truncate">{lang.nativeName}</span>
+                            </div>
+                          </label>
                         );
                       })}
                     </div>
@@ -1725,10 +1739,10 @@ export const WorkerOnboardingPage: React.FC = () => {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <input
                           type="text"
-                          maxLength={12}
-                          placeholder="e.g. 548291038476"
+                          maxLength={14}
+                          placeholder="e.g. 5482-9103-8476"
                           value={aadhaarNumber}
-                          onChange={(e) => setAadhaarNumber(e.target.value.replace(/\D/g, ""))}
+                          onChange={(e) => setAadhaarNumber(formatAadhaarNumber(e.target.value))}
                           className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:ring-2 focus:ring-blue-600"
                         />
                         <div className="relative">
@@ -2193,72 +2207,124 @@ export const WorkerOnboardingPage: React.FC = () => {
                 </div>
               )}
 
-              {/* STEP 4: PRIMARY COOPERATIVE SOCIETY */}
-              {step === 4 && (
-                <div className="space-y-4">
-                  <div className="border-b border-slate-100 pb-3">
-                    <h2 className="text-lg font-black text-slate-900">Step 4: Primary Cooperative Society Affiliation</h2>
-                    <p className="text-xs text-slate-500">
-                      Select your affiliated local society in {district}
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    {[
-                      {
-                        name: "Vijayawada Central Labour Co-op Society (PACS-04)",
-                        address: "Benz Circle, Vijayawada",
-                        members: "340 active members",
-                        recommended: true
-                      },
-                      {
-                        name: "Krishna District Technical Trades Cooperative Union",
-                        address: "Governorpet, Vijayawada",
-                        members: "215 active members",
-                        recommended: false
-                      },
-                      {
-                        name: "NTR District Construction & Artisan Society",
-                        address: "Auto Nagar, Vijayawada",
-                        members: "180 active members",
-                        recommended: false
-                      }
-                    ].map((soc) => (
-                      <div
-                        key={soc.name}
-                        onClick={() => setSelectedSociety(soc.name)}
-                        className={`p-4 rounded-2xl border-2 cursor-pointer transition flex items-start justify-between ${
-                          selectedSociety === soc.name
-                            ? "border-blue-600 bg-blue-50/50"
-                            : "border-slate-200 bg-white hover:border-slate-300"
-                        }`}
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs text-slate-900">{soc.name}</span>
-                            {soc.recommended && (
-                              <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                Nearest to You
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-slate-500 mt-0.5">{soc.address}</div>
-                          <div className="text-[11px] text-blue-600 font-semibold mt-1">
-                            {soc.members}
-                          </div>
-                        </div>
-                        <input
-                          type="radio"
-                          name="society"
-                          checked={selectedSociety === soc.name}
-                          onChange={() => setSelectedSociety(soc.name)}
-                          className="mt-1 text-blue-600 focus:ring-blue-500"
-                        />
+              {/* STEP 4: PRIMARY COOPERATIVE SOCIETY & SERVICE AREAS */}
+              {step === 4 && (() => {
+                const currentDistrictConfig = getDistrictSocietiesAndAreas(addressData.district || district || "Tirupati");
+                return (
+                  <div className="space-y-6">
+                    <div className="border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-800 border border-blue-200">
+                          {currentDistrictConfig.state} Cooperative Federation
+                        </span>
                       </div>
-                    ))}
+                      <h2 className="text-lg font-black text-slate-900 mt-1">Step 4: Society Affiliation &amp; Service Area Coverage</h2>
+                      <p className="text-xs text-slate-500">
+                        Affiliated cooperative societies and service dispatch zones in <strong className="text-slate-800">{currentDistrictConfig.district}</strong>
+                      </p>
+                    </div>
+
+                    {/* Primary Cooperative Society */}
+                    <div className="space-y-3">
+                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-blue-600" />
+                        <span>Choose Primary Labour Cooperative Society *</span>
+                      </h3>
+                      <div className="space-y-2.5">
+                        {currentDistrictConfig.societies.map((soc) => (
+                          <div
+                            key={soc.name}
+                            onClick={() => setSelectedSociety(soc.name)}
+                            className={`p-4 rounded-2xl border-2 cursor-pointer transition flex items-start justify-between ${
+                              (selectedSociety === soc.name || (!selectedSociety && soc.recommended))
+                                ? "border-blue-600 bg-blue-50/50 shadow-xs"
+                                : "border-slate-200 bg-white hover:border-slate-300"
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-xs text-slate-900">{soc.name}</span>
+                                {soc.recommended && (
+                                  <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                    Nearest to You
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-slate-500 mt-0.5">{soc.address}</div>
+                              <div className="text-[11px] text-blue-600 font-semibold mt-1">
+                                {soc.members}
+                              </div>
+                            </div>
+                            <input
+                              type="radio"
+                              name="society"
+                              checked={selectedSociety === soc.name || (!selectedSociety && Boolean(soc.recommended))}
+                              onChange={() => setSelectedSociety(soc.name)}
+                              className="mt-1 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Service Areas Multi-Checkbox Selector */}
+                    <div className="p-4 sm:p-5 bg-slate-50/90 rounded-2xl border border-slate-200 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-blue-600" />
+                            <span>Service Areas in {currentDistrictConfig.district} (Choose Multiple) *</span>
+                          </h3>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Select the local mandals, town sectors, and areas around your location where you accept bookings:
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedServiceAreas(currentDistrictConfig.serviceAreas)}
+                            className="text-[10px] font-bold text-blue-600 hover:text-blue-800 bg-white px-2.5 py-1 rounded-lg border border-slate-200 hover:border-blue-300 transition cursor-pointer"
+                          >
+                            Select All
+                          </button>
+                          <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">
+                            {selectedServiceAreas.length > 0 ? `${selectedServiceAreas.length} Areas Selected` : "Select at least 1"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        {currentDistrictConfig.serviceAreas.map((area) => {
+                          const isChecked = selectedServiceAreas.includes(area);
+                          return (
+                            <label
+                              key={area}
+                              className={`p-3 rounded-xl border-2 flex items-center justify-between cursor-pointer transition ${
+                                isChecked
+                                  ? "border-blue-600 bg-blue-50/80 shadow-xs"
+                                  : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => toggleServiceArea(area)}
+                                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
+                                />
+                                <span className="text-xs font-bold text-slate-800">{area}</span>
+                              </div>
+                              <span className="text-[10px] font-mono font-bold text-slate-400">
+                                {currentDistrictConfig.state === "Telangana" ? "TG" : "AP"}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* STEP 5: WAGE COMPACT & CODE OF CONDUCT */}
               {step === 5 && (
@@ -2379,7 +2445,7 @@ export const WorkerOnboardingPage: React.FC = () => {
                   <div className="flex flex-col items-end gap-1.5">
                     {step === 3 && (
                       <div className="text-[11px] font-medium text-slate-500">
-                        {!aadhaarNumber || aadhaarNumber.replace(/\s+/g, "").length !== 12 || !panNumber || panNumber.trim().length !== 10 ? (
+                        {!aadhaarNumber || cleanAadhaarNumber(aadhaarNumber).length !== 12 || !panNumber || panNumber.trim().length !== 10 ? (
                           <span className="text-amber-600">Enter 12-digit Aadhaar &amp; 10-char PAN</span>
                         ) : !aadhaarFile || !panFile ? (
                           <span className="text-amber-600">Attach Aadhaar &amp; PAN scans</span>

@@ -911,7 +911,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         address,
         societyId,
         avatarUrl,
-        bloodGroup: req.body.bloodGroup || undefined
+        bloodGroup: req.body.bloodGroup || undefined,
+        languages: Array.isArray(req.body.languages) && req.body.languages.length > 0
+          ? req.body.languages
+          : ["Telugu", "English"]
       });
     }
 
@@ -927,6 +930,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         const languagesArray = Array.isArray(req.body.languages)
           ? req.body.languages
           : ["Telugu", "Hindi", "English"];
+
+        const selectedServiceAreasArray = Array.isArray(req.body.selectedServiceAreas)
+          ? req.body.selectedServiceAreas
+          : [];
 
         const workerIdNumber = assignedEmployeeId || `COOP-WRK-${Math.floor(10000 + Math.random() * 90000)}`;
 
@@ -1093,6 +1100,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           existingWorker.profileImage = avatarUrl || existingWorker.profileImage || existingWorker.avatarUrl;
           existingWorker.skills = skillsArray.length > 0 ? skillsArray : existingWorker.skills;
           existingWorker.languages = languagesArray;
+          existingWorker.selectedServiceAreas = selectedServiceAreasArray;
           existingWorker.kycDocuments = defaultKycDocuments;
           existingWorker.verificationStatus = "PENDING";
           existingWorker.preliminaryRiskScore = prelim.preliminaryRiskScore;
@@ -1130,6 +1138,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
             skills: skillsArray.length > 0 ? skillsArray : ["Electrician"],
             experienceYears: Number(req.body.experienceYears) || 3,
             languages: languagesArray,
+            selectedServiceAreas: selectedServiceAreasArray,
             verificationLevel: 1,
             verificationStatus: "PENDING",
             preliminaryRiskScore: prelim.preliminaryRiskScore,
@@ -1594,6 +1603,9 @@ export const getMe = async (req: AuthenticatedRequest, res: Response): Promise<v
         avatarUrl: req.user.avatarUrl || workerProfile?.avatarUrl,
         profileImage: req.user.avatarUrl || workerProfile?.profileImage || workerProfile?.avatarUrl,
         verificationStatus: workerProfile?.verificationStatus || (req.user.role === USER_ROLES.WORKER ? "PENDING" : "APPROVED"),
+        rejectionReason: workerProfile?.rejectionReason || (req.user as any).rejectionReason || "",
+        languages: (req.user as any).languages || workerProfile?.languages || ["Telugu", "English"],
+        selectedServiceAreas: workerProfile?.selectedServiceAreas || [],
         verificationLevel: workerProfile?.verificationLevel || 1,
         employeeId: req.user.employeeId || workerProfile?.employeeId || workerProfile?.workerIdNumber,
         bloodGroup: (req.user as any).bloodGroup || "O+",

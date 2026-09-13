@@ -6,6 +6,7 @@ import { GeoService } from "../services/geoService";
 import { AiService } from "../services/aiService";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { ServiceCoverageEngine } from "../services/serviceCoverageEngine";
+import { saveDocument } from "../services/documentService";
 
 export const getWorkers = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -400,5 +401,99 @@ export const getWorkerMe = async (req: AuthenticatedRequest, res: Response): Pro
     res.status(500).json({ success: false, message: "Error retrieving worker profile.", error: error.message });
   }
 };
+
+export const reuploadDocument = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, message: "Not authenticated." });
+      return;
+    }
+
+    const { documentType, documentNumber, fileBase64, originalFilename, notes } = req.body;
+
+    if (!documentType || !fileBase64) {
+      res.status(400).json({ success: false, message: "documentType and fileBase64 are required." });
+      return;
+    }
+
+    const worker = await Worker.findOne({
+      $or: [
+        { userId: req.user._id },
+        ...(req.user.email ? [{ email: req.user.email.toLowerCase() }] : []),
+        ...(req.user.employeeId ? [{ employeeId: req.user.employeeId }, { workerIdNumber: req.user.employeeId }] : [])
+      ]
+    });
+
+    if (!worker) {
+      res.status(404).json({ success: false, message: "Worker record not found in cooperative database." });
+      return;
+    }
+
+    let savedRef = "";
+    try {
+      const savedDoc = await saveDocument({
+        rawContent: fileBase64,
+        originalName: originalFilename || `${documentType.toLowerCase()}_reupload.pdf`,
+        mimeType: fileBase64.startsWith("data:") ? fileBase64.split(";")[0].replace("data:", "") : "application/pdf"
+      });
+      savedRef = savedDoc.storageReference;
+    } catch (e: any) {
+      console.warn("Storage warning during re-upload:", e);
+      savedRef = fileBase64.startsWith("data:") ? fileBase64 : "";
+    }
+
+    if (!worker.kycDocuments) worker.kycDocuments = [];
+
+    const existingIdx = worker.kycDocuments.findIndex(
+      (d: any) => d.documentType?.toUpperCase() === documentType.toUpperCase()
+    );
+
+    const docPayload: any = {
+      documentType: documentType.toUpperCase(),
+      documentNumber: documentNumber || (existingIdx >= 0 ? worker.kycDocuments[existingIdx].documentNumber : ""),
+      fileUrl: savedRef || fileBase64,
+      storageReference: savedRef,
+      originalFilename: originalFilename || `${documentType.toLowerCase()}_reupload.pdf`,
+      submittedAt: new Date(),
+      verificationStatus: "PENDING",
+      aiVerificationNotes: notes ? `Re-uploaded by worker: ${notes}` : "Re-uploaded by worker for admin scrutiny",
+      rejectionReason: ""
+    };
+
+    if (existingIdx >= 0) {
+      const existingDoc = (worker.kycDocuments[existingIdx] as any)?.toObject ? (worker.kycDocuments[existingIdx] as any).toObject() : worker.kycDocuments[existingIdx];
+      worker.kycDocuments[existingIdx] = { ...existingDoc, ...docPayload };
+    } else {
+      worker.kycDocuments.push(docPayload);
+    }
+
+    worker.verificationStatus = "UNDER_REVIEW";
+    worker.rejectionReason = "";
+
+    if (!worker.auditHistory) worker.auditHistory = [];
+    worker.auditHistory.push({
+      action: `DOCUMENT_REUPLOADED_${documentType.toUpperCase()}`,
+      performedBy: req.user._id,
+      timestamp: new Date(),
+      details: notes || "Worker submitted revised document for administrator audit."
+    });
+
+    await worker.save();
+
+    if (worker.userId) {
+      await User.findByIdAndUpdate(worker.userId, { rejectionReason: "" }).catch(() => {});
+    }
+
+    res.json({
+      success: true,
+      message: "Document successfully re-uploaded. It is now queued for administrator review.",
+      worker
+    });
+  } catch (err: any) {
+    console.error("reuploadDocument error:", err);
+    res.status(500).json({ success: false, message: "Failed to re-upload document.", error: err.message });
+  }
+};
+
 
 

@@ -18,15 +18,15 @@ export interface CoverageCity {
 }
 
 export const CITIES_9_COVERAGE: CoverageCity[] = [
-  { id: "vja", name: "Vijayawada Central", state: "Andhra Pradesh", district: "NTR District", artisans: 1420, societies: 18, status: "Dispatching", sla: "6.8 min", welfareCorpus: "₹4,20,000", x: 0.8, z: 0.4 },
-  { id: "hyd", name: "Hyderabad Cyber Hub", state: "Telangana", district: "Hyderabad Central", artisans: 2150, societies: 26, status: "Active", sla: "7.1 min", welfareCorpus: "₹6,80,000", x: 0.2, z: 0.1 },
-  { id: "blr", name: "Bengaluru South", state: "Karnataka", district: "Bengaluru Urban", artisans: 1890, societies: 22, status: "Active", sla: "7.4 min", welfareCorpus: "₹5,90,000", x: -0.4, z: 1.2 },
-  { id: "vzg", name: "Visakhapatnam Port", state: "Andhra Pradesh", district: "Visakhapatnam", artisans: 980, societies: 14, status: "Active", sla: "8.0 min", welfareCorpus: "₹3,40,000", x: 1.6, z: 0.1 },
-  { id: "chn", name: "Chennai Central", state: "Tamil Nadu", district: "Chennai Urban", artisans: 1340, societies: 17, status: "Active", sla: "7.2 min", welfareCorpus: "₹4,50,000", x: 0.5, z: 1.6 },
-  { id: "mum", name: "Mumbai Labour Guild", state: "Maharashtra", district: "Mumbai Suburban", artisans: 3200, societies: 38, status: "Dispatching", sla: "6.5 min", welfareCorpus: "₹9,40,000", x: -1.5, z: -0.2 },
-  { id: "del", name: "Delhi NCR Federation", state: "Delhi", district: "National Capital", artisans: 2800, societies: 32, status: "Active", sla: "6.9 min", welfareCorpus: "₹8,10,000", x: -0.5, z: -1.8 },
-  { id: "kol", name: "Kolkata East Co-op", state: "West Bengal", district: "Kolkata Metropolitan", artisans: 1120, societies: 15, status: "Active", sla: "8.2 min", welfareCorpus: "₹3,80,000", x: 1.8, z: -0.9 },
-  { id: "koc", name: "Kochi Marine Guild", state: "Kerala", district: "Ernakulam", artisans: 890, societies: 12, status: "Active", sla: "7.8 min", welfareCorpus: "₹2,90,000", x: -0.8, z: 2.1 }
+  { id: "hyd", name: "Hyderabad Cyber Hub", state: "Telangana", district: "Hyderabad Central", artisans: 2450, societies: 32, status: "Active", sla: "6.5 min", welfareCorpus: "₹7,80,000", x: -0.2, z: -0.3 },
+  { id: "vja", name: "Vijayawada Central", state: "Andhra Pradesh", district: "NTR District", artisans: 1680, societies: 22, status: "Dispatching", sla: "6.8 min", welfareCorpus: "₹5,20,000", x: 0.7, z: 0.3 },
+  { id: "vzg", name: "Visakhapatnam Port City", state: "Andhra Pradesh", district: "Visakhapatnam", artisans: 1420, societies: 19, status: "Active", sla: "7.2 min", welfareCorpus: "₹4,60,000", x: 1.5, z: -0.8 },
+  { id: "wgl", name: "Warangal Heritage Hub", state: "Telangana", district: "Warangal Urban", artisans: 890, societies: 14, status: "Active", sla: "7.8 min", welfareCorpus: "₹2,90,000", x: 0.4, z: -0.9 },
+  { id: "tpt", name: "Tirupati Pilgrim & Tech City", state: "Andhra Pradesh", district: "Tirupati", artisans: 1120, societies: 16, status: "Active", sla: "7.0 min", welfareCorpus: "₹3,90,000", x: 0.6, z: 1.4 },
+  { id: "gtr", name: "Guntur Commercial Guild", state: "Andhra Pradesh", district: "Guntur", artisans: 1250, societies: 17, status: "Dispatching", sla: "6.9 min", welfareCorpus: "₹4,10,000", x: 0.5, z: 0.6 },
+  { id: "sec", name: "Secunderabad Cantonment", state: "Telangana", district: "Medchal-Malkajgiri", artisans: 980, societies: 15, status: "Active", sla: "7.3 min", welfareCorpus: "₹3,40,000", x: -0.3, z: -0.7 },
+  { id: "knl", name: "Kurnool Gateway Hub", state: "Andhra Pradesh", district: "Kurnool", artisans: 840, societies: 12, status: "Active", sla: "8.1 min", welfareCorpus: "₹2,80,000", x: -0.8, z: 0.8 },
+  { id: "krm", name: "Karimnagar & Nizamabad Cluster", state: "Telangana", district: "Karimnagar", artisans: 760, societies: 11, status: "Active", sla: "8.4 min", welfareCorpus: "₹2,50,000", x: -0.1, z: -1.6 }
 ];
 
 interface AdminCoverage3DProps {

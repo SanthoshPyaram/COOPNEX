@@ -439,14 +439,14 @@ export const reviewKycSubmission = async (req: AuthenticatedRequest, res: Respon
       if (worker.kycDocuments && worker.kycDocuments.length > 0) {
         worker.kycDocuments.forEach((doc) => {
           if (!documentType || isDocMatch(doc.documentType, documentType)) {
-            doc.verificationStatus = "REJECTED";
+            doc.verificationStatus = "REUPLOAD_REQUESTED";
             doc.aiVerificationNotes = feedback;
             doc.rejectionReason = feedback;
           }
         });
       }
 
-      worker.verificationStatus = "UNDER_REVIEW";
+      worker.verificationStatus = "REUPLOAD_REQUESTED";
       worker.rejectionReason = feedback;
 
       if (!worker.auditHistory) worker.auditHistory = [];
@@ -458,6 +458,10 @@ export const reviewKycSubmission = async (req: AuthenticatedRequest, res: Respon
       });
 
       await worker.save();
+
+      if (worker.userId) {
+        await User.findByIdAndUpdate(worker.userId, { rejectionReason: feedback }).catch(() => {});
+      }
 
       res.json({
         success: true,

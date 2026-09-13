@@ -81,6 +81,7 @@ apiRouter.patch(
 );
 apiRouter.get("/workers/me", authenticateJwt, workerCtrl.getWorkerMe);
 apiRouter.patch("/workers/me/availability", authenticateJwt, workerCtrl.updateAvailability);
+apiRouter.post("/workers/me/reupload-document", authenticateJwt, workerCtrl.reuploadDocument);
 
 // --- BOOKINGS ---
 apiRouter.post("/bookings", authenticateJwt, bookingCtrl.createBooking);

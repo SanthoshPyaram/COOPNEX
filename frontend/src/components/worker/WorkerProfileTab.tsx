@@ -18,7 +18,8 @@ import {
   Check,
   Loader2,
   Save,
-  X
+  X,
+  AlertCircle
 } from "lucide-react";
 import { HierarchicalAddressForm, AddressData } from "../location/HierarchicalAddressForm";
 import { api } from "../../services/api";
@@ -31,6 +32,7 @@ interface WorkerProfileTabProps {
   district: string;
   societyName: string;
   verificationStatus?: string;
+  rejectionReason?: string;
   kycDocuments?: any[];
   experienceYears?: number;
   rating?: number;
@@ -54,6 +56,7 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
   district,
   societyName,
   verificationStatus = "PENDING",
+  rejectionReason = "",
   kycDocuments = [],
   experienceYears = 3,
   rating = 4.9,
@@ -176,8 +179,19 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
         type: doc.documentType?.replace("_", " ") || "Identity Document",
         id: doc.documentNumber || "Submitted",
         issuer: doc.documentType === "AADHAAR" ? "UIDAI Verhoeff Checksum" : doc.documentType === "PAN" ? "Income Tax Department (NSDL)" : "District Authority",
-        status: doc.verificationStatus === "VERIFIED" ? "Verified by Admin" : "Review Pending",
-        fraudScore: doc.verificationStatus === "VERIFIED" ? "Verified Official Document" : "Structural Check Passed • Super Admin Scrutiny Pending",
+        status: doc.verificationStatus === "VERIFIED"
+          ? "Verified by Admin"
+          : doc.verificationStatus === "REUPLOAD_REQUESTED"
+          ? "Re-upload Requested"
+          : doc.verificationStatus === "REJECTED"
+          ? "Rejected"
+          : "Review Pending",
+        fraudScore: doc.verificationStatus === "VERIFIED"
+          ? "Verified Official Document"
+          : doc.verificationStatus === "REUPLOAD_REQUESTED"
+          ? "Administrator Requested Fresh Document Scan"
+          : "Structural Check Passed • Super Admin Scrutiny Pending",
+        note: doc.rejectionReason || doc.aiVerificationNotes || "",
         date: doc.submittedAt ? new Date(doc.submittedAt).toLocaleDateString("en-IN") : "Recent"
       }))
     : [
@@ -187,6 +201,7 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
           issuer: "UIDAI Verhoeff Checksum",
           status: isVerified ? "Verified by Admin" : "Review Pending",
           fraudScore: isVerified ? "Certified Authentic" : "Checksum Passed • Document Scrutiny Pending",
+          note: "",
           date: "Submitted"
         },
         {
@@ -195,6 +210,7 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
           issuer: "Income Tax Department (NSDL)",
           status: isVerified ? "Verified by Admin" : "Review Pending",
           fraudScore: isVerified ? "Certified Authentic" : "Format Validated • Review Pending",
+          note: "",
           date: "Submitted"
         },
         {
@@ -203,6 +219,7 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
           issuer: "City Police Commissionerate",
           status: isVerified ? "Verified Clean" : "Review Pending",
           fraudScore: isVerified ? "Clean Record" : "Pending Super Admin Scrutiny",
+          note: "",
           date: "Submitted"
         }
       ];
@@ -301,17 +318,29 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
       {/* TAB CONTENT: VERIFICATION & DOCUMENTS */}
       {activeSubTab === "documents" && (
         <div className="space-y-4">
+          {(rejectionReason || verificationStatus === "REUPLOAD_REQUESTED") && (
+            <div className="p-4 bg-amber-50 border-2 border-amber-300 rounded-2xl space-y-2">
+              <div className="flex items-center gap-2 text-amber-900 font-black text-xs uppercase tracking-wider">
+                <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
+                <span>Super Administrator Feedback &amp; Action Required</span>
+              </div>
+              <p className="text-xs text-amber-950 font-semibold leading-relaxed">
+                "{rejectionReason || "The administrator requested a clearer original scan or corrected document details. Please re-upload via your dashboard."}"
+              </p>
+            </div>
+          )}
+
           <div className={`p-4 rounded-2xl border flex items-center justify-between text-xs ${
             isVerified ? "bg-emerald-50 border-emerald-200 text-emerald-950" : "bg-amber-50 border-amber-200 text-amber-950"
           }`}>
             <span className="flex items-center gap-2 font-bold">
               <ShieldCheck className={`w-4 h-4 shrink-0 ${isVerified ? "text-emerald-600" : "text-amber-600"}`} />
-              <span>Accreditation Status: {isVerified ? "Official Cooperative Verified Level 4" : "Pending Super Administrator Review"}</span>
+              <span>Accreditation Status: {isVerified ? "Official Cooperative Verified Level 4" : verificationStatus === "REUPLOAD_REQUESTED" ? "Document Re-Upload Requested" : "Pending Super Administrator Review"}</span>
             </span>
             <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md border ${
               isVerified ? "text-emerald-800 bg-white/80 border-emerald-300" : "text-amber-800 bg-white/80 border-amber-300"
             }`}>
-              {isVerified ? "UIDAI & Police Cleared" : "Document Audit Pending"}
+              {isVerified ? "UIDAI & Police Cleared" : verificationStatus === "REUPLOAD_REQUESTED" ? "Re-upload Action Required" : "Document Audit Pending"}
             </span>
           </div>
 
@@ -319,7 +348,11 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
             {renderedKycDocs.map((doc, idx) => (
               <div
                 key={idx}
-                className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 flex items-start justify-between gap-3"
+                className={`p-4 rounded-2xl border ${
+                  doc.status === "Re-upload Requested"
+                    ? "border-amber-300 bg-amber-50/70"
+                    : "border-slate-200 bg-slate-50/60"
+                } flex items-start justify-between gap-3`}
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
@@ -328,16 +361,25 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
                   </div>
                   <p className="text-[11px] font-mono font-bold text-slate-600">{doc.id}</p>
                   <p className="text-[10px] text-slate-400">Issuer: {doc.issuer}</p>
+                  {doc.note && (
+                    <p className="text-[10px] font-semibold text-amber-900 bg-amber-100/80 px-2 py-0.5 rounded mt-1">
+                      Note: {doc.note}
+                    </p>
+                  )}
                 </div>
 
                 <div className="text-right shrink-0">
                   <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
                     doc.status === "Verified by Admin" || doc.status === "Verified Clean"
                       ? "text-emerald-800 bg-emerald-100"
+                      : doc.status === "Re-upload Requested"
+                      ? "text-amber-900 bg-amber-200 border border-amber-300"
                       : "text-amber-800 bg-amber-100"
                   }`}>
                     <CheckCircle2 className={`w-3 h-3 ${
-                      doc.status === "Verified by Admin" || doc.status === "Verified Clean" ? "text-emerald-600" : "text-amber-600"
+                      doc.status === "Verified by Admin" || doc.status === "Verified Clean"
+                        ? "text-emerald-600"
+                        : "text-amber-600"
                     }`} />
                     {doc.status}
                   </span>

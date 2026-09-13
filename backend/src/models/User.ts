@@ -42,6 +42,8 @@ export interface IUser extends Document {
   phoneVerificationProvider?: string;
   phoneVerificationId?: string;
   phoneVerifiedAt?: Date;
+  languages?: string[];
+  rejectionReason?: string;
   status: "ACTIVE" | "PENDING" | "SUSPENDED";
   profileCompleted: boolean;
   lastLoginAt?: Date;
@@ -103,6 +105,8 @@ const UserSchema = new Schema<IUser>(
     phoneVerificationProvider: { type: String, trim: true },
     phoneVerificationId: { type: String, trim: true },
     phoneVerifiedAt: { type: Date },
+    languages: { type: [String], default: ["Telugu", "English"] },
+    rejectionReason: { type: String, default: "" },
     status: { type: String, enum: ["ACTIVE", "PENDING", "SUSPENDED"], default: "ACTIVE" },
     profileCompleted: { type: Boolean, default: true },
     lastLoginAt: { type: Date },
