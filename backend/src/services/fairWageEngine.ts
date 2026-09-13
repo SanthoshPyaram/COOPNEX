@@ -104,11 +104,20 @@ export class FairWageEngine {
     // 4. Travel Allowance (Compensates worker transport, not kept by company)
     let travelAllowance = this.policy.travelTier1Amount;
     if (distanceKm > this.policy.travelTier2MaxKm) {
-      travelAllowance = this.policy.travelTier3Amount;
+      travelAllowance = this.policy.travelTier3Amount + Math.round((distanceKm - this.policy.travelTier2MaxKm) * 10);
     } else if (distanceKm > this.policy.travelTier1MaxKm) {
       travelAllowance = this.policy.travelTier2Amount;
     }
+
+    // Return travel compensation if distance > 15 km
+    const returnTravelThresholdKm = 15;
+    const returnTravelCost = distanceKm > returnTravelThresholdKm ? Math.round((distanceKm - returnTravelThresholdKm) * 8) : 0;
+    const transportCost = travelAllowance;
+
     explanations.push(`Travel Allowance: +₹${travelAllowance} (${distanceKm.toFixed(1)} km transit compensation)`);
+    if (returnTravelCost > 0) {
+      explanations.push(`Return Travel Compensation: +₹${returnTravelCost} (Distance exceeds ${returnTravelThresholdKm} km threshold)`);
+    }
 
     // 5. Emergency Allowance
     const emergencyAllowance = isEmergency ? this.policy.emergencyAllowanceStandard : 0;
@@ -116,8 +125,11 @@ export class FairWageEngine {
       explanations.push(`Emergency Allowance: +₹${emergencyAllowance} (Immediate priority dispatch & hazard protocol)`);
     }
 
+    // Service Amount (Worker labour components)
+    const serviceAmount = baseWorkerWage + skillPremium + experiencePremium + emergencyAllowance;
+
     // Total Worker Earning (100% credited to Worker Wallet)
-    const workerEarning = baseWorkerWage + skillPremium + experiencePremium + travelAllowance + emergencyAllowance;
+    const workerEarning = serviceAmount + transportCost + returnTravelCost;
 
     // 6. Cooperative Welfare Contribution (Funds health insurance, tool upgrades, child scholarships)
     const cooperativeContribution = Math.round(workerEarning * this.policy.cooperativeFundPercentage);
@@ -128,8 +140,31 @@ export class FairWageEngine {
 
     // Total Paid by Customer
     const customerPaid = workerEarning + cooperativeContribution + taxGst;
+    const totalAmount = customerPaid;
+    const platformFee = 0; // 0% platform commission model
 
-    const summaryMessage = `Worker receives ₹${workerEarning} (82.6% direct take-home). Society retains ₹${cooperativeContribution} for member healthcare. Total customer invoice: ₹${customerPaid}.`;
+    // Long-distance & scheduling feasibility evaluation
+    const maxSameDayDistanceKm = 25.0;
+    const sameDayCutoffHour = 17;
+    const currentHour = new Date().getHours();
+    const isLongDistance = distanceKm > maxSameDayDistanceKm;
+    const isPastCutoff = currentHour >= sameDayCutoffHour;
+
+    let scheduleRecommendation: "SAME_DAY" | "SCHEDULE_TOMORROW" = "SAME_DAY";
+    let scheduleReason: string | undefined = undefined;
+
+    if (isLongDistance && isPastCutoff) {
+      scheduleRecommendation = "SCHEDULE_TOMORROW";
+      scheduleReason = `Worker is located ${distanceKm.toFixed(1)} km away and it is past ${sameDayCutoffHour}:00 PM. We recommend scheduling for tomorrow morning or choosing a closer artisan.`;
+    } else if (isLongDistance) {
+      scheduleRecommendation = "SCHEDULE_TOMORROW";
+      scheduleReason = `Worker is located ${distanceKm.toFixed(1)} km away. For optimal preparation and safety, scheduling for tomorrow is recommended.`;
+    } else if (isPastCutoff && !isEmergency) {
+      scheduleRecommendation = "SCHEDULE_TOMORROW";
+      scheduleReason = `It is past ${sameDayCutoffHour}:00 PM. Same-day non-emergency slots may experience delays; tomorrow morning is recommended.`;
+    }
+
+    const summaryMessage = `Worker receives ₹${workerEarning} (direct take-home with transit compensation). Society retains ₹${cooperativeContribution} for member healthcare. Total invoice: ₹${customerPaid}.`;
 
     return {
       breakdown: {
@@ -141,7 +176,16 @@ export class FairWageEngine {
         emergencyAllowance,
         workerEarning,
         cooperativeContribution,
-        taxGst
+        taxGst,
+        serviceAmount,
+        transportCost,
+        returnTravelCost,
+        platformFee,
+        totalAmount,
+        distanceKm,
+        isLongDistance,
+        scheduleRecommendation,
+        scheduleReason
       },
       explanations,
       summaryMessage

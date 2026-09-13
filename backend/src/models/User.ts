@@ -67,9 +67,9 @@ const UserSchema = new Schema<IUser>(
       default: [USER_ROLES.CUSTOMER],
       index: true
     },
-    state: { type: String, default: "Andhra Pradesh" },
-    district: { type: String, required: true, default: "Vijayawada" },
-    city: { type: String, required: true, default: "Vijayawada" },
+    state: { type: String, trim: true },
+    district: { type: String, required: true, trim: true },
+    city: { type: String, trim: true },
     pincode: { type: String, trim: true, index: true },
     address: { type: String },
     societyId: { type: Schema.Types.ObjectId, ref: "Society" },

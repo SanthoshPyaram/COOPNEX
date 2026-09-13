@@ -7,6 +7,7 @@ import { checkLocalPincode } from "../data/indiaLocations";
 import { AnimatedCoopBackground } from "../components/animations/AnimatedCoopBackground";
 import { LanguageDropdown } from "../components/LanguageDropdown";
 import { useTranslation } from "react-i18next";
+import { HierarchicalAddressForm, AddressData } from "../components/location/HierarchicalAddressForm";
 import { API_BASE } from "../services/api";
 import {
   User,
@@ -164,9 +165,10 @@ export const RegisterPage: React.FC = () => {
   const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [pincode, setPincode] = useState("");
-  const [pincodeError, setPincodeError] = useState<string | null>(null);
-  const [detectedLocation, setDetectedLocation] = useState("");
+  const [addressData, setAddressData] = useState<Partial<AddressData>>({
+    addressType: "PERMANENT"
+  });
+  const [addressError, setAddressError] = useState<string | null>(null);
 
   // Submission State
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -206,19 +208,7 @@ export const RegisterPage: React.FC = () => {
 
   const strength = getPasswordStrength();
 
-  // Pincode lookup
-  const handlePincodeChange = (pin: string) => {
-    const clean = pin.replace(/\D/g, "").slice(0, 6);
-    setPincode(clean);
-    if (clean.length === 6) {
-      const res = checkLocalPincode(clean);
-      if (res.city && res.state) {
-        setDetectedLocation(`${res.city}${res.district ? ` (${res.district})` : ""}, ${res.state}`);
-      } else {
-        setDetectedLocation("Valid Indian PIN Code");
-      }
-    }
-  };
+
 
   // ==========================================
   // EMAIL VERIFICATION (SERVER VALIDATED + CRYPTO OTP)
@@ -418,13 +408,19 @@ export const RegisterPage: React.FC = () => {
       return;
     }
 
-    const pinCheck = validatePincode(pincode);
+    const pinCheck = validatePincode(addressData.pincode || "");
     if (!pinCheck.isValid) {
-      setPincodeError(pinCheck.error || null);
+      setAddressError(pinCheck.error || "Please enter a valid 6-digit PIN code.");
       return;
     }
 
     setIsSubmitting(true);
+
+    if (!addressData.pincode || addressData.pincode.length !== 6 || !addressData.district || !addressData.state || !addressData.street || !addressData.houseNumber) {
+      setAddressError("Please complete your address details including PIN code, street, and house number.");
+      setIsSubmitting(false);
+      return;
+    }
 
     const payload = {
       name: `${firstName.trim()} ${lastName.trim()}`,
@@ -440,9 +436,30 @@ export const RegisterPage: React.FC = () => {
       emailVerified: true,
       phoneVerified: false,
       authProviderUserId,
-      pincode: pincode.trim(),
-      district: detectedLocation.split(",")[0].trim(),
-      state: detectedLocation.split(",")[1]?.trim() || "Andhra Pradesh"
+      pincode: addressData.pincode,
+      state: addressData.state,
+      stateCode: addressData.stateCode,
+      district: addressData.district,
+      mandal: addressData.mandal,
+      postOffice: addressData.postOffice,
+      city: addressData.city,
+      village: addressData.village,
+      street: addressData.street,
+      houseNumber: addressData.houseNumber,
+      landmark: addressData.landmark,
+      addressType: addressData.addressType,
+      address: [
+        addressData.houseNumber,
+        addressData.street,
+        addressData.landmark,
+        addressData.village,
+        addressData.mandal,
+        addressData.district,
+        addressData.state,
+        addressData.pincode
+      ].filter(Boolean).join(", "),
+      coordinates: addressData.coordinates,
+      precision: addressData.precision
     };
 
     const res = await registerCustomer(payload);
@@ -454,6 +471,15 @@ export const RegisterPage: React.FC = () => {
       setFormError(res.message || "Registration failed. Please check your inputs.");
     }
   };
+
+  const isAddressComplete = Boolean(
+    addressData.pincode &&
+    addressData.pincode.length === 6 &&
+    addressData.state &&
+    addressData.district &&
+    addressData.street &&
+    addressData.houseNumber
+  );
 
   const isFormValid =
     firstName.trim().length > 0 &&
@@ -477,8 +503,7 @@ export const RegisterPage: React.FC = () => {
     confirmPassword.length >= 8 &&
     !confirmPasswordError &&
     password === confirmPassword &&
-    pincode.length === 6 &&
-    !pincodeError;
+    isAddressComplete;
 
   const getCompanionState = () => {
     if (accountCreatedUser) return "SUCCESS";
@@ -1202,45 +1227,17 @@ export const RegisterPage: React.FC = () => {
                 <PasswordRequirements password={password} />
               )}
 
-              {/* Pincode & Region */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <FormField
-                  id="reg-pincode"
-                  label="PIN Code"
-                  required
-                  error={pincodeError}
-                >
-                  <div className="relative">
-                    <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                    <input
-                      id="reg-pincode"
-                      type="text"
-                      required
-                      maxLength={6}
-                      placeholder="Enter 6-digit PIN (e.g. 520001)"
-                      value={pincode}
-                      onChange={(e) => {
-                        handlePincodeChange(e.target.value);
-                        const res = validatePincode(e.target.value);
-                        setPincodeError(e.target.value.length === 6 ? (res.isValid ? null : (res.error || null)) : null);
-                      }}
-                      onBlur={() => {
-                        const res = validatePincode(pincode);
-                        setPincodeError(res.isValid ? null : (res.error || null));
-                      }}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-600 transition"
-                    />
-                  </div>
-                </FormField>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Detected Coverage Region
-                  </label>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 dark:text-slate-300 truncate">
-                    {detectedLocation || <span className="text-slate-400 italic">Auto-detected upon entering PIN code</span>}
-                  </div>
-                </div>
+              {/* Hierarchical Postal & Locality Address Form */}
+              <div className="pt-1 p-3.5 bg-slate-50/80 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700">
+                <HierarchicalAddressForm
+                  value={addressData}
+                  onChange={(updated) => {
+                    setAddressData(updated);
+                    setAddressError(null);
+                  }}
+                  roleType="CUSTOMER"
+                  error={addressError}
+                />
               </div>
 
               {/* ======================================================== */}

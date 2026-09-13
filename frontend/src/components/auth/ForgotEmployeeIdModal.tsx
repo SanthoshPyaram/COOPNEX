@@ -151,7 +151,7 @@ export const ForgotEmployeeIdModal: React.FC<ForgotEmployeeIdModalProps> = ({
           name: "Arjun Kumar (Demo Worker)",
           trade: "Electrician",
           status: "VERIFIED",
-          district: "Vijayawada"
+          district: "NTR"
         };
       }
 
@@ -164,7 +164,7 @@ export const ForgotEmployeeIdModal: React.FC<ForgotEmployeeIdModalProps> = ({
             name: current.name,
             trade: current.workerProfile?.trade || "Specialist",
             status: current.verificationStatus || "UNDER_REVIEW",
-            district: current.district || "Vijayawada"
+            district: current.district || ""
           };
         }
       }
@@ -176,7 +176,7 @@ export const ForgotEmployeeIdModal: React.FC<ForgotEmployeeIdModalProps> = ({
           name: "Cooperative Specialist",
           trade: "Electrician",
           status: "UNDER_REVIEW",
-          district: "Vijayawada"
+          district: ""
         };
       }
 
@@ -185,7 +185,7 @@ export const ForgotEmployeeIdModal: React.FC<ForgotEmployeeIdModalProps> = ({
         name: foundWorker.name || "Cooperative Specialist",
         trade: foundWorker.trade || foundWorker.primarySkill || "Electrician",
         status: foundWorker.verificationStatus || foundWorker.status || "UNDER_REVIEW",
-        district: foundWorker.district || "Vijayawada"
+        district: foundWorker.district || ""
       });
 
       setStep("RECOVERED");
@@ -461,7 +461,7 @@ export const ForgotEmployeeIdModal: React.FC<ForgotEmployeeIdModalProps> = ({
                   </div>
 
                   <p className="text-[11px] text-blue-200/80">
-                    District: {recoveredWorker.district} • Vijayawada Central Labour Cooperative (PACS-04)
+                    District: {recoveredWorker.district || "Registered District"} • {recoveredWorker.district ? `${recoveredWorker.district} Labour Co-op (PACS)` : "Cooperative Labour Society"}
                   </p>
                 </div>
 

@@ -203,10 +203,10 @@ export const CustomerDashboardPage: React.FC = () => {
     name: user?.name || "",
     phone: user?.phone || "",
     gender: (user as any)?.gender || "Prefer not to say",
-    address: (user as any)?.address || "Flat 402, Sri Sai Residency, Near Benz Circle",
-    city: (user as any)?.city || "Vijayawada",
-    district: user?.district || "Vijayawada",
-    pincode: (user as any)?.pincode || "520010",
+    address: (user as any)?.address || "",
+    city: (user as any)?.city || "",
+    district: user?.district || (user as any)?.district || "",
+    pincode: (user as any)?.pincode || (user as any)?.postalCode || "",
     bloodGroup: (user as any)?.bloodGroup || "O+",
     emergencyContactName: (user as any)?.emergencyContactName || "",
     emergencyContactPhone: (user as any)?.emergencyContactPhone || ""
@@ -350,7 +350,7 @@ export const CustomerDashboardPage: React.FC = () => {
   // Load Blood Network Stats
   const loadBloodStats = async () => {
     try {
-      const res = await api.getBloodNetworkStats(user?.district || "Vijayawada");
+      const res = await api.getBloodNetworkStats(user?.district || profileFormData.district || "");
       if (res && res.success) {
         setBloodNetworkStats(res);
       }

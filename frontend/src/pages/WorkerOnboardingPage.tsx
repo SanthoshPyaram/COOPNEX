@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CoopnexLogo } from "../components/brand/CoopnexLogo";
 import { useAuth } from "../context/AuthContext";
 import { FormHumanCompanion } from "../components/common/FormHumanCompanion";
+import { HierarchicalAddressForm, AddressData } from "../components/location/HierarchicalAddressForm";
 import {
   HandHeart,
   User,
@@ -96,6 +97,10 @@ export const WorkerOnboardingPage: React.FC = () => {
   const [age, setAge] = useState(searchParams.get("age") || "");
   const [district, setDistrict] = useState("");
   const [address, setAddress] = useState("");
+  const [addressData, setAddressData] = useState<Partial<AddressData>>({
+    addressType: "WORK"
+  });
+  const [addressError, setAddressError] = useState<string | null>(null);
 
   const [step1Errors, setStep1Errors] = useState<{
     name?: string;
@@ -601,8 +606,13 @@ export const WorkerOnboardingPage: React.FC = () => {
       const passCheck = validatePassword(password);
       const confirmCheck = validateConfirmPassword(password, confirmPassword);
       const ageCheck = validateAge(age, 1, 120);
-      const districtCheck = validateRequired(district, "District");
-      const addressCheck = validateRequired(address, "Residential Address");
+      const isAddressValid = Boolean(
+        addressData.pincode &&
+        addressData.pincode.length === 6 &&
+        addressData.district &&
+        addressData.street &&
+        addressData.houseNumber
+      );
 
       const errors: typeof step1Errors = {};
       if (!nameCheck.isValid) errors.name = nameCheck.error;
@@ -612,8 +622,7 @@ export const WorkerOnboardingPage: React.FC = () => {
       if (!passCheck.isValid) errors.password = passCheck.error;
       if (!confirmCheck.isValid) errors.confirmPassword = confirmCheck.error;
       if (!ageCheck.isValid) errors.age = ageCheck.error;
-      if (!districtCheck.isValid) errors.district = districtCheck.error;
-      if (!addressCheck.isValid) errors.address = addressCheck.error;
+      if (!isAddressValid) errors.address = "Please complete your postal PIN code, street, and door number.";
 
       if (Object.keys(errors).length > 0) {
         setStep1Errors(errors);
@@ -698,16 +707,33 @@ export const WorkerOnboardingPage: React.FC = () => {
         password,
         gender: gender || "Other",
         age: age ? Number(age) : 28,
-        district: district || "Vijayawada",
-        address: address.trim(),
-        pincode: "520001",
+        district: addressData.district || district,
+        state: addressData.state,
+        stateCode: addressData.stateCode,
+        mandal: addressData.mandal,
+        city: addressData.city,
+        village: addressData.village,
+        street: addressData.street,
+        houseNumber: addressData.houseNumber,
+        address: address.trim() || [
+          addressData.houseNumber,
+          addressData.street,
+          addressData.landmark,
+          addressData.village,
+          addressData.mandal,
+          addressData.district,
+          addressData.state,
+          addressData.pincode
+        ].filter(Boolean).join(", "),
+        pincode: addressData.pincode || "520001",
+        coordinates: addressData.coordinates,
         bloodGroup: bloodGroup || "O+",
         languages: languagesKnown.length > 0 ? languagesKnown : ["Telugu", "Hindi", "English"],
         avatarUrl: photoPreview || "",
         photoPreview: photoPreview || "",
         signatureText: signatureText || name,
-        societyName: selectedSociety || "Vijayawada Central Labour Co-op Society (PACS-04)",
-        selectedSociety: selectedSociety || "Vijayawada Central Labour Co-op Society (PACS-04)",
+        societyName: selectedSociety || `${addressData.district || district || "Regional"} Central Labour Co-op Society`,
+        selectedSociety: selectedSociety || `${addressData.district || district || "Regional"} Central Labour Co-op Society`,
         primarySkill: primarySkill || "Electrician",
         skills: [primarySkill || "Electrician", ...(secondarySkills ? secondarySkills.split(",").map(s => s.trim()).filter(Boolean) : [])],
         experienceYears: Number(experienceYears) || 3,
@@ -855,8 +881,8 @@ export const WorkerOnboardingPage: React.FC = () => {
                     skills: [primarySkill, ...(secondarySkills ? secondarySkills.split(",").map(s => s.trim()).filter(Boolean) : [])],
                     bloodGroup: bloodGroup || "O+",
                     languagesKnown: languagesKnown.length > 0 ? languagesKnown : ["Telugu", "Hindi", "English"],
-                    district: district || "Vijayawada",
-                    societyName: selectedSociety || "Vijayawada Central Labour Co-op Society",
+                    district: addressData.district || district || "Registered District",
+                    societyName: selectedSociety || `${addressData.district || district || "Regional"} Central Labour Co-op Society`,
                     photoUrl: photoPreview,
                     signatureText: signatureText || name || "Authorized Artisan",
                     issueDate: new Date().toLocaleDateString("en-GB"),
@@ -1367,57 +1393,56 @@ export const WorkerOnboardingPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField
+                  <FormField
+                    id="worker-onboarding-age"
+                    label="Age (Years)"
+                    required
+                    error={step1Errors.age}
+                  >
+                    <input
                       id="worker-onboarding-age"
-                      label="Age (Years)"
-                      required
-                      error={step1Errors.age}
-                    >
-                      <input
-                        id="worker-onboarding-age"
-                        type="number"
-                        min={1}
-                        max={120}
-                        placeholder="e.g. 28"
-                        value={age}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setAge(val);
-                          setError(null);
-                          const check = validateAge(val, 1, 120);
-                          setStep1Errors((prev) => ({ ...prev, age: check.error }));
-                        }}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
-                      />
-                    </FormField>
+                      type="number"
+                      min={1}
+                      max={120}
+                      placeholder="e.g. 28"
+                      value={age}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setAge(val);
+                        setError(null);
+                        const check = validateAge(val, 1, 120);
+                        setStep1Errors((prev) => ({ ...prev, age: check.error }));
+                      }}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
+                    />
+                  </FormField>
 
-                    <FormField
-                      id="worker-onboarding-district"
-                      label="District"
-                      required
-                      error={step1Errors.district}
-                    >
-                      <select
-                        id="worker-onboarding-district"
-                        value={district}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setDistrict(val);
-                          setError(null);
-                          const check = validateRequired(val, "District");
-                          setStep1Errors((prev) => ({ ...prev, district: check.error }));
-                        }}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600"
-                      >
-                        <option value="">Select District</option>
-                        <option value="Vijayawada">Vijayawada (NTR District)</option>
-                        <option value="Guntur">Guntur District</option>
-                        <option value="Visakhapatnam">Visakhapatnam</option>
-                        <option value="Hyderabad">Hyderabad Central</option>
-                      </select>
-                    </FormField>
-                  </div>
+                {/* Hierarchical Postal & Locality Address Form */}
+                <div className="p-4 bg-slate-50/90 rounded-2xl border border-slate-200">
+                  <HierarchicalAddressForm
+                    value={addressData}
+                    onChange={(updated) => {
+                      setAddressData(updated);
+                      setDistrict(updated.district);
+                      setAddress(
+                        [
+                          updated.houseNumber,
+                          updated.street,
+                          updated.landmark,
+                          updated.village,
+                          updated.mandal,
+                          updated.district,
+                          updated.state,
+                          updated.pincode
+                        ].filter(Boolean).join(", ")
+                      );
+                      setAddressError(null);
+                      setStep1Errors((prev) => ({ ...prev, district: undefined, address: undefined }));
+                    }}
+                    roleType="WORKER"
+                    error={step1Errors.address || addressError}
+                  />
+                </div>
 
                   {/* Photo & Blood Group for Official Smart ID */}
                   <div className="p-4 bg-slate-50/90 rounded-2xl border border-slate-200 space-y-3">

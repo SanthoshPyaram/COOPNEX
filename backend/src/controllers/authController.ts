@@ -1119,12 +1119,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
             avatarUrl,
             profileImage: avatarUrl,
             societyId: user.societyId || new mongoose.Types.ObjectId("65b900000000000000000001"),
-            societyName: req.body.societyName || req.body.selectedSociety || "Vijayawada Central Labour Co-op Society (PACS-04)",
+            societyName: req.body.societyName || req.body.selectedSociety || `${user.district || "Regional"} Labour Co-op Society`,
             federationId: user.federationId || new mongoose.Types.ObjectId("65b900000000000000000002"),
-            district: user.district || "Vijayawada",
+            district: user.district || req.body.district || "Registered District",
             location: {
               type: "Point",
-              coordinates: [80.648, 16.5062]
+              coordinates: req.body.coordinates && req.body.coordinates.length === 2 ? req.body.coordinates : [79.0, 16.5]
             },
             serviceRadiusKm: Number(req.body.serviceRadiusKm) || 15,
             skills: skillsArray.length > 0 ? skillsArray : ["Electrician"],

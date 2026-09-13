@@ -33,8 +33,14 @@ export const getMongoUri = (): string => {
     return uri;
   }
 
+  // Guard against accidental connections to unrelated databases
+  if (uri && (uri.includes("/sahakari_seva") || uri.includes("/smart_agriculture"))) {
+    console.warn(`[MongoDB Warning] Redirecting target database from legacy string to coopnex database.`);
+    return uri.replace(/\/sahakari_seva|\/smart_agriculture/, "/coopnex");
+  }
+
   // Development default
-  return uri || "mongodb://localhost:27017/sahakari_seva";
+  return uri || "mongodb://localhost:27017/coopnex";
 };
 
 export const connectDB = async (): Promise<void> => {

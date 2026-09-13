@@ -10,6 +10,7 @@
     "seed": "tsx src/scripts/seed.ts",
     "db:reset": "tsx src/scripts/reset-coopnex-data.ts",
     "migrate": "tsx src/scripts/migrateToAtlas.ts",
+    "import:locations": "tsx src/scripts/importOfficialLocations.ts",
     "test": "vitest run"
   },
   "dependencies": {

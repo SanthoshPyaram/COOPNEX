@@ -25,7 +25,7 @@ interface LeafletMapProps {
 }
 
 export const LeafletMap: React.FC<LeafletMapProps> = ({
-  center = [16.5062, 80.6480], // default lat/lon
+  center,
   zoom = 13,
   workers = [],
   customerLocation,
@@ -42,12 +42,15 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
 
+  const effectiveCenter: [number, number] = customerLocation || center || [20.5937, 78.9629];
+  const effectiveZoom = (customerLocation || center) ? zoom : 5;
+
   // Initialize Map
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
-      const map = L.map(mapContainerRef.current).setView(center, zoom);
+      const map = L.map(mapContainerRef.current).setView(effectiveCenter, effectiveZoom);
 
       // OpenStreetMap tiles
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -66,10 +69,10 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
   // Update map view smoothly when center changes
   useEffect(() => {
-    if (mapInstanceRef.current && center) {
-      mapInstanceRef.current.flyTo(center, zoom, { duration: 1.2 });
+    if (mapInstanceRef.current && effectiveCenter) {
+      mapInstanceRef.current.flyTo(effectiveCenter, effectiveZoom, { duration: 1.2 });
     }
-  }, [center[0], center[1], zoom]);
+  }, [effectiveCenter[0], effectiveCenter[1], effectiveZoom]);
 
   // Update markers, routes, and zones whenever data changes
   useEffect(() => {

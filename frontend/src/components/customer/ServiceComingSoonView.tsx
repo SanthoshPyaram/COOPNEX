@@ -289,3 +289,4 @@ export const ServiceComingSoonView: React.FC<ServiceComingSoonViewProps> = ({
     </div>
   );
 };
+

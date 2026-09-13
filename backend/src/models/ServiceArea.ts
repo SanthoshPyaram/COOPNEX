@@ -84,3 +84,4 @@ ServiceAreaSchema.index({ state: 1, district: 1, city: 1 });
 ServiceAreaSchema.index({ isActive: 1, state: 1 });
 
 export const ServiceArea = mongoose.model<IServiceArea>("ServiceArea", ServiceAreaSchema);
+

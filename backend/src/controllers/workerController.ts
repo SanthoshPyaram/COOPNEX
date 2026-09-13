@@ -77,8 +77,8 @@ export const getWorkers = async (req: Request, res: Response): Promise<void> => 
 
     let workers = await Worker.find(filter).sort({ rating: -1, verificationLevel: -1 }).limit(50);
 
-    const targetCity = locationMeta?.city || distStr || "Vijayawada";
-    const targetDistrict = locationMeta?.district || distStr || "Vijayawada";
+    const targetCity = locationMeta?.city || distStr || "";
+    const targetDistrict = locationMeta?.district || distStr || "";
 
     const sanitizedWorkers = workers.map((w: any) => {
       const doc = typeof w.toObject === "function" ? w.toObject() : { ...w };
@@ -161,12 +161,20 @@ export const getServiceCategories = async (req: Request, res: Response): Promise
 export const getNearbyWorkers = async (req: Request, res: Response): Promise<void> => {
   try {
     const {
-      lat = 16.5062, // Vijayawada central coords default
-      lon = 80.6480,
+      lat,
+      lon,
       radiusKm = 10,
       service = "Electrician",
       isEmergency = "false"
     } = req.query;
+
+    if (!lat || !lon) {
+      res.status(400).json({
+        success: false,
+        message: "Customer coordinates (lat, lon) are required to locate nearby artisans."
+      });
+      return;
+    }
 
     const customerLat = Number(lat);
     const customerLon = Number(lon);

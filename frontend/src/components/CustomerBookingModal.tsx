@@ -32,7 +32,7 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
   isOpen,
   onClose,
   onBookingCreated,
-  customerAddressDefault = "Flat 402, Sri Sai Residency, Near Benz Circle, Vijayawada"
+  customerAddressDefault = ""
 }) => {
   const [step, setStep] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(false);
@@ -44,7 +44,7 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
   const [isEmergency, setIsEmergency] = useState(false);
   const [timeSlot, setTimeSlot] = useState("Today Morning (9:00 AM - 12:00 PM)");
   const [address, setAddress] = useState(customerAddressDefault);
-  const [landmark, setLandmark] = useState("Near Benz Circle");
+  const [landmark, setLandmark] = useState("");
   const [createdBooking, setCreatedBooking] = useState<any | null>(null);
 
   // Validation State
@@ -204,7 +204,7 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
                 <div>
                   <h4 className="font-bold text-sm text-slate-900">{worker.name}</h4>
                   <p className="text-slate-500 text-[11px]">
-                    {worker.skills?.[0] || "Specialist"} • {worker.societyName || "Vijayawada Central Cooperative"}
+                    {worker.skills?.[0] || "Specialist"} • {worker.societyName || (worker.district ? `${worker.district} Cooperative` : "Cooperative Specialist")}
                   </p>
                   <span className="text-emerald-700 font-bold text-[10px]">
                     ★ {worker.rating || 4.9} ({worker.reviewCount || 94} ratings)
@@ -409,7 +409,7 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
               <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-2xl flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-[#2563EB] shrink-0" />
                 <span className="text-[11px] text-[#2563EB] font-semibold">
-                  Vijayawada Central Cooperative Zone • Service radius verified
+                  {worker.district ? `${worker.district} Cooperative Zone` : "Cooperative Zone"} • Service radius verified
                 </span>
               </div>
 

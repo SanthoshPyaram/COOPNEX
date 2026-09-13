@@ -11,6 +11,15 @@ export interface IFairWageBreakdown {
   workerEarning: number;
   cooperativeContribution: number;
   taxGst: number;
+  serviceAmount?: number;
+  transportCost?: number;
+  returnTravelCost?: number;
+  platformFee?: number;
+  totalAmount?: number;
+  distanceKm?: number;
+  isLongDistance?: boolean;
+  scheduleRecommendation?: "SAME_DAY" | "SCHEDULE_TOMORROW";
+  scheduleReason?: string;
 }
 
 export interface IBooking extends Document {

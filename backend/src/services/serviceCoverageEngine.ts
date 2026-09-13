@@ -137,21 +137,86 @@ export class ServiceCoverageEngine {
     const cleaned = raw;
     const prefix3 = cleaned.substring(0, 3);
 
-    // 2. Query MongoDB ServiceArea Collection
+    // 2. Query MongoDB LocationMaster or ServiceArea if available
     if (mongoose.connection.readyState === 1) {
       try {
+        const { LocationMaster } = await import("../models/LocationMaster");
+        const locRecord = await LocationMaster.findOne({ pincode: cleaned }).lean();
+        if (locRecord) {
+          const isApOrTs =
+            /andhra\s*pradesh/i.test(locRecord.stateNameEnglish) ||
+            /telangana/i.test(locRecord.stateNameEnglish) ||
+            locRecord.stateCode === "AP" ||
+            locRecord.stateCode === "TG";
+
+          const coords = locRecord.location?.coordinates || [79.0, 16.5];
+          const distName = locRecord.districtNameEnglish || "District";
+          const stateName = locRecord.stateNameEnglish || (isApOrTs ? "Andhra Pradesh" : "India");
+          const cityName = locRecord.city || locRecord.town || locRecord.postOfficeName || distName;
+
+          if (isApOrTs) {
+            return {
+              pincode: cleaned,
+              isValidPincode: true,
+              available: true,
+              status: "AVAILABLE",
+              isCovered: true,
+              activeCooperative: true,
+              state: stateName,
+              stateCode: /andhra/i.test(stateName) ? "AP" : "TG",
+              district: distName,
+              city: cityName,
+              coordinates: coords,
+              services: ALL_SERVICES,
+              servicesAvailable: ALL_SERVICES,
+              serviceSupported: true,
+              cooperativeName: `${distName} Primary Labour Cooperative Society`,
+              slaMinutes: 15,
+              nearestHub: `${distName} Cooperative Kendra`,
+              nearestHubCoordinates: coords,
+              nearestServiceArea: `${distName} Cooperative Kendra`,
+              cooperativeFederation: `${stateName} State Labour Cooperative Federation`,
+              launchPhase: "PHASE_1_LAUNCH",
+              message: `✓ COOPNEX is actively operating in ${cityName}, ${stateName}. Verified cooperative artisans are available for dispatch.`
+            };
+          } else {
+            return {
+              pincode: cleaned,
+              isValidPincode: true,
+              available: false,
+              status: "COMING_SOON",
+              isCovered: false,
+              activeCooperative: false,
+              state: stateName,
+              stateCode: locRecord.stateCode || "IN",
+              district: distName,
+              city: cityName,
+              coordinates: coords,
+              services: [],
+              servicesAvailable: [],
+              serviceSupported: false,
+              nearestHub: "Andhra Pradesh & Telangana Cooperative Network",
+              nearestHubCoordinates: coords,
+              launchPhase: "FUTURE_EXPANSION",
+              message: `Sorry, COOPNEX isn't available in ${stateName} yet. We're currently serving communities across all districts of Andhra Pradesh and Telangana. We're working to expand soon!`
+            };
+          }
+        }
+
+        // Secondary check against ServiceArea collection
         const dbArea = await ServiceArea.findOne({
           $or: [
             { pincodes: cleaned },
             { pincodePrefixes: prefix3 }
           ]
-        });
+        }).lean();
 
         if (dbArea) {
-          const coords = dbArea.location?.coordinates || [80.6480, 16.5062];
-          const nearestCoords = dbArea.nearestHubCoordinates || [80.6480, 16.5062];
+          const coords = dbArea.location?.coordinates || [79.0, 16.5];
+          const nearestCoords = dbArea.nearestHubCoordinates || coords;
+          const isApOrTs = dbArea.stateCode === "AP" || dbArea.stateCode === "TG" || /andhra|telangana/i.test(dbArea.state);
 
-          if (dbArea.isActive) {
+          if (dbArea.isActive || isApOrTs) {
             return {
               pincode: cleaned,
               isValidPincode: true,
@@ -173,7 +238,7 @@ export class ServiceCoverageEngine {
               nearestHubCoordinates: nearestCoords,
               nearestServiceArea: `${dbArea.city} Cooperative Kendra`,
               cooperativeFederation: `${dbArea.state} Primary Labour Cooperative Federation`,
-              launchPhase: dbArea.launchPhase,
+              launchPhase: dbArea.launchPhase || "PHASE_1_LAUNCH",
               message: `✓ COOPNEX is actively operating in ${dbArea.city}, ${dbArea.state}. Verified cooperative artisans are available for dispatch.`
             };
           } else {
@@ -192,10 +257,10 @@ export class ServiceCoverageEngine {
               services: [],
               servicesAvailable: [],
               serviceSupported: false,
-              nearestHub: dbArea.nearestHub || "Vijayawada Cooperative Kendra",
+              nearestHub: dbArea.nearestHub || "Regional Cooperative Kendra",
               nearestHubCoordinates: nearestCoords,
               launchPhase: dbArea.launchPhase,
-              message: `We're expanding across Andhra Pradesh and Telangana, district by district. We'd love to bring trusted cooperative services to ${dbArea.city} soon.`
+              message: `Sorry, COOPNEX isn't available in your area yet. We're expanding soon!`
             };
           }
         }
@@ -211,8 +276,7 @@ export class ServiceCoverageEngine {
   /**
    * Synchronous geographical fallback lookup.
    * Distinguishes:
-   * - Active launch hubs in AP & Telangana (AVAILABLE)
-   * - Future districts of AP & Telangana (COMING_SOON)
+   * - Andhra Pradesh & Telangana districts (AVAILABLE)
    * - Other Indian states outside AP/TS (COMING_SOON)
    * - Invalid Pincode (INVALID_PINCODE)
    */
@@ -235,12 +299,17 @@ export class ServiceCoverageEngine {
 
     const cleaned = raw;
     const prefix3 = cleaned.substring(0, 3);
-    const isLaunchHub = ACTIVE_LAUNCH_PREFIXES.has(prefix3);
 
     // Check direct 3-digit table
     const directMatch = POSTAL_PREFIX_DATA[prefix3];
     if (directMatch) {
-      if (isLaunchHub) {
+      const isApOrTs =
+        directMatch.stateCode === "AP" ||
+        directMatch.stateCode === "TG" ||
+        /andhra/i.test(directMatch.state) ||
+        /telangana/i.test(directMatch.state);
+
+      if (isApOrTs) {
         return {
           pincode: cleaned,
           isValidPincode: true,
@@ -266,7 +335,6 @@ export class ServiceCoverageEngine {
           message: `✓ COOPNEX is actively operating in ${directMatch.city}, ${directMatch.state}. Verified cooperative artisans are available for dispatch.`
         };
       } else {
-        const isApOrTs = directMatch.stateCode === "AP" || directMatch.stateCode === "TG";
         return {
           pincode: cleaned,
           isValidPincode: true,
@@ -284,10 +352,8 @@ export class ServiceCoverageEngine {
           serviceSupported: false,
           nearestHub: directMatch.nearestHub,
           nearestHubCoordinates: directMatch.nearestHubCoordinates,
-          launchPhase: isApOrTs ? "PLANNED_PHASE_2" : "FUTURE_EXPANSION",
-          message: isApOrTs
-            ? `We're expanding across Andhra Pradesh and Telangana, district by district. We'd love to bring trusted cooperative services to ${directMatch.city} soon.`
-            : `COOPNEX is currently operational in selected hubs across Andhra Pradesh & Telangana. We're working to expand to ${directMatch.city}, ${directMatch.state} soon!`
+          launchPhase: "FUTURE_EXPANSION",
+          message: `Sorry, COOPNEX isn't available in ${directMatch.state} yet. We're currently serving communities across all districts of Andhra Pradesh and Telangana. We're working to expand soon!`
         };
       }
     }

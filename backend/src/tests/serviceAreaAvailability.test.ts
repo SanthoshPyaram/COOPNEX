@@ -64,37 +64,33 @@ describe("COOPNEX Service Area Availability System", () => {
     });
   });
 
-  describe("3. Planned Expansion Areas (AP/TS Districts & Other States)", () => {
-    it("should identify Kadapa (516xxx) as COMING_SOON with expansion corridor info", () => {
+  describe("3. Full AP & Telangana Statewide Coverage", () => {
+    it("should identify Kadapa (516xxx) as AVAILABLE in Andhra Pradesh", () => {
       const res = ServiceCoverageEngine.checkAvailability("516001");
       expect(res.isValidPincode).toBe(true);
-      expect(res.available).toBe(false);
-      expect(res.status).toBe("COMING_SOON");
+      expect(res.available).toBe(true);
+      expect(res.status).toBe("AVAILABLE");
       expect(res.district).toContain("Kadapa");
-      expect(res.nearestHub).toBeDefined();
-      expect(res.nearestHubCoordinates).toBeDefined();
       expect(res.coordinates).toBeDefined();
     });
 
-    it("should identify Nellore (524xxx) as COMING_SOON with expansion corridor info", () => {
+    it("should identify Nellore (524xxx) as AVAILABLE in Andhra Pradesh", () => {
       const res = ServiceCoverageEngine.checkAvailability("524001");
       expect(res.isValidPincode).toBe(true);
-      expect(res.available).toBe(false);
-      expect(res.status).toBe("COMING_SOON");
+      expect(res.available).toBe(true);
+      expect(res.status).toBe("AVAILABLE");
       expect(res.district).toContain("Nellore");
-      expect(res.nearestHub).toBeDefined();
     });
 
-    it("should identify Nizamabad (503xxx) as COMING_SOON with expansion corridor info", () => {
+    it("should identify Nizamabad (503xxx) as AVAILABLE in Telangana", () => {
       const res = ServiceCoverageEngine.checkAvailability("503001");
       expect(res.isValidPincode).toBe(true);
-      expect(res.available).toBe(false);
-      expect(res.status).toBe("COMING_SOON");
+      expect(res.available).toBe(true);
+      expect(res.status).toBe("AVAILABLE");
       expect(res.district).toContain("Nizamabad");
-      expect(res.nearestHub).toBeDefined();
     });
 
-    it("should handle locations outside AP/Telangana (e.g. Delhi 110001, Mumbai 400001) as COMING_SOON without error", () => {
+    it("should handle locations outside AP/Telangana (e.g. Delhi 110001, Mumbai 400001, Bengaluru 560001) as COMING_SOON without error", () => {
       const delhiRes = ServiceCoverageEngine.checkAvailability("110001");
       expect(delhiRes.isValidPincode).toBe(true);
       expect(delhiRes.available).toBe(false);
@@ -104,6 +100,11 @@ describe("COOPNEX Service Area Availability System", () => {
       expect(mumbaiRes.isValidPincode).toBe(true);
       expect(mumbaiRes.available).toBe(false);
       expect(mumbaiRes.status).toBe("COMING_SOON");
+
+      const blrRes = ServiceCoverageEngine.checkAvailability("560001");
+      expect(blrRes.isValidPincode).toBe(true);
+      expect(blrRes.available).toBe(false);
+      expect(blrRes.status).toBe("COMING_SOON");
     });
   });
 
@@ -116,8 +117,8 @@ describe("COOPNEX Service Area Availability System", () => {
       expect(res.city).toBe("Vijayawada");
     });
 
-    it("should return COMING_SOON structure for expansion areas from checkAvailabilityAsync", async () => {
-      const res = await ServiceCoverageEngine.checkAvailabilityAsync("516001");
+    it("should return COMING_SOON structure for other states from checkAvailabilityAsync", async () => {
+      const res = await ServiceCoverageEngine.checkAvailabilityAsync("560001");
       expect(res).toBeDefined();
       expect(res.status).toBe("COMING_SOON");
       expect(res.available).toBe(false);

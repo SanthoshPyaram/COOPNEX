@@ -21,6 +21,8 @@ import { USER_ROLES } from "../config/constants";
 export const apiRouter = Router();
 
 // --- LOCATION & SERVICE COVERAGE ENGINE ---
+apiRouter.get("/location/pincode/:pincode", locationCtrl.getPincodeDetails);
+apiRouter.get("/location/search", locationCtrl.searchLocations);
 apiRouter.get("/location/check-pincode", locationCtrl.checkPincode);
 apiRouter.get("/location/states", locationCtrl.getStates);
 apiRouter.get("/location/service-areas", locationCtrl.getServiceAreas);

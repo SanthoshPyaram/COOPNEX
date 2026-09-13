@@ -63,9 +63,13 @@ export const createBooking = async (req: AuthenticatedRequest, res: Response): P
       if (assignedWorker) {
         workerVerificationLevel = assignedWorker.verificationLevel || 3;
         workerExperienceYears = assignedWorker.experienceYears || 4;
-        const wCoords = assignedWorker.location?.coordinates || [80.648, 16.506];
-        const cCoords = serviceLocation?.coordinates || [80.648, 16.506];
-        distanceKm = GeoService.calculateDistanceKm(cCoords[1], cCoords[0], wCoords[1], wCoords[0]);
+        const wCoords = assignedWorker.location?.coordinates;
+        const cCoords = serviceLocation?.coordinates;
+        if (wCoords && cCoords && wCoords.length === 2 && cCoords.length === 2) {
+          distanceKm = GeoService.calculateDistanceKm(cCoords[1], cCoords[0], wCoords[1], wCoords[0]);
+        } else {
+          distanceKm = 3.0; // Local vicinity standard
+        }
       }
     }
 
@@ -94,8 +98,8 @@ export const createBooking = async (req: AuthenticatedRequest, res: Response): P
       serviceCategory,
       requirementDescription,
       serviceLocation: {
-        address: serviceLocation?.address || "MG Road, Vijayawada",
-        coordinates: serviceLocation?.coordinates || [80.648, 16.506]
+        address: serviceLocation?.address || "Service Location",
+        coordinates: serviceLocation?.coordinates || assignedWorker?.location?.coordinates || [79.0, 16.5]
       },
       bookingType,
       status: initialStatus,
