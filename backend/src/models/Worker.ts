@@ -41,6 +41,16 @@ export interface IWorker extends Document {
   societyName: string;
   federationId: mongoose.Types.ObjectId;
   district: string;
+  state?: string;
+  stateCode?: string;
+  city?: string;
+  mandal?: string;
+  village?: string;
+  houseNumber?: string;
+  street?: string;
+  landmark?: string;
+  pincode?: string;
+  address?: string;
   location: {
     type: string;
     coordinates: [number, number]; // [lon, lat]
@@ -112,6 +122,16 @@ const WorkerSchema = new Schema<IWorker>(
     societyName: { type: String, required: true },
     federationId: { type: Schema.Types.ObjectId, ref: "Federation", required: true },
     district: { type: String, required: true, index: true },
+    state: { type: String, default: "" },
+    stateCode: { type: String, default: "" },
+    city: { type: String, default: "" },
+    mandal: { type: String, default: "" },
+    village: { type: String, default: "" },
+    houseNumber: { type: String, default: "" },
+    street: { type: String, default: "" },
+    landmark: { type: String, default: "" },
+    pincode: { type: String, default: "" },
+    address: { type: String, default: "" },
     location: {
       type: { type: String, enum: ["Point"], default: "Point" },
       coordinates: { type: [Number], required: true } // [lon, lat]

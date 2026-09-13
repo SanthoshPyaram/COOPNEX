@@ -504,6 +504,15 @@ export const WorkerPage: React.FC = () => {
               rating={wp?.rating || 5.0}
               reviewCount={wp?.reviewCount || 0}
               jobsCompletedCount={wp?.jobsCompletedCount || activeJobs.filter((j) => j.status === "COMPLETED").length}
+              address={(user as any)?.address || wp?.address || "Benz Circle, Vijayawada"}
+              city={(user as any)?.city || wp?.city || "Vijayawada"}
+              state={(user as any)?.state || wp?.state || "Andhra Pradesh"}
+              stateCode={(user as any)?.stateCode || wp?.stateCode || "AP"}
+              mandal={(user as any)?.mandal || wp?.mandal || "Vijayawada Urban"}
+              village={(user as any)?.village || wp?.village || ""}
+              pincode={(user as any)?.pincode || wp?.pincode || "520001"}
+              coordinates={(user as any)?.location?.coordinates || wp?.location?.coordinates || [80.648, 16.5062]}
+              onProfileUpdated={() => refreshWorkerStatus(true)}
             />
           )}
 

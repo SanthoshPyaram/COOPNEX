@@ -392,11 +392,132 @@ export const HierarchicalAddressForm: React.FC<HierarchicalAddressFormProps> = (
               </div>
             ) : null}
 
-            {/* Read-Only Detected Hierarchy Grid */}
+            {/* 2. City / Town and Village Selection (ASKED DIRECTLY AFTER PINCODE) */}
+            <div className="p-3.5 bg-blue-50/50 dark:bg-slate-800/40 rounded-2xl border border-blue-200/80 dark:border-blue-900/40 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black uppercase tracking-wider text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <span>Your City &amp; Village / Locality</span>
+                </span>
+                <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-100/80 dark:bg-blue-900/60 px-2 py-0.5 rounded-full">
+                  Step 2 of Address
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* City / Town Input / Select */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center justify-between">
+                    <span>City / Town Name <span className="text-rose-500">*</span></span>
+                    {selectedCity && selectedCity !== "__CUSTOM__" && (
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">✓ Verified</span>
+                    )}
+                  </label>
+                  {citiesList.length > 0 ? (
+                    <div className="space-y-1.5">
+                      <select
+                        value={selectedCity}
+                        onChange={(e) => {
+                          setSelectedCity(e.target.value);
+                          emitChange({ city: e.target.value === "__CUSTOM__" ? customCity : e.target.value });
+                        }}
+                        className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-blue-600 transition shadow-2xs"
+                      >
+                        {citiesList.map((c, i) => (
+                          <option key={i} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                        <option value="__CUSTOM__">Other (Enter manually)</option>
+                      </select>
+                      {selectedCity === "__CUSTOM__" && (
+                        <input
+                          type="text"
+                          placeholder="Type city or town name"
+                          value={customCity}
+                          onChange={(e) => {
+                            setCustomCity(e.target.value);
+                            emitChange({ city: e.target.value });
+                          }}
+                          className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white"
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Enter city / town name"
+                      value={selectedCity === "__CUSTOM__" ? customCity : selectedCity}
+                      onChange={(e) => {
+                        setSelectedCity("__CUSTOM__");
+                        setCustomCity(e.target.value);
+                        emitChange({ city: e.target.value });
+                      }}
+                      className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-blue-600"
+                    />
+                  )}
+                </div>
+
+                {/* Village / Locality / Ward Input / Select */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center justify-between">
+                    <span>Village / Locality / Ward <span className="text-rose-500">*</span></span>
+                    {selectedVillage && selectedVillage !== "__CUSTOM__" && (
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">✓ Verified</span>
+                    )}
+                  </label>
+                  {villagesList.length > 0 ? (
+                    <div className="space-y-1.5">
+                      <select
+                        value={selectedVillage}
+                        onChange={(e) => {
+                          setSelectedVillage(e.target.value);
+                          emitChange({ village: e.target.value === "__CUSTOM__" ? customVillage : e.target.value });
+                        }}
+                        className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-blue-600 transition shadow-2xs"
+                      >
+                        {villagesList.map((v, i) => (
+                          <option key={i} value={v.name}>
+                            {v.name}
+                          </option>
+                        ))}
+                        <option value="__CUSTOM__">Other (Enter manually)</option>
+                      </select>
+                      {selectedVillage === "__CUSTOM__" && (
+                        <input
+                          type="text"
+                          placeholder="Type village / locality / ward name"
+                          value={customVillage}
+                          onChange={(e) => {
+                            setCustomVillage(e.target.value);
+                            emitChange({ village: e.target.value });
+                          }}
+                          className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white"
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Enter village, colony, or revenue hamlet"
+                      value={selectedVillage === "__CUSTOM__" ? customVillage : selectedVillage}
+                      onChange={(e) => {
+                        setSelectedVillage("__CUSTOM__");
+                        setCustomVillage(e.target.value);
+                        emitChange({ village: e.target.value });
+                      }}
+                      className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-blue-600"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Detected Administrative Hierarchy (State & District) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
-                  Detected State
+                  State
                 </label>
                 <div className="w-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white flex items-center justify-between">
                   <span>{stateName}</span>
@@ -407,7 +528,7 @@ export const HierarchicalAddressForm: React.FC<HierarchicalAddressFormProps> = (
                         : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"
                     }`}
                   >
-                    {serviceStatus === "AVAILABLE" ? "SUPPORTED REGION" : "EXPANSION REGION"}
+                    {serviceStatus === "AVAILABLE" ? "AVAILABLE" : "COMING SOON"}
                   </span>
                 </div>
               </div>
@@ -422,7 +543,7 @@ export const HierarchicalAddressForm: React.FC<HierarchicalAddressFormProps> = (
               </div>
             </div>
 
-            {/* 3. Post Office & Mandal Selectors */}
+            {/* 4. Post Office & Mandal Selectors */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -492,105 +613,6 @@ export const HierarchicalAddressForm: React.FC<HierarchicalAddressFormProps> = (
                     onChange={(e) => {
                       setCustomMandal(e.target.value);
                       emitChange({ mandal: e.target.value });
-                    }}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white"
-                  />
-                )}
-              </div>
-            </div>
-
-            {/* 4. City / Town and Village Selection */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  City / Town Name
-                </label>
-                {citiesList.length > 0 ? (
-                  <div className="space-y-1.5">
-                    <select
-                      value={selectedCity}
-                      onChange={(e) => {
-                        setSelectedCity(e.target.value);
-                        emitChange({ city: e.target.value === "__CUSTOM__" ? customCity : e.target.value });
-                      }}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600 transition"
-                    >
-                      {citiesList.map((c, i) => (
-                        <option key={i} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                      <option value="__CUSTOM__">Other (Enter manually)</option>
-                    </select>
-                    {selectedCity === "__CUSTOM__" && (
-                      <input
-                        type="text"
-                        placeholder="Type city or town name"
-                        value={customCity}
-                        onChange={(e) => {
-                          setCustomCity(e.target.value);
-                          emitChange({ city: e.target.value });
-                        }}
-                        className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs"
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <input
-                    type="text"
-                    placeholder="Enter city / town"
-                    value={customCity}
-                    onChange={(e) => {
-                      setCustomCity(e.target.value);
-                      emitChange({ city: e.target.value });
-                    }}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white"
-                  />
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Village / Locality {villagesList.length > 0 ? `(${villagesList.length} mapped)` : ""}
-                </label>
-                {villagesList.length > 0 ? (
-                  <div className="space-y-1.5">
-                    <select
-                      value={selectedVillage}
-                      onChange={(e) => {
-                        setSelectedVillage(e.target.value);
-                        emitChange({ village: e.target.value === "__CUSTOM__" ? customVillage : e.target.value });
-                      }}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600 transition"
-                    >
-                      {villagesList.map((v, i) => (
-                        <option key={i} value={v.name}>
-                          {v.name}
-                        </option>
-                      ))}
-                      <option value="__CUSTOM__">Other (Enter manually)</option>
-                    </select>
-                    {selectedVillage === "__CUSTOM__" && (
-                      <input
-                        type="text"
-                        placeholder="Type village name"
-                        value={customVillage}
-                        onChange={(e) => {
-                          setCustomVillage(e.target.value);
-                          emitChange({ village: e.target.value });
-                        }}
-                        className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs"
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <input
-                    type="text"
-                    placeholder="Enter village or locality name"
-                    value={customVillage}
-                    onChange={(e) => {
-                      setCustomVillage(e.target.value);
-                      emitChange({ village: e.target.value });
                     }}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white"
                   />

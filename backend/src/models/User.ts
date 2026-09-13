@@ -17,10 +17,20 @@ export interface IUser extends Document {
   role: UserRole;
   roles?: UserRole[];
   state?: string;
+  stateCode?: string;
   district: string;
   city: string;
+  mandal?: string;
+  village?: string;
+  houseNumber?: string;
+  street?: string;
+  landmark?: string;
   pincode?: string;
   address?: string;
+  location?: {
+    type: string;
+    coordinates: [number, number];
+  };
   societyId?: mongoose.Types.ObjectId;
   federationId?: mongoose.Types.ObjectId;
   avatarUrl?: string;
@@ -68,10 +78,20 @@ const UserSchema = new Schema<IUser>(
       index: true
     },
     state: { type: String, trim: true },
+    stateCode: { type: String, trim: true },
     district: { type: String, required: true, trim: true },
     city: { type: String, trim: true },
+    mandal: { type: String, trim: true },
+    village: { type: String, trim: true },
+    houseNumber: { type: String, trim: true },
+    street: { type: String, trim: true },
+    landmark: { type: String, trim: true },
     pincode: { type: String, trim: true, index: true },
     address: { type: String },
+    location: {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: { type: [Number], default: [80.6480, 16.5062] }
+    },
     societyId: { type: Schema.Types.ObjectId, ref: "Society" },
     federationId: { type: Schema.Types.ObjectId, ref: "Federation" },
     avatarUrl: { type: String },

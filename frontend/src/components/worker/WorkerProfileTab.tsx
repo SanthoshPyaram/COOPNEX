@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { HumanVisual } from "../HumanVisual";
 import {
   User,
@@ -13,8 +13,16 @@ import {
   Mail,
   Award,
   Lock,
-  ExternalLink
+  ExternalLink,
+  Edit3,
+  Check,
+  Loader2,
+  Save,
+  X
 } from "lucide-react";
+import { HierarchicalAddressForm, AddressData } from "../location/HierarchicalAddressForm";
+import { api } from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 
 interface WorkerProfileTabProps {
   employeeId: string;
@@ -28,6 +36,15 @@ interface WorkerProfileTabProps {
   rating?: number;
   reviewCount?: number;
   jobsCompletedCount?: number;
+  address?: string;
+  city?: string;
+  state?: string;
+  stateCode?: string;
+  mandal?: string;
+  village?: string;
+  pincode?: string;
+  coordinates?: [number, number];
+  onProfileUpdated?: () => void;
 }
 
 export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
@@ -41,11 +58,116 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
   experienceYears = 3,
   rating = 4.9,
   reviewCount = 0,
-  jobsCompletedCount = 0
+  jobsCompletedCount = 0,
+  address = "Benz Circle, Vijayawada",
+  city = "Vijayawada",
+  state = "Andhra Pradesh",
+  stateCode = "AP",
+  mandal = "Vijayawada Urban",
+  village = "",
+  pincode = "520001",
+  coordinates = [80.648, 16.5062],
+  onProfileUpdated
 }) => {
+  const { refreshUser } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState<
-    "about" | "skills" | "experience" | "reviews" | "documents" | "cooperative"
+    "documents" | "address" | "about" | "skills" | "experience" | "reviews" | "cooperative"
   >("documents");
+
+  // Address edit state
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const [currentAddress, setCurrentAddress] = useState(address);
+  const [currentCity, setCurrentCity] = useState(city);
+  const [currentState, setCurrentState] = useState(state);
+  const [currentMandal, setCurrentMandal] = useState(mandal);
+  const [currentVillage, setCurrentVillage] = useState(village);
+  const [currentPincode, setCurrentPincode] = useState(pincode);
+  const [currentCoordinates, setCurrentCoordinates] = useState<[number, number]>(coordinates);
+
+  const [addressFormData, setAddressFormData] = useState<Partial<AddressData>>({
+    pincode,
+    state,
+    stateCode,
+    district,
+    mandal,
+    village,
+    city,
+    street: address,
+    coordinates
+  });
+
+  useEffect(() => {
+    setCurrentAddress(address);
+    setCurrentCity(city);
+    setCurrentState(state);
+    setCurrentMandal(mandal);
+    setCurrentVillage(village);
+    setCurrentPincode(pincode);
+    setCurrentCoordinates(coordinates);
+    setAddressFormData({
+      pincode,
+      state,
+      stateCode,
+      district,
+      mandal,
+      village,
+      city,
+      street: address,
+      coordinates
+    });
+  }, [address, city, state, stateCode, mandal, village, pincode, district]);
+
+  const handleSaveAddress = async () => {
+    setSavingAddress(true);
+    setSaveError(null);
+    try {
+      const combinedStreet = addressFormData.street
+        ? `${addressFormData.houseNumber ? addressFormData.houseNumber + ", " : ""}${addressFormData.street}${addressFormData.landmark ? " (Near " + addressFormData.landmark + ")" : ""}`
+        : currentAddress;
+
+      const payload = {
+        address: combinedStreet,
+        city: addressFormData.city || currentCity,
+        district: addressFormData.district || district,
+        state: addressFormData.state || currentState,
+        stateCode: addressFormData.stateCode || "AP",
+        mandal: addressFormData.mandal || currentMandal,
+        village: addressFormData.village || currentVillage,
+        houseNumber: addressFormData.houseNumber || "",
+        street: addressFormData.street || "",
+        landmark: addressFormData.landmark || "",
+        pincode: addressFormData.pincode || currentPincode,
+        coordinates: addressFormData.coordinates || currentCoordinates
+      };
+
+      const res = await api.updateProfile(payload);
+      if (res.success) {
+        setSaveSuccess(true);
+        setIsEditingAddress(false);
+        setCurrentAddress(payload.address);
+        setCurrentCity(payload.city);
+        setCurrentState(payload.state);
+        setCurrentMandal(payload.mandal);
+        setCurrentVillage(payload.village);
+        setCurrentPincode(payload.pincode);
+        if (payload.coordinates) setCurrentCoordinates(payload.coordinates);
+        await refreshUser();
+        if (onProfileUpdated) onProfileUpdated();
+        setTimeout(() => setSaveSuccess(false), 4000);
+      } else {
+        setSaveError(res.message || "Failed to save address to database.");
+      }
+    } catch (err: any) {
+      console.error("Worker address save error:", err);
+      setSaveError(err.message || "Failed to save address.");
+    } finally {
+      setSavingAddress(false);
+    }
+  };
 
   const isVerified = verificationStatus === "VERIFIED";
 
@@ -155,6 +277,7 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
       <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-100 pb-2">
         {[
           { id: "documents", label: "Verification & Documents (KYC)" },
+          { id: "address", label: "Base Location & Address" },
           { id: "about", label: "About" },
           { id: "skills", label: "Skills & Badges" },
           { id: "experience", label: "Experience History" },
@@ -223,6 +346,143 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* TAB CONTENT: OPERATIONAL BASE & ADDRESS */}
+      {activeSubTab === "address" && (
+        <div className="space-y-4">
+          {saveSuccess && (
+            <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 flex items-center gap-2 font-bold animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Operational base and workshop address saved successfully to MongoDB!</span>
+            </div>
+          )}
+
+          {saveError && (
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-800 flex items-center gap-2 font-bold animate-in fade-in">
+              <X className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{saveError}</span>
+            </div>
+          )}
+
+          {!isEditingAddress ? (
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200 shrink-0">
+                    <MapPin className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900">Registered Operational Base</h4>
+                    <p className="text-[11px] text-slate-500">Your base location is used to calculate citizen dispatch proximity and travel allowances.</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsEditingAddress(true)}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Edit Base Address</span>
+                </button>
+              </div>
+
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Current Workshop / Home Base</span>
+                <p className="text-sm font-bold text-slate-800 mt-1">
+                  {currentAddress || "Benz Circle, Vijayawada"}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">
+                  🏙️ City: <strong className="text-slate-900">{currentCity}</strong>
+                </span>
+                {currentVillage && (
+                  <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">
+                    🏡 Village/Locality: <strong className="text-slate-900">{currentVillage}</strong>
+                  </span>
+                )}
+                {currentMandal && (
+                  <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">
+                    🏛️ Mandal: <strong className="text-slate-900">{currentMandal}</strong>
+                  </span>
+                )}
+                <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">
+                  📍 District: <strong className="text-slate-900">{district}</strong>
+                </span>
+                <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">
+                  🗺️ State: <strong className="text-slate-900">{currentState}</strong>
+                </span>
+                <span className="px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 font-mono font-bold text-xs">
+                  📮 PIN: <strong>{currentPincode}</strong>
+                </span>
+              </div>
+
+              <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-xs text-slate-600">
+                <span className="flex items-center gap-1.5 font-semibold text-emerald-700">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  15 km Cooperative Field Dispatch Coverage Active
+                </span>
+                <span className="text-[11px] font-mono text-slate-400">
+                  [{currentCoordinates[1].toFixed(4)}, {currentCoordinates[0].toFixed(4)}]
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-slate-50 border border-blue-200 rounded-2xl p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                <div>
+                  <h4 className="text-sm font-black text-slate-900">Edit Operational Base &amp; Workshop</h4>
+                  <p className="text-xs text-slate-500">Enter your 6-digit PIN code. City and Village are selected right after entering your PIN code.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingAddress(false)}
+                  className="text-xs text-slate-500 hover:text-slate-800 font-bold px-2 py-1 rounded cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <HierarchicalAddressForm
+                value={addressFormData}
+                roleType="WORKER"
+                showMapPreview={true}
+                onChange={(updated) => setAddressFormData(updated)}
+              />
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingAddress(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 font-bold text-xs transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveAddress}
+                  disabled={savingAddress}
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm shadow-blue-500/20 disabled:opacity-50 cursor-pointer"
+                >
+                  {savingAddress ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving to Database...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-3.5 h-3.5" />
+                      <span>Save Address to Database</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

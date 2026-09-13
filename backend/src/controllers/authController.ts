@@ -1627,7 +1627,15 @@ export const updateProfile = async (req: AuthenticatedRequest, res: Response): P
       city,
       district,
       state,
+      stateCode,
+      mandal,
+      village,
+      houseNumber,
+      street,
+      landmark,
       pincode,
+      coordinates,
+      location,
       bloodGroup,
       emergencyContactName,
       emergencyContactPhone
@@ -1648,12 +1656,56 @@ export const updateProfile = async (req: AuthenticatedRequest, res: Response): P
     if (city !== undefined) user.city = city.trim();
     if (district !== undefined) user.district = district.trim();
     if (state !== undefined) user.state = state.trim();
+    if (stateCode !== undefined) (user as any).stateCode = stateCode.trim();
+    if (mandal !== undefined) (user as any).mandal = mandal.trim();
+    if (village !== undefined) (user as any).village = village.trim();
+    if (houseNumber !== undefined) (user as any).houseNumber = houseNumber.trim();
+    if (street !== undefined) (user as any).street = street.trim();
+    if (landmark !== undefined) (user as any).landmark = landmark.trim();
     if (pincode !== undefined) user.pincode = pincode.trim();
+    if (coordinates && Array.isArray(coordinates) && coordinates.length === 2) {
+      user.location = {
+        type: "Point",
+        coordinates: [Number(coordinates[0]), Number(coordinates[1])]
+      };
+    } else if (location?.coordinates && Array.isArray(location.coordinates) && location.coordinates.length === 2) {
+      user.location = {
+        type: "Point",
+        coordinates: [Number(location.coordinates[0]), Number(location.coordinates[1])]
+      };
+    }
     if (bloodGroup !== undefined) (user as any).bloodGroup = bloodGroup.trim();
     if (emergencyContactName !== undefined) (user as any).emergencyContactName = emergencyContactName.trim();
     if (emergencyContactPhone !== undefined) (user as any).emergencyContactPhone = emergencyContactPhone.trim();
 
     await user.save();
+
+    // Sync to Worker model if user is a worker
+    try {
+      const worker = await Worker.findOne({ $or: [{ userId: user._id }, { email: user.email }] });
+      if (worker) {
+        if (address !== undefined) worker.address = address.trim();
+        if (city !== undefined) worker.city = city.trim();
+        if (district !== undefined) worker.district = district.trim();
+        if (state !== undefined) worker.state = state.trim();
+        if (stateCode !== undefined) worker.stateCode = stateCode.trim();
+        if (mandal !== undefined) worker.mandal = mandal.trim();
+        if (village !== undefined) worker.village = village.trim();
+        if (houseNumber !== undefined) worker.houseNumber = houseNumber.trim();
+        if (street !== undefined) worker.street = street.trim();
+        if (landmark !== undefined) worker.landmark = landmark.trim();
+        if (pincode !== undefined) worker.pincode = pincode.trim();
+        if (user.location?.coordinates) {
+          worker.location = {
+            type: "Point",
+            coordinates: user.location.coordinates
+          };
+        }
+        await worker.save();
+      }
+    } catch (syncErr) {
+      console.warn("Worker address sync warning:", syncErr);
+    }
 
     res.json({
       success: true,
@@ -1671,7 +1723,14 @@ export const updateProfile = async (req: AuthenticatedRequest, res: Response): P
         city: user.city,
         district: user.district,
         state: user.state,
+        stateCode: (user as any).stateCode,
+        mandal: (user as any).mandal,
+        village: (user as any).village,
+        houseNumber: (user as any).houseNumber,
+        street: (user as any).street,
+        landmark: (user as any).landmark,
         pincode: user.pincode,
+        location: user.location,
         bloodGroup: (user as any).bloodGroup || "O+",
         emergencyContactName: (user as any).emergencyContactName,
         emergencyContactPhone: (user as any).emergencyContactPhone,

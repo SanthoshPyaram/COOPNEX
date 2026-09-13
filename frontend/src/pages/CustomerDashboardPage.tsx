@@ -19,6 +19,8 @@ import { ReviewModal } from "../components/ReviewModal";
 import { CustomerLocationModal } from "../components/CustomerLocationModal";
 import { ServiceComingSoonView } from "../components/customer/ServiceComingSoonView";
 import { LeafletMap } from "../components/LeafletMap";
+import { HierarchicalAddressForm, AddressData } from "../components/location/HierarchicalAddressForm";
+import { LiveWorkerTrackingModal } from "../components/location/LiveWorkerTrackingModal";
 import { FormField } from "../components/common/FormField";
 import {
   validateName,
@@ -58,7 +60,9 @@ import {
   X,
   UserCheck,
   Award,
-  Compass
+  Compass,
+  Navigation,
+  Edit3
 } from "lucide-react";
 
 interface ServiceCategoryMeta {
@@ -75,7 +79,7 @@ interface ServiceCategoryMeta {
 
 export const CustomerDashboardPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
 
@@ -197,8 +201,24 @@ export const CustomerDashboardPage: React.FC = () => {
   const [bookingModalWorker, setBookingModalWorker] = useState<WorkerProfile | null>(null);
   const [whyWorker, setWhyWorker] = useState<WorkerProfile | null>(null);
   const [reviewBooking, setReviewBooking] = useState<Booking | null>(null);
+  const [trackingBooking, setTrackingBooking] = useState<Booking | null>(null);
+  const [isEditingAddress, setIsEditingAddress] = useState<boolean>(false);
 
   // Profile Edit Form State
+  const [profileAddressData, setProfileAddressData] = useState<Partial<AddressData>>({
+    pincode: (user as any)?.pincode || (user as any)?.postalCode || "",
+    state: (user as any)?.state || "Andhra Pradesh",
+    stateCode: (user as any)?.stateCode || "AP",
+    district: user?.district || (user as any)?.district || "",
+    mandal: (user as any)?.mandal || "",
+    village: (user as any)?.village || "",
+    city: (user as any)?.city || "",
+    street: (user as any)?.street || "",
+    houseNumber: (user as any)?.houseNumber || "",
+    landmark: (user as any)?.landmark || "",
+    coordinates: (user as any)?.location?.coordinates || [80.648, 16.5062]
+  });
+
   const [profileFormData, setProfileFormData] = useState({
     name: user?.name || "",
     phone: user?.phone || "",
@@ -206,7 +226,15 @@ export const CustomerDashboardPage: React.FC = () => {
     address: (user as any)?.address || "",
     city: (user as any)?.city || "",
     district: user?.district || (user as any)?.district || "",
+    state: (user as any)?.state || "Andhra Pradesh",
+    stateCode: (user as any)?.stateCode || "AP",
+    mandal: (user as any)?.mandal || "",
+    village: (user as any)?.village || "",
+    houseNumber: (user as any)?.houseNumber || "",
+    street: (user as any)?.street || "",
+    landmark: (user as any)?.landmark || "",
     pincode: (user as any)?.pincode || (user as any)?.postalCode || "",
+    coordinates: (user as any)?.location?.coordinates || [80.648, 16.5062],
     bloodGroup: (user as any)?.bloodGroup || "O+",
     emergencyContactName: (user as any)?.emergencyContactName || "",
     emergencyContactPhone: (user as any)?.emergencyContactPhone || ""
@@ -435,9 +463,25 @@ export const CustomerDashboardPage: React.FC = () => {
     setProfileSaveLoading(true);
     setProfileSaveSuccess(false);
     try {
-      const res = await api.updateProfile(profileFormData);
+      const payload = {
+        ...profileFormData,
+        state: profileAddressData.state || profileFormData.state || "Andhra Pradesh",
+        stateCode: profileAddressData.stateCode || profileFormData.stateCode || "AP",
+        district: profileAddressData.district || profileFormData.district,
+        mandal: profileAddressData.mandal || profileFormData.mandal || "",
+        village: profileAddressData.village || profileFormData.village || "",
+        city: profileAddressData.city || profileFormData.city,
+        houseNumber: profileAddressData.houseNumber || profileFormData.houseNumber || "",
+        street: profileAddressData.street || profileFormData.street || "",
+        landmark: profileAddressData.landmark || profileFormData.landmark || "",
+        pincode: profileAddressData.pincode || profileFormData.pincode,
+        coordinates: profileAddressData.coordinates || profileFormData.coordinates
+      };
+      const res = await api.updateProfile(payload);
       if (res.success) {
         setProfileSaveSuccess(true);
+        setIsEditingAddress(false);
+        await refreshUser();
         setTimeout(() => setProfileSaveSuccess(false), 4000);
       }
     } catch (err) {
@@ -1357,14 +1401,24 @@ export const CustomerDashboardPage: React.FC = () => {
 
                     {/* Honest Live Tracking Notice for Active Bookings */}
                     {b.status !== "COMPLETED" && b.status !== "CANCELLED" && (
-                      <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl text-xs text-blue-900 flex items-start gap-2.5">
-                        <Radio className="w-4 h-4 text-blue-600 shrink-0 mt-0.5 animate-pulse" />
-                        <div>
-                          <strong>{t("cards.trackLive")}:</strong>
-                          <p className="text-[11px] text-blue-800 mt-0.5">
-                            Specialist status is verified under Vijayawada Cooperative Network. Live GPS beacon updates directly when the specialist initiates transit to your door.
-                          </p>
+                      <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl text-xs text-blue-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-start gap-2.5">
+                          <Radio className="w-4 h-4 text-blue-600 shrink-0 mt-0.5 animate-pulse" />
+                          <div>
+                            <strong>{t("cards.trackLive")}:</strong>
+                            <p className="text-[11px] text-blue-800 mt-0.5">
+                              Specialist GPS beacon is active. Track real-time movement and transit ETA from the service base to your address.
+                            </p>
+                          </div>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => setTrackingBooking(b)}
+                          className="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition shadow-xs flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                        >
+                          <Navigation className="w-3.5 h-3.5 animate-pulse" />
+                          <span>Track Worker Live</span>
+                        </button>
                       </div>
                     )}
 
@@ -1376,12 +1430,23 @@ export const CustomerDashboardPage: React.FC = () => {
 
                       <div className="flex items-center gap-2">
                         {b.status !== "COMPLETED" && b.status !== "CANCELLED" && (
-                          <button
-                            onClick={() => handleCancelBooking(b._id)}
-                            className="px-3.5 py-1.5 rounded-full border border-rose-200 text-rose-700 hover:bg-rose-50 font-bold transition cursor-pointer"
-                          >
-                            {t("common.cancel")}
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setTrackingBooking(b)}
+                              className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <Navigation className="w-3.5 h-3.5" />
+                              <span>Track Worker</span>
+                            </button>
+
+                            <button
+                              onClick={() => handleCancelBooking(b._id)}
+                              className="px-3.5 py-1.5 rounded-full border border-rose-200 text-rose-700 hover:bg-rose-50 font-bold transition cursor-pointer"
+                            >
+                              {t("common.cancel")}
+                            </button>
+                          </>
                         )}
 
                         {b.status === "COMPLETED" && (
@@ -1530,145 +1595,117 @@ export const CustomerDashboardPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Residential Address */}
-                <div className="space-y-3 pt-3 border-t border-slate-100">
-                  <h3 className="font-black text-slate-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-[#2563EB]" />
-                    <span>Residential Address &amp; Cooperative Hub</span>
-                  </h3>
+                {/* Residential Address with Structure & Edit Option */}
+                <div className="space-y-4 pt-3 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-black text-slate-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-[#2563EB]" />
+                      <span>Residential Address &amp; Cooperative Hub</span>
+                    </h3>
 
-                  <div>
-                    <FormField
-                      id="profile-address"
-                      label="Street Address / House No."
-                      error={profileErrors.address}
-                      touched={profileTouched.address}
-                      required
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingAddress(!isEditingAddress)}
+                      className="px-3 py-1 rounded-full border border-blue-200 hover:bg-blue-50 text-[#2563EB] text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
                     >
-                      <input
-                        type="text"
-                        id="profile-address"
-                        value={profileFormData.address}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setProfileFormData((p) => ({ ...p, address: val }));
-                          if (profileTouched.address) {
-                            setProfileErrors((prev) => ({
-                              ...prev,
-                              address: validateRequired(val, "Street address", "🏠").error || null
-                            }));
-                          }
-                        }}
-                        onBlur={() => {
-                          setProfileTouched((prev) => ({ ...prev, address: true }));
-                          setProfileErrors((prev) => ({
-                            ...prev,
-                            address: validateRequired(profileFormData.address, "Street address", "🏠").error || null
-                          }));
-                        }}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"
-                      />
-                    </FormField>
+                      <Edit3 className="w-3 h-3" />
+                      <span>{isEditingAddress ? "Close Address Editor" : "Edit Address"}</span>
+                    </button>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <FormField
-                      id="profile-city"
-                      label="City"
-                      error={profileErrors.city}
-                      touched={profileTouched.city}
-                      required
-                    >
-                      <input
-                        type="text"
-                        id="profile-city"
-                        value={profileFormData.city}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setProfileFormData((p) => ({ ...p, city: val }));
-                          if (profileTouched.city) {
-                            setProfileErrors((prev) => ({
-                              ...prev,
-                              city: validateRequired(val, "City", "🏙️").error || null
-                            }));
-                          }
-                        }}
-                        onBlur={() => {
-                          setProfileTouched((prev) => ({ ...prev, city: true }));
-                          setProfileErrors((prev) => ({
-                            ...prev,
-                            city: validateRequired(profileFormData.city, "City", "🏙️").error || null
-                          }));
-                        }}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"
-                      />
-                    </FormField>
+                  {!isEditingAddress ? (
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">Current Address</span>
+                        <p className="text-xs font-bold text-slate-800 mt-0.5">
+                          {profileFormData.address || "No primary street address registered yet."}
+                        </p>
+                      </div>
 
-                    <FormField
-                      id="profile-district"
-                      label="District"
-                      error={profileErrors.district}
-                      touched={profileTouched.district}
-                      required
-                    >
-                      <input
-                        type="text"
-                        id="profile-district"
-                        value={profileFormData.district}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setProfileFormData((p) => ({ ...p, district: val }));
-                          if (profileTouched.district) {
-                            setProfileErrors((prev) => ({
-                              ...prev,
-                              district: validateRequired(val, "District", "🏛️").error || null
-                            }));
-                          }
-                        }}
-                        onBlur={() => {
-                          setProfileTouched((prev) => ({ ...prev, district: true }));
-                          setProfileErrors((prev) => ({
-                            ...prev,
-                            district: validateRequired(profileFormData.district, "District", "🏛️").error || null
-                          }));
-                        }}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"
-                      />
-                    </FormField>
+                      <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-200/60 text-xs">
+                        <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-[11px]">
+                          🏙️ City: <strong className="text-slate-900">{profileFormData.city || "Not set"}</strong>
+                        </span>
+                        {(profileFormData as any).village && (
+                          <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-[11px]">
+                            🏡 Village/Locality: <strong className="text-slate-900">{(profileFormData as any).village}</strong>
+                          </span>
+                        )}
+                        {(profileFormData as any).mandal && (
+                          <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-[11px]">
+                            🏛️ Mandal: <strong className="text-slate-900">{(profileFormData as any).mandal}</strong>
+                          </span>
+                        )}
+                        <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-[11px]">
+                          📍 District: <strong className="text-slate-900">{profileFormData.district || "Not set"}</strong>
+                        </span>
+                        <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-[11px]">
+                          🗺️ State: <strong className="text-slate-900">{profileFormData.state || "Andhra Pradesh"}</strong>
+                        </span>
+                        <span className="px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 font-mono font-bold text-[11px]">
+                          📮 PIN: <strong>{profileFormData.pincode || "520001"}</strong>
+                        </span>
+                      </div>
 
-                    <FormField
-                      id="profile-pincode"
-                      label="Pincode"
-                      error={profileErrors.pincode}
-                      touched={profileTouched.pincode}
-                      required
-                    >
-                      <input
-                        type="text"
-                        id="profile-pincode"
-                        maxLength={6}
-                        value={profileFormData.pincode}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, "");
-                          setProfileFormData((p) => ({ ...p, pincode: val }));
-                          if (profileTouched.pincode) {
-                            setProfileErrors((prev) => ({
-                              ...prev,
-                              pincode: validatePincode(val).error || null
-                            }));
-                          }
-                        }}
-                        onBlur={() => {
-                          setProfileTouched((prev) => ({ ...prev, pincode: true }));
-                          setProfileErrors((prev) => ({
-                            ...prev,
-                            pincode: validatePincode(profileFormData.pincode).error || null
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                        <span className="flex items-center gap-1 text-emerald-700 font-semibold">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          Geospatial coordinates configured
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingAddress(true)}
+                          className="text-[#2563EB] hover:underline font-bold"
+                        >
+                          Modify Address Details →
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-slate-50 border border-blue-200 rounded-2xl p-4 space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                        <div>
+                          <h4 className="text-xs font-black text-slate-900">Update Official Address Details</h4>
+                          <p className="text-[11px] text-slate-500">Enter your 6-digit PIN code to automatically load city, village, and administrative districts.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingAddress(false)}
+                          className="text-xs text-slate-500 hover:text-slate-800 font-bold"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+
+                      <HierarchicalAddressForm
+                        value={profileAddressData}
+                        roleType="CUSTOMER"
+                        showMapPreview={true}
+                        onChange={(updated) => {
+                          setProfileAddressData(updated);
+                          const combinedStreet = updated.street
+                            ? `${updated.houseNumber ? updated.houseNumber + ", " : ""}${updated.street}${updated.landmark ? " (Near " + updated.landmark + ")" : ""}`
+                            : profileFormData.address;
+
+                          setProfileFormData((p) => ({
+                            ...p,
+                            address: combinedStreet || p.address,
+                            city: updated.city || p.city,
+                            district: updated.district || p.district,
+                            state: updated.state || p.state,
+                            stateCode: updated.stateCode || (p as any).stateCode || "AP",
+                            mandal: updated.mandal || (p as any).mandal || "",
+                            village: updated.village || (p as any).village || "",
+                            houseNumber: updated.houseNumber || (p as any).houseNumber || "",
+                            street: updated.street || (p as any).street || "",
+                            landmark: updated.landmark || (p as any).landmark || "",
+                            pincode: updated.pincode || p.pincode,
+                            coordinates: updated.coordinates || (p as any).coordinates
                           }));
                         }}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-mono focus:ring-2 focus:ring-[#2563EB] focus:outline-hidden"
                       />
-                    </FormField>
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Health & Emergency Social Service */}
@@ -2034,6 +2071,14 @@ export const CustomerDashboardPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Live Worker Tracking Modal */}
+      {trackingBooking && (
+        <LiveWorkerTrackingModal
+          booking={trackingBooking}
+          onClose={() => setTrackingBooking(null)}
+        />
       )}
 
       {/* Customer Location Modal */}
