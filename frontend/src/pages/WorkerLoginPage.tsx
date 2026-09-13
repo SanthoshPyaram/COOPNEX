@@ -61,6 +61,7 @@ export const WorkerLoginPage: React.FC = () => {
 
   const getCompanionState = () => {
     if (isSuccess) return "SUCCESS";
+    if (errorMessage && (errorMessage.includes("unavailable") || errorMessage.includes("service") || errorMessage.includes("server") || errorMessage.includes("connect"))) return "SERVICE_ERROR";
     if (errorMessage?.includes("not registered") || errorMessage?.includes("Invalid email")) return "INVALID_EMAIL";
     if (employeeIdError) return "INVALID_EMAIL";
     if (passwordError) return "WEAK_PASSWORD";

@@ -47,6 +47,7 @@ export const LoginPage: React.FC = () => {
   const [showForgotModal, setShowForgotModal] = useState(false);
 
   const getCompanionState = () => {
+    if (errorMessage && (errorMessage.includes("unavailable") || errorMessage.includes("service") || errorMessage.includes("server") || errorMessage.includes("connect"))) return "SERVICE_ERROR";
     if (errorMessage?.includes("not registered") || errorMessage?.includes("Invalid email")) return "INVALID_EMAIL";
     if (emailError) return "INVALID_EMAIL";
     if (passwordError) return "WEAK_PASSWORD";

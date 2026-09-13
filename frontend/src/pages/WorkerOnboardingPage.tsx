@@ -438,12 +438,25 @@ export const WorkerOnboardingPage: React.FC = () => {
     if (emailOtpWrong) return "WRONG_OTP";
     if (emailOtpSent) return "OTP_SENT";
     if (isCheckingEmail || isSendingEmailOtp || isVerifyingEmailOtp) return "CHECKING_EMAIL";
+    if (emailErrorMsg && (emailErrorMsg.includes("unavailable") || emailErrorMsg.includes("service") || emailErrorMsg.includes("couldn't send") || emailErrorMsg.includes("taking too long") || emailErrorMsg.includes("timeout") || emailErrorMsg.includes("connect"))) {
+      return "SERVICE_ERROR";
+    }
+    if (emailErrorMsg && emailErrorMsg.includes("Too many")) {
+      return "RATE_LIMITED";
+    }
     if (step1Errors.email || emailErrorMsg || emailDuplicateError) return "INVALID_EMAIL";
     if (email.includes("@") && !step1Errors.email && !emailErrorMsg) return "EMAIL_VALID";
     if (step1Errors.name) return "INVALID_NAME";
     if (password.length >= 8) return "STRONG_PASSWORD";
     if (name || email || phone) return "TYPING";
     return "IDLE";
+  };
+
+  const getCompanionCustomMessage = () => {
+    if (emailErrorMsg && (emailErrorMsg.includes("unavailable") || emailErrorMsg.includes("service") || emailErrorMsg.includes("couldn't send") || emailErrorMsg.includes("taking too long") || emailErrorMsg.includes("Too many") || emailErrorMsg.includes("connect"))) {
+      return emailErrorMsg.replace(/^[❌⚠️⏱️]\s*/, "");
+    }
+    return undefined;
   };
 
   // Run Algorithmic Pre-Check with Authentic UIDAI Verhoeff Checksum & NSDL PAN Validation
@@ -926,7 +939,7 @@ export const WorkerOnboardingPage: React.FC = () => {
 
                   {/* Interactive Character Companion reacting to form progress */}
                   <div className="flex justify-center pb-1">
-                    <FormHumanCompanion state={getStep1CompanionState()} />
+                    <FormHumanCompanion state={getStep1CompanionState()} customMessage={getCompanionCustomMessage()} />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

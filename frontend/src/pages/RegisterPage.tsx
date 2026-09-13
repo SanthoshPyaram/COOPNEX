@@ -483,6 +483,12 @@ export const RegisterPage: React.FC = () => {
     if (emailOtpWrong) return "WRONG_OTP";
     if (emailOtpSent) return "OTP_SENT";
     if (isCheckingEmail || isSendingEmailOtp || isVerifyingEmailOtp) return "CHECKING_EMAIL";
+    if (emailErrorMsg && (emailErrorMsg.includes("unavailable") || emailErrorMsg.includes("service") || emailErrorMsg.includes("couldn't send") || emailErrorMsg.includes("taking too long") || emailErrorMsg.includes("timeout") || emailErrorMsg.includes("connect"))) {
+      return "SERVICE_ERROR";
+    }
+    if (emailErrorMsg && emailErrorMsg.includes("Too many")) {
+      return "RATE_LIMITED";
+    }
     if (emailError || emailErrorMsg || emailDuplicateError) return "INVALID_EMAIL";
     if (email.includes("@") && !emailError && !emailErrorMsg) return "EMAIL_VALID";
     if (firstNameError || lastNameError) return "INVALID_NAME";
@@ -490,6 +496,13 @@ export const RegisterPage: React.FC = () => {
     if (isFormValid) return "VALID_FORM";
     if (firstName || lastName || email || phone || dateOfBirth) return "TYPING";
     return "IDLE";
+  };
+
+  const getCompanionCustomMessage = () => {
+    if (emailErrorMsg && (emailErrorMsg.includes("unavailable") || emailErrorMsg.includes("service") || emailErrorMsg.includes("couldn't send") || emailErrorMsg.includes("taking too long") || emailErrorMsg.includes("Too many") || emailErrorMsg.includes("connect"))) {
+      return emailErrorMsg.replace(/^[❌⚠️⏱️]\s*/, "");
+    }
+    return undefined;
   };
 
   return (
@@ -630,7 +643,7 @@ export const RegisterPage: React.FC = () => {
 
               {/* Interactive Character Companion reacting to form progress */}
               <div className="flex justify-center pb-2">
-                <FormHumanCompanion state={getCompanionState()} />
+                <FormHumanCompanion state={getCompanionState()} customMessage={getCompanionCustomMessage()} />
               </div>
 
               {/* Personal Details: First Name & Last Name */}

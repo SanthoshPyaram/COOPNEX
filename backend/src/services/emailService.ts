@@ -147,9 +147,15 @@ export async function sendOtpEmail(
     }
   }
 
+  const effectiveEmailJsServiceId = (
+    process.env.EMAILJS_SERVICE_ID ||
+    process.env.VITE_EMAILJS_SERVICE_ID ||
+    "service_9t0h2rw"
+  ).trim();
+
   const hasAnyConfig = Boolean(
     (brevoKey && !brevoKey.includes("xxxxxxx")) ||
-    (process.env.EMAILJS_SERVICE_ID && !process.env.EMAILJS_SERVICE_ID.includes("xxxxxxx")) ||
+    (effectiveEmailJsServiceId && !effectiveEmailJsServiceId.includes("xxxxxxx")) ||
     (process.env.SMTP_HOST && process.env.SMTP_USER)
   );
 

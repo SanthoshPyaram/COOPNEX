@@ -6,6 +6,12 @@ export interface EmailJsResult {
   error?: string;
 }
 
+// Universal Working EmailJS Default Credentials (matching frontend config)
+const DEFAULT_EMAILJS_SERVICE_ID = "service_9t0h2rw";
+const DEFAULT_EMAILJS_VERIFICATION_TEMPLATE_ID = "template_fp4f1mm";
+const DEFAULT_EMAILJS_RESET_TEMPLATE_ID = "template_be8rx9d";
+const DEFAULT_EMAILJS_PUBLIC_KEY = "tl2Adrvyaq949VsOc";
+
 /**
  * Send real 6-digit verification OTP using EmailJS REST API
  * Dynamic template variables passed:
@@ -17,19 +23,25 @@ export async function sendEmailJsOtp(
   recipientName?: string,
   purpose: string = "VERIFY_ACCOUNT"
 ): Promise<EmailJsResult> {
-  const serviceId = process.env.EMAILJS_SERVICE_ID || process.env.VITE_EMAILJS_SERVICE_ID || "";
+  const serviceId = (
+    process.env.EMAILJS_SERVICE_ID ||
+    process.env.VITE_EMAILJS_SERVICE_ID ||
+    DEFAULT_EMAILJS_SERVICE_ID
+  ).trim();
   
   // Resolve Universal Verification Template ID
-  const verificationTemplateId =
+  const verificationTemplateId = (
     process.env.EMAILJS_VERIFICATION_TEMPLATE_ID ||
     process.env.VITE_EMAILJS_VERIFICATION_TEMPLATE_ID ||
-    "";
+    DEFAULT_EMAILJS_VERIFICATION_TEMPLATE_ID
+  ).trim();
 
   // Resolve Universal Password Reset Template ID
-  const resetTemplateId =
+  const resetTemplateId = (
     process.env.EMAILJS_RESET_TEMPLATE_ID ||
     process.env.VITE_EMAILJS_RESET_TEMPLATE_ID ||
-    "";
+    DEFAULT_EMAILJS_RESET_TEMPLATE_ID
+  ).trim();
 
   // Select appropriate template based on purpose
   const isResetFlow =
@@ -38,10 +50,14 @@ export async function sendEmailJsOtp(
     purpose === "PASSWORD_RESET";
 
   const templateId = isResetFlow ? resetTemplateId : verificationTemplateId;
-  const publicKey = process.env.EMAILJS_PUBLIC_KEY || process.env.VITE_EMAILJS_PUBLIC_KEY || "";
-  const privateKey = process.env.EMAILJS_PRIVATE_KEY || "";
+  const publicKey = (
+    process.env.EMAILJS_PUBLIC_KEY ||
+    process.env.VITE_EMAILJS_PUBLIC_KEY ||
+    DEFAULT_EMAILJS_PUBLIC_KEY
+  ).trim();
+  const privateKey = (process.env.EMAILJS_PRIVATE_KEY || "").trim();
 
-  // If EmailJS credentials are not yet configured or still placeholder in .env
+  // If EmailJS credentials are still placeholder in .env
   const isPlaceholder = (val: string) => !val || val.includes("xxxxxxx") || val.startsWith("<") || val.includes("your_");
   if (isPlaceholder(serviceId) || isPlaceholder(templateId) || isPlaceholder(publicKey)) {
     console.warn(

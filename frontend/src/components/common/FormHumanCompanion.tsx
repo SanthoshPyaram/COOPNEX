@@ -17,6 +17,8 @@ export type FormCompanionEmotion =
   | "STRONG_PASSWORD"
   | "WEAK_PASSWORD"
   | "UNDER_18"
+  | "SERVICE_ERROR"
+  | "RATE_LIMITED"
   | "SUCCESS";
 
 interface FormHumanCompanionProps {
@@ -95,6 +97,16 @@ const EMOTION_MAP: Record<FormCompanionEmotion, { emoji: string; text: string; r
   UNDER_18: {
     emoji: "😕",
     text: "Looks like you're not eligible yet. You must be 18 or older.",
+    role: "customer-rep"
+  },
+  SERVICE_ERROR: {
+    emoji: "⚠️",
+    text: "OTP service is temporarily unavailable. Please try again later.",
+    role: "customer-rep"
+  },
+  RATE_LIMITED: {
+    emoji: "⏳",
+    text: "Too many OTP requests. Please wait a moment before trying again.",
     role: "customer-rep"
   },
   SUCCESS: {
