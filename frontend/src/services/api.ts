@@ -32,13 +32,11 @@ const getApiBaseUrl = (): string => {
       return `http://${hostname}:5000/api`;
     }
 
-    // 4. In browser runtime on GitHub Pages static hosting
-    if (hostname.includes("github.io")) {
-      return `${DEFAULT_PROD_API_URL}/api`;
-    }
+    // 4. In browser runtime on GitHub Pages, Vercel, Netlify, Render or any remote production domain
+    return `${DEFAULT_PROD_API_URL}/api`;
   }
 
-  return "/api";
+  return DEFAULT_PROD_API_URL ? `${DEFAULT_PROD_API_URL}/api` : "/api";
 };
 
 export const API_BASE = getApiBaseUrl();

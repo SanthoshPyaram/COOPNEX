@@ -44,7 +44,7 @@ interface AuthContextType {
   validateEmail: (email: string, mode?: string) => Promise<{ success: boolean; status: string; safeToSendOtp: boolean; message: string; reason?: string }>;
   sendOtp: (identifier: string, purpose?: string, name?: string) => Promise<{ success: boolean; message?: string; emailDispatched?: boolean; retryAfterSeconds?: number; notRegistered?: boolean }>;
   verifyOtp: (identifier: string, otpCode: string, purpose?: string) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
-  forgotPasswordSendOtp: (identifier: string) => Promise<{ success: boolean; message?: string; otpCode?: string; emailDispatched?: boolean; previewUrl?: string; notRegistered?: boolean; retryAfterSeconds?: number }>;
+  forgotPasswordSendOtp: (identifier: string) => Promise<{ success: boolean; code?: string; message?: string; otpCode?: string; emailDispatched?: boolean; previewUrl?: string; notRegistered?: boolean; retryAfterSeconds?: number }>;
   forgotPasswordReset: (identifier: string, otpCode: string, newPass: string) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
   registerCustomer: (data: any) => Promise<{ success: boolean; message?: string }>;
   registerWorker: (data: any) => Promise<{ success: boolean; message?: string; employeeId?: string }>;
@@ -468,19 +468,90 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const forgotPasswordSendOtp = async (identifier: string): Promise<{ success: boolean; message?: string; otpCode?: string; retryAfterSeconds?: number; notRegistered?: boolean }> => {
+  const forgotPasswordSendOtp = async (identifier: string): Promise<{
+    success: boolean;
+    code?: string;
+    message?: string;
+    otpCode?: string;
+    retryAfterSeconds?: number;
+    notRegistered?: boolean;
+  }> => {
     try {
       const cleanEmail = identifier.trim().toLowerCase();
       const formatCheck = validateEmailFormat(cleanEmail);
       if (!formatCheck.isValid) {
-        return { success: false, message: "❌ Please enter a valid email address. 📧" };
+        return {
+          success: false,
+          code: "INVALID_EMAIL",
+          message: "❌ Please enter a valid email address. 📧"
+        };
       }
 
-      return await sendOtp(cleanEmail, "FORGOT_PASSWORD", "COOPNEX Member");
+      try {
+        let res = await fetch(`${API_BASE}/auth/forgot-password/send-otp`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identifier: cleanEmail, email: cleanEmail })
+        });
+
+        // If a proxy or static host gives 404 HTML without JSON, try route alias
+        if (res.status === 404) {
+          const contentType = res.headers.get("content-type") || "";
+          if (!contentType.includes("application/json")) {
+            res = await fetch(`${API_BASE}/forgot-password/send-otp`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ identifier: cleanEmail, email: cleanEmail })
+            });
+          }
+        }
+
+        const data = await res.json().catch(() => null);
+
+        if (res.ok && data?.success) {
+          return {
+            success: true,
+            code: "SUCCESS",
+            message: data.message || "OTP sent successfully. Please check your email.",
+            retryAfterSeconds: data.retryAfterSeconds || 60
+          };
+        }
+
+        if (res.status === 404 || data?.code === "EMAIL_NOT_FOUND" || data?.exists === false) {
+          return {
+            success: false,
+            notRegistered: true,
+            code: "EMAIL_NOT_FOUND",
+            message: data?.message || "This email is not registered. Please try again with another email address."
+          };
+        }
+
+        if (res.status === 429 || data?.code === "RATE_LIMITED" || data?.code === "OTP_RATE_LIMITED") {
+          return {
+            success: false,
+            code: "RATE_LIMITED",
+            retryAfterSeconds: data?.retryAfterSeconds || 60,
+            message: data?.message || "Too many OTP requests. Please wait and try again."
+          };
+        }
+
+        return {
+          success: false,
+          code: data?.code || "OTP_SEND_FAILED",
+          message: data?.message || "We couldn't send the OTP to this email right now. Please try again."
+        };
+      } catch {
+        return {
+          success: false,
+          code: "NETWORK_ERROR",
+          message: "Unable to connect to the server. Please check your internet connection and try again."
+        };
+      }
     } catch {
       return {
         success: false,
-        message: "❌ We couldn't send the verification code. Please try again. 📩"
+        code: "OTP_SEND_FAILED",
+        message: "We couldn't send the OTP to this email right now. Please try again."
       };
     }
   };
@@ -515,7 +586,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // 2. Fallback backend verification
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
       const res = await fetch(`${API_BASE}/auth/forgot-password/reset`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

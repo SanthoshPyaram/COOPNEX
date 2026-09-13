@@ -45,7 +45,7 @@ export function validateName(name: string, fieldLabel = "name"): ValidationResul
 
   // Check for forbidden special characters (allow letters, single dots, single hyphens, single spaces)
   const nameRegex = /^[A-Za-z]+(?:[ .'-][A-Za-z]+)*[.]?$/;
-  if (!nameRegex.test(trimmed) || trimmed.length < 2 || trimmed.length > 60) {
+  if (!nameRegex.test(trimmed) || trimmed.length < 1 || trimmed.length > 60) {
     return {
       isValid: false,
       error: `❌ Please enter a valid ${label} using letters only. 👤`

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { SixDigitOtpInput } from "../SixDigitOtpInput";
 import { useAuth } from "../../context/AuthContext";
+import { useTranslation } from "react-i18next";
 import { FormField } from "../common/FormField";
 import { PasswordRequirements } from "../common/PasswordRequirements";
 import { validateEmailFormat, validatePassword, validateConfirmPassword } from "../../utils/validation";
@@ -34,6 +35,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
   portalRole = "CUSTOMER",
   onSuccess
 }) => {
+  const { t } = useTranslation();
   const { forgotPasswordSendOtp, forgotPasswordReset } = useAuth();
 
   const [step, setStep] = useState<"ENTER_IDENTIFIER" | "ENTER_OTP" | "RESET_PASSWORD" | "SUCCESS">("ENTER_IDENTIFIER");
@@ -138,11 +140,17 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     setIsLoading(false);
 
     if (res.success) {
-      setSuccessMessage("✅ OTP sent successfully! Check your email. 📩");
+      setSuccessMessage(t("auth.otpSentSuccess", "✅ OTP sent successfully. Please check your email."));
       setStep("ENTER_OTP");
-      setCountdown(60);
+      setCountdown(res.retryAfterSeconds || 60);
+    } else if (res.code === "EMAIL_NOT_FOUND" || res.notRegistered) {
+      setEmailError(t("auth.emailNotFound", "This email is not registered. Please try again with another email address."));
+    } else if (res.code === "RATE_LIMITED") {
+      setErrorMessage(res.message || t("auth.rateLimited", "Too many OTP requests. Please wait and try again."));
+    } else if (res.code === "NETWORK_ERROR") {
+      setErrorMessage(t("auth.networkError", "Unable to connect to the server. Please check your internet connection and try again."));
     } else {
-      setEmailError(res.message || "❌ This email address is not registered. Please check your email and try again. 📧");
+      setErrorMessage(t("auth.otpSendFailed", "We couldn't send the OTP to this email right now. Please try again."));
     }
   };
 
@@ -158,11 +166,17 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     setIsLoading(false);
 
     if (res.success) {
-      setSuccessMessage("✅ OTP sent successfully! Check your email. 📩");
-      setCountdown(60);
+      setSuccessMessage(t("auth.otpSentSuccess", "✅ OTP sent successfully. Please check your email."));
+      setCountdown(res.retryAfterSeconds || 60);
       setOtpDigits(["", "", "", "", "", ""]);
+    } else if (res.code === "EMAIL_NOT_FOUND" || res.notRegistered) {
+      setErrorMessage(t("auth.emailNotFound", "This email is not registered. Please try again with another email address."));
+    } else if (res.code === "RATE_LIMITED") {
+      setErrorMessage(res.message || t("auth.rateLimited", "Too many OTP requests. Please wait and try again."));
+    } else if (res.code === "NETWORK_ERROR") {
+      setErrorMessage(t("auth.networkError", "Unable to connect to the server. Please check your internet connection and try again."));
     } else {
-      setErrorMessage(res.message || "❌ We couldn't send the verification code. Please try again. 📩");
+      setErrorMessage(t("auth.otpSendFailed", "We couldn't send the OTP to this email right now. Please try again."));
     }
   };
 
@@ -343,7 +357,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 {isLoading ? (
                   <span className="inline-flex items-center gap-2">
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Checking Account & Sending...</span>
+                    <span>{t("auth.sendingOtp", "Sending OTP...")}</span>
                   </span>
                 ) : (
                   <>

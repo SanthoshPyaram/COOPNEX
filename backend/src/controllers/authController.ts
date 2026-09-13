@@ -1507,8 +1507,10 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
           if (!existingUser && !existingWorker && !existingAdmin) {
             res.status(404).json({
               success: false,
+              exists: false,
               safeToSendOtp: false,
-              message: "❌ This email address is not registered. Please check your email and try again. 📧"
+              code: "EMAIL_NOT_FOUND",
+              message: "This email is not registered. Please try again with another email address."
             });
             return;
           }
@@ -1741,6 +1743,7 @@ export const forgotPasswordSendOtp = async (req: Request, res: Response): Promis
     if (!cleanTarget || (!emailRegex.test(cleanTarget) && cleanTarget.length < 4)) {
       res.status(400).json({
         success: false,
+        code: "INVALID_EMAIL",
         message: "Please provide a valid registered email address or Employee ID."
       });
       return;
@@ -1761,7 +1764,8 @@ export const forgotPasswordSendOtp = async (req: Request, res: Response): Promis
         res.status(404).json({
           success: false,
           exists: false,
-          message: "❌ This email address is not registered. Please check your email and try again. 📧"
+          code: "EMAIL_NOT_FOUND",
+          message: "This email is not registered. Please try again with another email address."
         });
         return;
       }
@@ -1792,7 +1796,8 @@ export const forgotPasswordSendOtp = async (req: Request, res: Response): Promis
       res.status(404).json({
         success: false,
         exists: false,
-        message: "❌ This email address is not registered. Please check your email and try again. 📧"
+        code: "EMAIL_NOT_FOUND",
+        message: "This email is not registered. Please try again with another email address."
       });
       return;
     }
@@ -1803,7 +1808,8 @@ export const forgotPasswordSendOtp = async (req: Request, res: Response): Promis
       res.status(404).json({
         success: false,
         exists: false,
-        message: "❌ This email address is not registered. Please check your email and try again. 📧"
+        code: "EMAIL_NOT_FOUND",
+        message: "This email is not registered. Please try again with another email address."
       });
       return;
     }
@@ -1816,7 +1822,8 @@ export const forgotPasswordSendOtp = async (req: Request, res: Response): Promis
         const waitTime = Math.ceil(60 - timeSinceLastSent);
         res.status(429).json({
           success: false,
-          message: `Please wait ${waitTime}s before requesting a new password reset code.`,
+          code: "RATE_LIMITED",
+          message: `Too many OTP requests. Please wait ${waitTime}s before requesting a new password reset code.`,
           retryAfterSeconds: waitTime
         });
         return;
@@ -1841,27 +1848,47 @@ export const forgotPasswordSendOtp = async (req: Request, res: Response): Promis
     });
 
     let emailDispatched = false;
-    // Dispatch via EmailJS using RESET_PASSWORD template
+    // Dispatch via EmailJS using RESET_PASSWORD template first
     const emailResult = await sendEmailJsOtp(emailTarget, otpCode, user.name, "RESET_PASSWORD");
     if (emailResult.success) {
       emailDispatched = true;
     } else {
-      console.warn(`[AUTH] EmailJS reset template dispatch pending: ${emailResult.message}. Attempting fallback SMTP...`);
-      const fallbackResult = await sendOtpEmail(emailTarget, otpCode, "FORGOT_PASSWORD");
+      console.warn(`[AUTH] EmailJS reset template dispatch pending: ${emailResult.message}. Attempting fallback hierarchy...`);
+      const fallbackResult = await sendOtpEmail(emailTarget, otpCode, "FORGOT_PASSWORD", user.name);
       if (fallbackResult.success) {
         emailDispatched = true;
       }
     }
 
-    res.json({
+    if (!emailDispatched) {
+      // Rollback un-dispatched OTP record so dead OTP cannot linger
+      await Otp.deleteMany({ identifier: cleanTarget, purpose: "FORGOT_PASSWORD", verified: false });
+      res.status(500).json({
+        success: false,
+        exists: true,
+        otpSent: false,
+        code: "OTP_SEND_FAILED",
+        message: "We couldn't send the OTP to this email right now. Please try again."
+      });
+      return;
+    }
+
+    res.status(200).json({
       success: true,
-      message: "If an eligible account exists, a verification code will be sent to your registered contact.",
-      expiresInSeconds: 600,
-      emailDispatched
+      exists: true,
+      otpSent: true,
+      code: "SUCCESS",
+      message: "OTP sent successfully. Please check your email.",
+      retryAfterSeconds: 60,
+      expiresInSeconds: 600
     });
   } catch (error: any) {
     console.error("forgotPasswordSendOtp error:", error);
-    res.status(500).json({ success: false, message: "Server error during password reset request." });
+    res.status(500).json({
+      success: false,
+      code: "SERVER_ERROR",
+      message: "Server error during password reset request."
+    });
   }
 };
 
