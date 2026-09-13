@@ -7,6 +7,7 @@ import { Review } from "../models/Review";
 import { Society } from "../models/Society";
 import { Federation } from "../models/Federation";
 import { WorkforceExchange } from "../models/WorkforceExchange";
+import { ServiceArea } from "../models/ServiceArea";
 import { AiService } from "../services/aiService";
 import { AuthenticatedRequest } from "../middleware/auth";
 
@@ -547,5 +548,131 @@ export const getAllPayments = async (_req: Request, res: Response): Promise<void
     res.status(500).json({ success: false, message: "Failed to fetch payments.", error: error.message });
   }
 };
+
+/**
+ * Super Admin: Get all service areas with counts and metrics
+ */
+export const getAdminServiceAreas = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const areas = await ServiceArea.find().sort({ state: 1, city: 1 });
+    const activeCount = areas.filter((a) => a.isActive).length;
+    const comingSoonCount = areas.filter((a) => !a.isActive).length;
+
+    res.json({
+      success: true,
+      data: {
+        total: areas.length,
+        activeCount,
+        comingSoonCount,
+        areas
+      }
+    });
+  } catch (error: any) {
+    console.error("getAdminServiceAreas error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch service areas.", error: error.message });
+  }
+};
+
+/**
+ * Super Admin: Toggle or update service area active status
+ */
+export const toggleServiceArea = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    const area = await ServiceArea.findById(id);
+    if (!area) {
+      res.status(404).json({ success: false, message: "Service area not found." });
+      return;
+    }
+
+    if (typeof isActive === "boolean") {
+      area.isActive = isActive;
+    } else {
+      area.isActive = !area.isActive;
+    }
+
+    if (area.isActive && area.launchPhase === "FUTURE_EXPANSION") {
+      area.launchPhase = "PHASE_1_LAUNCH";
+    }
+
+    await area.save();
+
+    res.json({
+      success: true,
+      message: `Service area ${area.city}, ${area.district} is now ${area.isActive ? "ACTIVE" : "INACTIVE"}.`,
+      data: area
+    });
+  } catch (error: any) {
+    console.error("toggleServiceArea error:", error);
+    res.status(500).json({ success: false, message: "Failed to toggle service area.", error: error.message });
+  }
+};
+
+/**
+ * Super Admin: Create a new service area
+ */
+export const createServiceArea = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const {
+      state,
+      stateCode,
+      district,
+      city,
+      pincodePrefixes,
+      pincodes,
+      location,
+      isActive,
+      launchPhase,
+      supportedServices,
+      cooperativeName,
+      nearestHub,
+      nearestHubCoordinates,
+      slaMinutes
+    } = req.body;
+
+    if (!state || !stateCode || !district || !city || !pincodePrefixes || !location?.coordinates) {
+      res.status(400).json({
+        success: false,
+        message: "state, stateCode, district, city, pincodePrefixes, and location coordinates are required."
+      });
+      return;
+    }
+
+    const newArea = await ServiceArea.create({
+      state,
+      stateCode: stateCode.toUpperCase(),
+      district,
+      city,
+      pincodePrefixes: Array.isArray(pincodePrefixes) ? pincodePrefixes : [pincodePrefixes],
+      pincodes: pincodes || [],
+      location: {
+        type: "Point",
+        coordinates: location.coordinates
+      },
+      isActive: Boolean(isActive),
+      launchPhase: launchPhase || (isActive ? "PHASE_1_LAUNCH" : "FUTURE_EXPANSION"),
+      supportedServices: supportedServices || [
+        "Electrician", "Plumber", "Carpenter", "Painter", "Cleaner",
+        "Caregiver", "Driver", "Gardener", "Technician", "Domestic Helper"
+      ],
+      cooperativeName,
+      nearestHub,
+      nearestHubCoordinates,
+      slaMinutes: slaMinutes || 45
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Service area for ${city} created successfully.`,
+      data: newArea
+    });
+  } catch (error: any) {
+    console.error("createServiceArea error:", error);
+    res.status(500).json({ success: false, message: "Failed to create service area.", error: error.message });
+  }
+};
+
 
 

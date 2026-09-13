@@ -38,30 +38,50 @@ export const getWorkers = async (req: Request, res: Response): Promise<void> => 
       filter.verificationStatus = { $in: ["VERIFIED", "APPROVED"] };
     }
 
-    let workers = await Worker.find(filter).sort({ rating: -1, verificationLevel: -1 }).limit(50);
-
     // Resolve location info if pincode or district provided
     const pinStr = pincode ? String(pincode).trim() : "";
     const distStr = district ? String(district).trim() : "";
     let locationMeta: any = null;
 
     if (pinStr && pinStr.length === 6) {
-      locationMeta = ServiceCoverageEngine.checkAvailability(pinStr);
+      locationMeta = await ServiceCoverageEngine.checkAvailabilityAsync(pinStr);
+    } else if (distStr) {
+      locationMeta = await ServiceCoverageEngine.checkAvailabilityAsync(distStr);
     }
+
+    // Protection: If area is unsupported / coming soon, strictly return empty workers
+    if (locationMeta && !locationMeta.available) {
+      res.json({
+        success: true,
+        count: 0,
+        available: false,
+        locationStatus: "COMING_SOON",
+        pincode: pinStr || undefined,
+        district: locationMeta.district || distStr,
+        city: locationMeta.city || distStr,
+        workers: [],
+        message: "Workers aren't available in your locality yet. We're working to bring COOPNEX services to your area."
+      });
+      return;
+    }
+
+    if (locationMeta?.district) {
+      const cleanDist = locationMeta.district.replace(/\s*District.*$/i, "").trim();
+      filter.$or = [
+        { district: new RegExp(cleanDist, "i") },
+        { district: new RegExp(locationMeta.city, "i") }
+      ];
+    } else if (distStr) {
+      filter.district = new RegExp(distStr, "i");
+    }
+
+    let workers = await Worker.find(filter).sort({ rating: -1, verificationLevel: -1 }).limit(50);
 
     const targetCity = locationMeta?.city || distStr || "Vijayawada";
     const targetDistrict = locationMeta?.district || distStr || "Vijayawada";
 
-    const sanitizedWorkers = workers.map((w: any, idx: number) => {
+    const sanitizedWorkers = workers.map((w: any) => {
       const doc = typeof w.toObject === "function" ? w.toObject() : { ...w };
-
-      // Ensure coordinates are properly formatted for LeafletMap
-      if (!doc.location || !Array.isArray(doc.location.coordinates)) {
-        doc.location = {
-          type: "Point",
-          coordinates: [80.6480 + ((idx % 5) * 0.008 - 0.016), 16.5062 + ((idx % 4) * 0.007 - 0.014)]
-        };
-      }
 
       if (doc.kycDocuments) {
         doc.kycDocuments = doc.kycDocuments.map((k: any) => ({
@@ -76,6 +96,8 @@ export const getWorkers = async (req: Request, res: Response): Promise<void> => 
     res.json({
       success: true,
       count: sanitizedWorkers.length,
+      available: true,
+      locationStatus: "AVAILABLE",
       pincode: pinStr || undefined,
       district: targetDistrict,
       city: targetCity,

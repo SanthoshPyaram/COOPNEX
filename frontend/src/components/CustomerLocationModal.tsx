@@ -13,14 +13,21 @@ interface AreaOption {
 }
 
 const PREDEFINED_AREAS: AreaOption[] = [
+  // Active Launch Hubs — Andhra Pradesh & Telangana
   { name: "Benz Circle", pincode: "520010", ward: "Central Hub", district: "Vijayawada", city: "Vijayawada" },
-  { name: "Governorpet", pincode: "520002", ward: "Commercial District", district: "Vijayawada", city: "Vijayawada" },
-  { name: "Patamata", pincode: "520010", ward: "East Sector", district: "Vijayawada", city: "Vijayawada" },
   { name: "One Town", pincode: "520001", ward: "Heritage Ward", district: "Vijayawada", city: "Vijayawada" },
-  { name: "Bhavanipuram", pincode: "520012", ward: "West Gateway", district: "Vijayawada", city: "Vijayawada" },
-  { name: "Gollapudi", pincode: "521225", ward: "Suburban Hub", district: "Vijayawada", city: "Vijayawada" },
-  { name: "Auto Nagar", pincode: "520007", ward: "Industrial Zone", district: "Vijayawada", city: "Vijayawada" },
-  { name: "Gunadala", pincode: "520004", ward: "North Sector", district: "Vijayawada", city: "Vijayawada" }
+  { name: "Brodipet", pincode: "522002", ward: "Urban Center", district: "Guntur", city: "Guntur" },
+  { name: "MVP Colony", pincode: "530017", ward: "Coastal Zone", district: "Visakhapatnam", city: "Visakhapatnam" },
+  { name: "Alipiri", pincode: "517501", ward: "Temple City Hub", district: "Tirupati", city: "Tirupati" },
+  { name: "Kallur", pincode: "518003", ward: "Commercial Zone", district: "Kurnool", city: "Kurnool" },
+  { name: "Banjara Hills", pincode: "500034", ward: "Central District", district: "Hyderabad", city: "Hyderabad" },
+  { name: "Hanamkonda", pincode: "506001", ward: "Urban Hub", district: "Warangal", city: "Warangal" },
+  { name: "Collectorate", pincode: "505001", ward: "City Central", district: "Karimnagar", city: "Karimnagar" },
+  // Planned Expansion Areas (Coming Soon)
+  { name: "RIMS Kadapa", pincode: "516001", ward: "Expansion Hub", district: "Kadapa", city: "Kadapa" },
+  { name: "Magunta Layout", pincode: "524001", ward: "Coastal Corridor", district: "Nellore", city: "Nellore" },
+  { name: "Khaleelwadi", pincode: "503001", ward: "North Corridor", district: "Nizamabad", city: "Nizamabad" },
+  { name: "Clock Tower", pincode: "515001", ward: "Rayalaseema Corridor", district: "Anantapur", city: "Anantapur" }
 ];
 
 interface CustomerLocationModalProps {

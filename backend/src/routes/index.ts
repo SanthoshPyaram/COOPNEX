@@ -23,6 +23,7 @@ export const apiRouter = Router();
 // --- LOCATION & SERVICE COVERAGE ENGINE ---
 apiRouter.get("/location/check-pincode", locationCtrl.checkPincode);
 apiRouter.get("/location/states", locationCtrl.getStates);
+apiRouter.get("/location/service-areas", locationCtrl.getServiceAreas);
 
 // --- AUTHENTICATION & REAL-TIME OTP ---
 apiRouter.post("/auth/validate-email", authCtrl.validateEmail);
@@ -127,6 +128,26 @@ apiRouter.post(
   authenticateJwt,
   requireRoles(USER_ROLES.SUPER_ADMIN),
   adminCtrl.reviewKycSubmission
+);
+
+// --- SERVICE AREA DYNAMIC COVERAGE (SUPER ADMIN) ---
+apiRouter.get(
+  "/admin/service-areas",
+  authenticateJwt,
+  requireRoles(USER_ROLES.SUPER_ADMIN),
+  adminCtrl.getAdminServiceAreas
+);
+apiRouter.patch(
+  "/admin/service-areas/:id/toggle",
+  authenticateJwt,
+  requireRoles(USER_ROLES.SUPER_ADMIN),
+  adminCtrl.toggleServiceArea
+);
+apiRouter.post(
+  "/admin/service-areas",
+  authenticateJwt,
+  requireRoles(USER_ROLES.SUPER_ADMIN),
+  adminCtrl.createServiceArea
 );
 
 

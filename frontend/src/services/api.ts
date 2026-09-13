@@ -343,6 +343,59 @@ export const api = {
       body: JSON.stringify({ employeeId, password: pass })
     });
     return res.json();
+  },
+
+  // Location & Service Area Availability
+  checkPincode: async (pincode: string, service?: string) => {
+    try {
+      const q = service ? `&service=${encodeURIComponent(service)}` : "";
+      const res = await fetch(`${API_BASE}/location/check-pincode?pincode=${encodeURIComponent(pincode)}${q}`);
+      return res.json();
+    } catch (e) {
+      console.error("api.checkPincode error:", e);
+      return { success: false, data: { available: false, status: "COMING_SOON" } };
+    }
+  },
+
+  getServiceAreas: async () => {
+    try {
+      const res = await fetch(`${API_BASE}/location/service-areas`);
+      return res.json();
+    } catch (e) {
+      return { success: false, data: [] };
+    }
+  },
+
+  // Admin Service Areas
+  getAdminServiceAreas: async () => {
+    const res = await fetch(`${API_BASE}/admin/service-areas`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}` }
+    });
+    return res.json();
+  },
+
+  toggleServiceArea: async (id: string, isActive?: boolean) => {
+    const res = await fetch(`${API_BASE}/admin/service-areas/${id}/toggle`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      },
+      body: JSON.stringify(typeof isActive === "boolean" ? { isActive } : {})
+    });
+    return res.json();
+  },
+
+  createServiceArea: async (payload: any) => {
+    const res = await fetch(`${API_BASE}/admin/service-areas`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      },
+      body: JSON.stringify(payload)
+    });
+    return res.json();
   }
 };
 

@@ -198,6 +198,7 @@ export const CustomerAppShell: React.FC<CustomerAppShellProps> = ({
           setActivePincode(pin);
           localStorage.setItem("coopnex_customer_area", area);
           localStorage.setItem("coopnex_customer_pincode", pin);
+          window.dispatchEvent(new CustomEvent("coopnex_location_changed", { detail: { area, pincode: pin } }));
           setLocationModalOpen(false);
         }}
       />

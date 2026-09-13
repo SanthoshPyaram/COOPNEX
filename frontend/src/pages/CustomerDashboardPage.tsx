@@ -16,6 +16,8 @@ import { SpecialistProfileModal } from "../components/SpecialistProfileModal";
 import { CustomerBookingModal } from "../components/CustomerBookingModal";
 import { WhyThisWorkerModal } from "../components/WhyThisWorkerModal";
 import { ReviewModal } from "../components/ReviewModal";
+import { CustomerLocationModal } from "../components/CustomerLocationModal";
+import { ServiceComingSoonView } from "../components/customer/ServiceComingSoonView";
 import { LeafletMap } from "../components/LeafletMap";
 import { FormField } from "../components/common/FormField";
 import {
@@ -55,7 +57,8 @@ import {
   SlidersHorizontal,
   X,
   UserCheck,
-  Award
+  Award,
+  Compass
 } from "lucide-react";
 
 interface ServiceCategoryMeta {
@@ -79,9 +82,83 @@ export const CustomerDashboardPage: React.FC = () => {
   const activeTab = searchParams.get("tab") || "dashboard";
   const initialService = searchParams.get("service") || "ALL";
 
-  // Active Pincode & Area
-  const activePincode = localStorage.getItem("coopnex_customer_pincode") || user?.pincode || "520010";
-  const activeArea = localStorage.getItem("coopnex_customer_area") || "Benz Circle";
+  // Active Pincode & Area (priority: user's authenticated profile pincode / district or session selection)
+  const [activePincode, setActivePincode] = useState<string>(() => {
+    return localStorage.getItem("coopnex_customer_pincode") || user?.pincode || "520010";
+  });
+  const [activeArea, setActiveArea] = useState<string>(() => {
+    return localStorage.getItem("coopnex_customer_area") || user?.district || user?.city || "Benz Circle";
+  });
+  const [locationModalOpen, setLocationModalOpen] = useState<boolean>(false);
+
+  // Real Service Area Availability State
+  const [areaAvailability, setAreaAvailability] = useState<{
+    checking: boolean;
+    available: boolean;
+    status: "AVAILABLE" | "COMING_SOON" | "INVALID_PINCODE";
+    state?: string;
+    district?: string;
+    city?: string;
+    pincode?: string;
+    coordinates?: [number, number]; // [lat, lon]
+    nearestHub?: string;
+    nearestHubCoordinates?: [number, number]; // [lat, lon]
+  }>({
+    checking: true,
+    available: true,
+    status: "AVAILABLE"
+  });
+
+  // Listen for storage / custom event location changes
+  useEffect(() => {
+    const handleLocationChange = (e?: any) => {
+      const p = e?.detail?.pincode || localStorage.getItem("coopnex_customer_pincode");
+      const a = e?.detail?.area || localStorage.getItem("coopnex_customer_area");
+      if (p) setActivePincode(p);
+      if (a) setActiveArea(a);
+    };
+    window.addEventListener("coopnex_location_changed", handleLocationChange);
+    window.addEventListener("storage", handleLocationChange);
+    return () => {
+      window.removeEventListener("coopnex_location_changed", handleLocationChange);
+      window.removeEventListener("storage", handleLocationChange);
+    };
+  }, []);
+
+  // Check service availability whenever activePincode changes
+  useEffect(() => {
+    let isMounted = true;
+    const verifyCoverage = async () => {
+      if (!activePincode || activePincode.length !== 6) return;
+      setAreaAvailability((prev) => ({ ...prev, checking: true }));
+      try {
+        const res = await api.checkPincode(activePincode);
+        if (isMounted && res && res.success && res.data) {
+          setAreaAvailability({
+            checking: false,
+            available: res.data.available,
+            status: res.data.status,
+            state: res.data.state,
+            district: res.data.district,
+            city: res.data.city,
+            pincode: res.data.pincode || activePincode,
+            coordinates: res.data.coordinates,
+            nearestHub: res.data.nearestHub,
+            nearestHubCoordinates: res.data.nearestHubCoordinates
+          });
+        }
+      } catch (err) {
+        console.error("verifyCoverage error:", err);
+        if (isMounted) {
+          setAreaAvailability((prev) => ({ ...prev, checking: false }));
+        }
+      }
+    };
+    verifyCoverage();
+    return () => {
+      isMounted = false;
+    };
+  }, [activePincode]);
 
   // Data States — initialized strictly with real empty states (ZERO fake mock arrays)
   const [workers, setWorkers] = useState<WorkerProfile[]>([]);
@@ -235,6 +312,16 @@ export const CustomerDashboardPage: React.FC = () => {
       if (emergencyReadyOnly) {
         params.emergencyReady = true;
       }
+      if (activePincode) {
+        params.pincode = activePincode;
+      }
+
+      // If coverage engine confirmed area is currently outside active launch hubs, don't show fake workers
+      if (!areaAvailability.checking && !areaAvailability.available) {
+        setWorkers([]);
+        setLoading(false);
+        return;
+      }
 
       const data = await api.getWorkers(params);
       setWorkers(data || []);
@@ -279,7 +366,7 @@ export const CustomerDashboardPage: React.FC = () => {
 
   useEffect(() => {
     loadWorkers();
-  }, [selectedCategory, genderFilter, minRating, verifiedOnly, emergencyReadyOnly]);
+  }, [selectedCategory, genderFilter, minRating, verifiedOnly, emergencyReadyOnly, activePincode, areaAvailability.available]);
 
   useEffect(() => {
     loadBookings();
@@ -382,15 +469,27 @@ export const CustomerDashboardPage: React.FC = () => {
               Namaste, {user?.name || "Citizen"} 👋
             </h1>
             <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
-              <span className="inline-flex items-center gap-1.5 font-bold bg-blue-50 text-[#2563EB] border border-blue-200 px-3 py-1 rounded-full">
+              <button
+                type="button"
+                onClick={() => setLocationModalOpen(true)}
+                className="inline-flex items-center gap-1.5 font-bold bg-blue-50 hover:bg-blue-100 text-[#2563EB] border border-blue-200 px-3 py-1 rounded-full cursor-pointer transition shadow-2xs"
+                title="Click to change detected location"
+              >
                 <MapPin className="w-3.5 h-3.5 text-[#2563EB]" />
                 <span>{activeArea} (PIN: {activePincode})</span>
-              </span>
+              </button>
 
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{workers.length} Verified Specialists In District</span>
-              </span>
+              {areaAvailability.available ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>{workers.length} Verified Specialists In District</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+                  <Clock className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Expansion Corridor • Service Coming Soon</span>
+                </span>
+              )}
 
               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2563EB] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full">
                 <ShieldCheck className="w-3.5 h-3.5 text-[#2563EB]" />
@@ -448,8 +547,23 @@ export const CustomerDashboardPage: React.FC = () => {
         {/* TAB 1: OVERVIEW DASHBOARD */}
         {/* ======================================================== */}
         {activeTab === "dashboard" && (
-          <div className="space-y-6">
-            {/* HERO COOPERATIVE BANNER */}
+          !areaAvailability.checking && !areaAvailability.available ? (
+            <ServiceComingSoonView
+              locality={{
+                city: areaAvailability.city || activeArea,
+                district: areaAvailability.district || activeArea,
+                state: areaAvailability.state || "Andhra Pradesh / Telangana",
+                pincode: activePincode
+              }}
+              nearestHub={areaAvailability.nearestHub}
+              nearestHubCoordinates={areaAvailability.nearestHubCoordinates}
+              userCoordinates={areaAvailability.coordinates}
+              onOpenLocationModal={() => setLocationModalOpen(true)}
+              onSwitchTab={(tab) => setSearchParams({ tab: tab.toLowerCase() })}
+            />
+          ) : (
+            <div className="space-y-6">
+              {/* HERO COOPERATIVE BANNER */}
             <div className="bg-gradient-to-br from-[#172554] via-[#1E3A8A] to-[#312E81] rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden border border-blue-900/60 card-3d">
               <div className="space-y-3 relative z-10 max-w-xl">
                 <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 text-[#F59E0B] text-xs font-bold border border-white/15">
@@ -756,6 +870,7 @@ export const CustomerDashboardPage: React.FC = () => {
               </div>
             </div>
           </div>
+          )
         )}
 
         {/* ======================================================== */}
@@ -890,7 +1005,7 @@ export const CustomerDashboardPage: React.FC = () => {
               <div className="lg:col-span-7 space-y-4">
                 <div className="flex items-center justify-between text-xs text-slate-600 font-semibold px-1">
                   <span>
-                    Showing {filteredWorkers.length} verified specialists in {user?.district || "Vijayawada"}
+                    Showing {filteredWorkers.length} verified specialists in {activeArea} (PIN {activePincode})
                   </span>
                   <span className="text-[#2563EB] font-bold">100% Cooperative Direct Pay</span>
                 </div>
@@ -901,28 +1016,54 @@ export const CustomerDashboardPage: React.FC = () => {
                     <p>Loading verified cooperative specialists...</p>
                   </div>
                 ) : filteredWorkers.length === 0 ? (
-                  /* Honest Empty State */
-                  <div className="bg-white p-10 rounded-3xl text-center border border-slate-200 shadow-xs space-y-3">
-                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
-                      <Search className="w-6 h-6" />
+                  !areaAvailability.checking && !areaAvailability.available ? (
+                    <div className="bg-gradient-to-br from-amber-50 to-orange-50/50 p-8 rounded-3xl text-center border border-amber-200 shadow-xs space-y-4">
+                      <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto text-amber-600">
+                        <MapPin className="w-6 h-6" />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-bold text-base text-slate-900">
+                          Specialists Expanding Soon to {activeArea}
+                        </h4>
+                        <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
+                          {t("coverage.unavailableNotice")}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap justify-center gap-3 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setLocationModalOpen(true)}
+                          className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-full transition shadow-xs cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Compass className="w-4 h-4" />
+                          <span>{t("coverage.changeLocation")}</span>
+                        </button>
+                      </div>
                     </div>
-                    <h4 className="font-bold text-base text-slate-800">No specialists found matching filters</h4>
-                    <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                      Try broadening your search criteria or resetting filters to view all available cooperative technicians in Vijayawada.
-                    </p>
-                    <button
-                      onClick={() => {
-                        setSelectedCategory("ALL");
-                        setGenderFilter("ALL");
-                        setMinRating(0);
-                        setVerifiedOnly(false);
-                        setSearchQuery("");
-                      }}
-                      className="px-5 py-2.5 bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white text-xs font-bold rounded-full transition shadow-xs cursor-pointer"
-                    >
-                      Reset All Filters &amp; View All Specialists
-                    </button>
-                  </div>
+                  ) : (
+                    /* Honest Filter Empty State */
+                    <div className="bg-white p-10 rounded-3xl text-center border border-slate-200 shadow-xs space-y-3">
+                      <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+                        <Search className="w-6 h-6" />
+                      </div>
+                      <h4 className="font-bold text-base text-slate-800">No specialists found matching filters</h4>
+                      <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                        Try broadening your search criteria or resetting filters to view all available cooperative technicians in {activeArea}.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setSelectedCategory("ALL");
+                          setGenderFilter("ALL");
+                          setMinRating(0);
+                          setVerifiedOnly(false);
+                          setSearchQuery("");
+                        }}
+                        className="px-5 py-2.5 bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white text-xs font-bold rounded-full transition shadow-xs cursor-pointer"
+                      >
+                        Reset All Filters &amp; View All Specialists
+                      </button>
+                    </div>
+                  )
                 ) : (
                   filteredWorkers.map((worker, idx) => {
                     const matchScore = 98 - (idx % 6) * 2;
@@ -1032,17 +1173,17 @@ export const CustomerDashboardPage: React.FC = () => {
               <div className="lg:col-span-5 space-y-4">
                 <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs relative">
                   <div className="flex items-center justify-between mb-3 text-xs">
-                    <span className="font-bold text-slate-800">Vijayawada Cooperative Fleet Map</span>
+                    <span className="font-bold text-slate-800">{activeArea} Cooperative Fleet Map</span>
                     <span className="text-emerald-700 font-bold flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>{workers.length} Specialists Plotted</span>
+                      <span className={`w-2 h-2 rounded-full ${areaAvailability.available ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+                      <span>{areaAvailability.available ? `${workers.length} Specialists Plotted` : "Expansion Corridor"}</span>
                     </span>
                   </div>
 
                   <div className="h-96 rounded-2xl overflow-hidden border border-slate-200">
                     <LeafletMap
-                      center={[16.5062, 80.6480]}
-                      zoom={13}
+                      center={areaAvailability.coordinates || [16.5062, 80.6480]}
+                      zoom={areaAvailability.available ? 13 : 11}
                       workers={workers.map((w) => ({
                         id: w._id,
                         name: w.name,
@@ -1051,7 +1192,11 @@ export const CustomerDashboardPage: React.FC = () => {
                         coordinates: w.location?.coordinates || [80.6480, 16.5062],
                         verificationLevel: w.verificationLevel || 4
                       }))}
-                      customerLocation={[16.5062, 80.6480]}
+                      customerLocation={areaAvailability.coordinates || [16.5062, 80.6480]}
+                      customerLocationLabel={`${activeArea} (${activePincode})`}
+                      status={areaAvailability.status}
+                      nearestHubCoordinates={areaAvailability.nearestHubCoordinates}
+                      nearestHubName={areaAvailability.nearestHub}
                       onWorkerSelect={(workerId) => {
                         const match = workers.find((w) => w._id === workerId);
                         if (match) setProfileModalWorker(match);
@@ -1890,6 +2035,22 @@ export const CustomerDashboardPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Customer Location Modal */}
+      <CustomerLocationModal
+        isOpen={locationModalOpen}
+        activeArea={activeArea}
+        activePincode={activePincode}
+        onClose={() => setLocationModalOpen(false)}
+        onSelectArea={(area: string, pin: string) => {
+          setActiveArea(area);
+          setActivePincode(pin);
+          localStorage.setItem("coopnex_customer_area", area);
+          localStorage.setItem("coopnex_customer_pincode", pin);
+          window.dispatchEvent(new CustomEvent("coopnex_location_changed", { detail: { area, pincode: pin } }));
+          setLocationModalOpen(false);
+        }}
+      />
     </CustomerAppShell>
   );
 };

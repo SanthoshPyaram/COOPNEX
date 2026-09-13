@@ -7,6 +7,7 @@ import { Invoice } from "../models/Invoice";
 import { BOOKING_STATUS, BookingStatus } from "../config/constants";
 import { fairWageEngine } from "../services/fairWageEngine";
 import { GeoService } from "../services/geoService";
+import { ServiceCoverageEngine } from "../services/serviceCoverageEngine";
 import { AuthenticatedRequest } from "../middleware/auth";
 
 export const createBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -19,6 +20,22 @@ export const createBooking = async (req: AuthenticatedRequest, res: Response): P
       workerId,
       bookingType = "STANDARD"
     } = req.body;
+
+    // Strict Service-Area Availability Enforcement
+    const targetPincode = serviceLocation?.pincode || req.user?.pincode;
+    if (targetPincode) {
+      const coverage = await ServiceCoverageEngine.checkAvailabilityAsync(targetPincode, serviceCategory);
+      if (!coverage.available) {
+        res.status(422).json({
+          success: false,
+          code: "SERVICE_UNAVAILABLE_IN_AREA",
+          message: `COOPNEX cooperative services are not yet available in ${coverage.city || "your locality"}. We're expanding across Andhra Pradesh and Telangana soon!`,
+          locationStatus: "COMING_SOON",
+          area: coverage.city
+        });
+        return;
+      }
+    }
 
     const customerId = req.user?._id;
     const customerName = req.user?.name || "Customer";

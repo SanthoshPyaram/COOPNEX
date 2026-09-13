@@ -14,6 +14,10 @@ interface LeafletMapProps {
     verificationLevel: number;
   }>;
   customerLocation?: [number, number]; // [lat, lon]
+  customerLocationLabel?: string;
+  status?: "AVAILABLE" | "COMING_SOON" | "INVALID_PINCODE";
+  nearestHubCoordinates?: [number, number]; // [lat, lon]
+  nearestHubName?: string;
   zones?: HeatmapZone[];
   onWorkerSelect?: (workerId: string) => void;
   onZoneSelect?: (zone: HeatmapZone) => void;
@@ -21,10 +25,14 @@ interface LeafletMapProps {
 }
 
 export const LeafletMap: React.FC<LeafletMapProps> = ({
-  center = [16.5062, 80.6480], // Vijayawada
+  center = [16.5062, 80.6480], // default lat/lon
   zoom = 13,
   workers = [],
   customerLocation,
+  customerLocationLabel,
+  status = "AVAILABLE",
+  nearestHubCoordinates,
+  nearestHubName,
   zones = [],
   onWorkerSelect,
   onZoneSelect,
@@ -34,6 +42,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
 
+  // Initialize Map
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
@@ -55,60 +64,123 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     };
   }, []);
 
-  // Update markers and zones whenever data changes
+  // Update map view smoothly when center changes
+  useEffect(() => {
+    if (mapInstanceRef.current && center) {
+      mapInstanceRef.current.flyTo(center, zoom, { duration: 1.2 });
+    }
+  }, [center[0], center[1], zoom]);
+
+  // Update markers, routes, and zones whenever data changes
   useEffect(() => {
     if (!mapInstanceRef.current || !layerGroupRef.current) return;
 
     layerGroupRef.current.clearLayers();
 
-    // 1. Add Customer Marker if available
+    // 1. Add Customer / Locality Marker if available
     if (customerLocation) {
+      const isComingSoon = status === "COMING_SOON";
+      const pinColor = isComingSoon ? "#f59e0b" : "#2563eb";
+      const pinIcon = isComingSoon ? "⏳" : "🏠";
+
       const custIcon = L.divIcon({
         className: "custom-customer-pin",
         html: `
-          <div style="background-color: #2563eb; color: white; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.3); font-weight: bold; font-size: 14px;">
-            🏠
+          <div style="background-color: ${pinColor}; color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.35); font-size: 15px; position: relative;">
+            ${pinIcon}
+            ${isComingSoon ? '<span style="position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; border: 2px solid white;"></span>' : ""}
+          </div>
+        `,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+      });
+
+      const popupContent = isComingSoon
+        ? `<div style="font-family: sans-serif; min-width: 160px;">
+            <strong style="color: #0f172a; font-size: 13px;">${customerLocationLabel || "Your Locality"}</strong><br/>
+            <span style="color: #b45309; font-size: 11px; font-weight: 600;">COOPNEX Expansion Area</span><br/>
+            <span style="color: #64748b; font-size: 11px;">Coverage launch in progress</span>
+           </div>`
+        : `<div style="font-family: sans-serif; min-width: 160px;">
+            <strong style="color: #0f172a; font-size: 13px;">${customerLocationLabel || "Your Service Location"}</strong><br/>
+            <span style="color: #16a34a; font-size: 11px; font-weight: 600;">✓ Active Service Hub Area</span>
+           </div>`;
+
+      L.marker(customerLocation, { icon: custIcon })
+        .addTo(layerGroupRef.current)
+        .bindPopup(popupContent);
+    }
+
+    // 2. If COMING_SOON and nearestHubCoordinates provided, render nearest hub marker and connection route
+    if (status === "COMING_SOON" && customerLocation && nearestHubCoordinates) {
+      const hubIcon = L.divIcon({
+        className: "custom-hub-pin",
+        html: `
+          <div style="background-color: #0f766e; color: white; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.25); font-size: 14px;">
+            🏢
           </div>
         `,
         iconSize: [34, 34],
         iconAnchor: [17, 17]
       });
 
-      L.marker(customerLocation, { icon: custIcon })
+      L.marker(nearestHubCoordinates, { icon: hubIcon })
         .addTo(layerGroupRef.current)
-        .bindPopup("<b>Your Service Location</b><br>Benz Circle, Vijayawada");
-    }
-
-    // 2. Add Worker Markers
-    workers.forEach((w) => {
-      const [lon, lat] = w.coordinates;
-      const workerIcon = L.divIcon({
-        className: "custom-worker-pin",
-        html: `
-          <div style="background-color: #0f766e; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #f59e0b; box-shadow: 0 4px 6px rgba(0,0,0,0.25); font-weight: bold; font-size: 11px;">
-            ${w.verificationLevel >= 4 ? "★" : "✓"}
-          </div>
-        `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
-      });
-
-      const marker = L.marker([lat, lon], { icon: workerIcon })
-        .addTo(layerGroupRef.current!)
         .bindPopup(`
-          <div style="font-family: sans-serif; min-width: 140px;">
-            <strong style="font-size: 13px; color: #0f172a;">${w.name}</strong><br/>
-            <span style="font-size: 11px; color: #0f766e; font-weight: 600;">${w.skills.join(", ")}</span><br/>
-            <span style="font-size: 11px; color: #64748b;">Rating: ${w.rating}★ • Level ${w.verificationLevel} Verified</span>
+          <div style="font-family: sans-serif; min-width: 170px;">
+            <strong style="font-size: 13px; color: #0f766e;">${nearestHubName || "Nearest Operational Hub"}</strong><br/>
+            <span style="font-size: 11px; color: #16a34a; font-weight: 600;">✓ Active Cooperative Network</span><br/>
+            <span style="font-size: 11px; color: #64748b;">Expansion corridor active</span>
           </div>
         `);
 
-      marker.on("click", () => {
-        if (onWorkerSelect) onWorkerSelect(w.id);
-      });
-    });
+      // Draw dashed connecting route representing expansion
+      L.polyline([customerLocation, nearestHubCoordinates], {
+        color: "#f59e0b",
+        weight: 3,
+        opacity: 0.8,
+        dashArray: "6, 8",
+        lineCap: "round"
+      }).addTo(layerGroupRef.current).bindPopup(`
+        <div style="font-family: sans-serif; font-size: 11px; color: #475569;">
+          <strong>Planned Expansion Corridor</strong><br/>
+          From ${nearestHubName || "Active Hub"} to your district
+        </div>
+      `);
+    }
 
-    // 3. Add Heatmap Circles for Demand Zones
+    // 3. Add Worker Markers (only if available)
+    if (status === "AVAILABLE") {
+      workers.forEach((w) => {
+        const [lon, lat] = w.coordinates;
+        const workerIcon = L.divIcon({
+          className: "custom-worker-pin",
+          html: `
+            <div style="background-color: #0f766e; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #f59e0b; box-shadow: 0 4px 6px rgba(0,0,0,0.25); font-weight: bold; font-size: 11px;">
+              ${w.verificationLevel >= 4 ? "★" : "✓"}
+            </div>
+          `,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        });
+
+        const marker = L.marker([lat, lon], { icon: workerIcon })
+          .addTo(layerGroupRef.current!)
+          .bindPopup(`
+            <div style="font-family: sans-serif; min-width: 140px;">
+              <strong style="font-size: 13px; color: #0f172a;">${w.name}</strong><br/>
+              <span style="font-size: 11px; color: #0f766e; font-weight: 600;">${w.skills.join(", ")}</span><br/>
+              <span style="font-size: 11px; color: #64748b;">Rating: ${w.rating}★ • Level ${w.verificationLevel} Verified</span>
+            </div>
+          `);
+
+        marker.on("click", () => {
+          if (onWorkerSelect) onWorkerSelect(w.id);
+        });
+      });
+    }
+
+    // 4. Add Heatmap Circles for Demand Zones
     zones.forEach((z) => {
       const [lon, lat] = z.coordinates;
       let color = "#10b981"; // Low = Green
@@ -137,7 +209,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         if (onZoneSelect) onZoneSelect(z);
       });
     });
-  }, [workers, customerLocation, zones]);
+  }, [workers, customerLocation, customerLocationLabel, status, nearestHubCoordinates, nearestHubName, zones]);
 
   return (
     <div className="relative rounded-2xl overflow-hidden border border-slate-200 shadow-sm">

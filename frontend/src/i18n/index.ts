@@ -269,7 +269,18 @@ export const translations: Record<Language, Record<string, string>> = {
     "services.subtitle": "Click any orbital trade node to inspect statutory minimum hourly rates, safety certifications, and primary society rosters.",
     "network.badge": "Pan-India Cooperative Grid",
     "network.title": "Federal Cooperative Infrastructure",
-    "network.subtitle": "Interactive 3D network linking district labour societies, state federations, and urban primary centers."
+    "network.subtitle": "Interactive 3D network linking district labour societies, state federations, and urban primary centers.",
+    "coverage.comingSoonTitle": "We're Expanding to Your Locality Soon!",
+    "coverage.comingSoonSubtitle": "COOPNEX is currently operational in select launch hubs of Andhra Pradesh & Telangana and scaling rapidly to your district.",
+    "coverage.detectedLocality": "Your Detected Locality",
+    "coverage.operationalNote": "Cooperative artisan verification, training, and hub establishment are currently underway in your region. You will be notified the moment booking becomes live.",
+    "coverage.changeLocation": "Change Location",
+    "coverage.notifyMe": "Notify Me When Launched",
+    "coverage.notifyMeSuccess": "✓ We will notify you via SMS & Email as soon as COOPNEX goes live in your area!",
+    "coverage.expansionRouteTitle": "Planned Expansion Corridor",
+    "coverage.nearestHubLabel": "Nearest Operational Hub",
+    "coverage.exploreNetwork": "Explore Cooperative Network",
+    "coverage.unavailableNotice": "Specialists are currently not dispatchable in this pincode. Please check back soon or switch location."
   },
 
   // 2. HINDI (हिन्दी)
@@ -517,7 +528,18 @@ export const translations: Record<Language, Record<string, string>> = {
     "services.subtitle": "वैधानिक न्यूनतम दरों, सुरक्षा प्रमाणपत्रों और प्राथमिक सोसाइटी सूचियों का निरीक्षण करने के लिए किसी भी ट्रेड पर क्लिक करें।",
     "network.badge": "अखिल भारतीय सहकारी ग्रिड",
     "network.title": "संघीय सहकारी अवसंरचना",
-    "network.subtitle": "जिला श्रम समितियों, राज्य संघों और शहरी प्राथमिक केंद्रों को जोड़ने वाला इंटरैक्टिव 3D नेटवर्क।"
+    "network.subtitle": "जिला श्रम समितियों, राज्य संघों और शहरी प्राथमिक केंद्रों को जोड़ने वाला इंटरैक्टिव 3D नेटवर्क।",
+    "coverage.comingSoonTitle": "हम जल्द ही आपके क्षेत्र में आ रहे हैं!",
+    "coverage.comingSoonSubtitle": "COOPNEX वर्तमान में आंध्र प्रदेश और तेलंगाना के प्रमुख केंद्रों में सक्रिय है और जल्द ही आपके जिले में विस्तारित हो रहा है।",
+    "coverage.detectedLocality": "आपका पता लगाया गया क्षेत्र",
+    "coverage.operationalNote": "आपके क्षेत्र में सहकारी कारीगरों का सत्यापन और प्रशिक्षण चल रहा है। सेवा शुरू होते ही आपको सूचित किया जाएगा।",
+    "coverage.changeLocation": "स्थान बदलें",
+    "coverage.notifyMe": "लॉन्च होने पर मुझे सूचित करें",
+    "coverage.notifyMeSuccess": "✓ आपके क्षेत्र में सेवा शुरू होते ही हम आपको SMS और ईमेल से सूचित करेंगे!",
+    "coverage.expansionRouteTitle": "योजनाबद्ध विस्तार गलियारा",
+    "coverage.nearestHubLabel": "निकटतम सक्रिय केंद्र",
+    "coverage.exploreNetwork": "सहकारी नेटवर्क देखें",
+    "coverage.unavailableNotice": "इस पिनकोड में वर्तमान में कारीगर उपलब्ध नहीं हैं। कृपया जल्द दोबारा जांचें या स्थान बदलें।"
   },
 
   // 3. TELUGU (తెలుగు)
@@ -765,7 +787,18 @@ export const translations: Record<Language, Record<string, string>> = {
     "services.subtitle": "కనీస వేతనాలు, భద్రతా ధృవీకరణ పత్రాలు మరియు సొసైటీ సభ్యుల వివరాల పరిశీలనకు ఏదైనా ట్రేడ్ ఎంచుకోండి.",
     "network.badge": "అఖిల భారత సహకార గ్రిడ్",
     "network.title": "సమాఖ్య సహకార మౌలిక సదుపాయాలు",
-    "network.subtitle": "జిల్లా కార్మిక సంఘాలు, రాష్ట్ర సమాఖ్యలు మరియు ప్రాథమిక కేంద్రాలను అనుసంధానించే 3D నెట్‌వర్క్."
+    "network.subtitle": "జిల్లా కార్మిక సంఘాలు, రాష్ట్ర సమాఖ్యలు మరియు ప్రాథమిక కేంద్రాలను అనుసంధానించే 3D నెట్‌వర్క్.",
+    "coverage.comingSoonTitle": "త్వరలోనే మీ ప్రాంతానికి మా సేవలు విస్తరిస్తున్నాము!",
+    "coverage.comingSoonSubtitle": "COOPNEX ప్రస్తుతం ఆంధ్రప్రదేశ్ మరియు తెలంగాణలలో ఎంపిక చేసిన నగరాల్లో అందుబాటులో ఉంది. త్వరలోనే మీ జిల్లాకు విస్తరిస్తోంది.",
+    "coverage.detectedLocality": "మీ ప్రస్తుత ప్రాంతం",
+    "coverage.operationalNote": "మీ ప్రాంతంలో సహకార నిపుణుల ధృవీకరణ మరియు శిక్షణ పనులు శరవేగంగా జరుగుతున్నాయి. బుకింగ్‌లు ప్రారంభం కాగానే మీకు సమాచారం అందిస్తాము.",
+    "coverage.changeLocation": "ప్రాంతాన్ని మార్చండి",
+    "coverage.notifyMe": "సేవలు ప్రారంభమైనప్పుడు తెలియజేయండి",
+    "coverage.notifyMeSuccess": "✓ మీ ప్రాంతంలో COOPNEX ప్రారంభం కాగానే మీకు SMS మరియు ఈమెయిల్ ద్వారా తెలియజేస్తాము!",
+    "coverage.expansionRouteTitle": "ప్రణాళికాబద్ధమైన విస్తరణ మార్గం",
+    "coverage.nearestHubLabel": "సమీపంలోని క్రియాశీల కేంద్రం",
+    "coverage.exploreNetwork": "సహకార నెట్‌వర్క్‌ను చూడండి",
+    "coverage.unavailableNotice": "ఈ పిన్‌కోడ్‌లో ప్రస్తుతం నిపుణులు అందుబాటులో లేరు. దయచేసి ప్రాంతాన్ని మార్చండి లేదా త్వరలో మళ్లీ ప్రయత్నించండి."
   },
 
   // 4. TAMIL (தமிழ்)
