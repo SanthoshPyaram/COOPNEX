@@ -305,3 +305,4 @@ export const HowCoopnexWorksContinuousPath: React.FC = () => {
     </section>
   );
 };
+

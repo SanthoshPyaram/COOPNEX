@@ -202,13 +202,22 @@ export const WorkerOnboardingPage: React.FC = () => {
             ctx.drawImage(img, 0, 0, w, h);
             const compressed = canvas.toDataURL("image/jpeg", 0.85);
             setPhotoPreview(compressed);
+            try {
+              localStorage.setItem("coopnex_worker_avatar", compressed);
+            } catch {}
           } else {
             setPhotoPreview(rawBase64);
+            try {
+              localStorage.setItem("coopnex_worker_avatar", rawBase64);
+            } catch {}
           }
           setPhotoFile({ name: file.name, size: `${(file.size / 1024).toFixed(0)} KB` });
         };
         img.onerror = () => {
           setPhotoPreview(rawBase64);
+          try {
+            localStorage.setItem("coopnex_worker_avatar", rawBase64);
+          } catch {}
           setPhotoFile({ name: file.name, size: `${(file.size / 1024).toFixed(0)} KB` });
         };
         img.src = rawBase64;
@@ -518,7 +527,7 @@ export const WorkerOnboardingPage: React.FC = () => {
     setError(null);
     setPreCheckScanning(true);
 
-    const targetAadhaar = (customAadhaar !== undefined ? customAadhaar : aadhaarNumber).replace(/\s+/g, "");
+    const targetAadhaar = cleanAadhaarNumber(customAadhaar !== undefined ? customAadhaar : aadhaarNumber);
     const targetPan = (customPan !== undefined ? customPan : panNumber).toUpperCase().trim();
 
     setTimeout(() => {
@@ -683,7 +692,7 @@ export const WorkerOnboardingPage: React.FC = () => {
       }
     }
     if (step === 3) {
-      const cleanAadhaar = aadhaarNumber.replace(/\s+/g, "");
+      const cleanAadhaar = cleanAadhaarNumber(aadhaarNumber);
       const cleanPan = panNumber.toUpperCase().trim();
 
       if (!cleanAadhaar || cleanAadhaar.length !== 12) {
@@ -809,6 +818,11 @@ export const WorkerOnboardingPage: React.FC = () => {
 
       if (res && res.employeeId) {
         setTrackingId(res.employeeId);
+        try {
+          if (photoPreview) {
+            localStorage.setItem(`coopnex_worker_avatar_${res.employeeId}`, photoPreview);
+          }
+        } catch {}
       }
       setSubmitted(true);
     } catch (err: any) {

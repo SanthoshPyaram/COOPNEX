@@ -8,6 +8,7 @@ import { Society } from "../models/Society";
 import { Federation } from "../models/Federation";
 import { WorkforceExchange } from "../models/WorkforceExchange";
 import { ServiceArea } from "../models/ServiceArea";
+import { Notification } from "../models/Notification";
 import { AiService } from "../services/aiService";
 import { AuthenticatedRequest } from "../middleware/auth";
 
@@ -591,12 +592,32 @@ export const getAdminServiceAreas = async (_req: Request, res: Response): Promis
     const activeCount = areas.filter((a) => a.isActive).length;
     const comingSoonCount = areas.filter((a) => !a.isActive).length;
 
+    // Calculate total unique active pincodes covered
+    const activePincodeSet = new Set<string>();
+    areas.forEach((a) => {
+      if (a.isActive && Array.isArray(a.pincodes)) {
+        a.pincodes.forEach((p) => activePincodeSet.add(p));
+      }
+    });
+
+    // Count registered users located in currently active pincodes
+    let totalCoveredUsers = 0;
+    try {
+      if (activePincodeSet.size > 0) {
+        totalCoveredUsers = await User.countDocuments({
+          pincode: { $in: Array.from(activePincodeSet) }
+        });
+      }
+    } catch {}
+
     res.json({
       success: true,
       data: {
         total: areas.length,
         activeCount,
         comingSoonCount,
+        totalPincodes: activePincodeSet.size,
+        totalCoveredUsers,
         areas
       }
     });
@@ -632,14 +653,213 @@ export const toggleServiceArea = async (req: Request, res: Response): Promise<vo
 
     await area.save();
 
+    // Inform existing customers & workers in that area's pincodes
+    let notifiedCount = 0;
+    try {
+      if (Array.isArray(area.pincodes) && area.pincodes.length > 0) {
+        const affectedUsers = await User.find({ pincode: { $in: area.pincodes } });
+        if (affectedUsers.length > 0) {
+          const notifs = affectedUsers.map((u) => ({
+            userId: u._id,
+            title: area.isActive
+              ? `COOPNEX Service Now Active in ${area.city}`
+              : `COOPNEX Service Temporarily Paused in ${area.city}`,
+            message: area.isActive
+              ? `Great news! Cooperative dispatch service in ${area.city}, ${area.district} (PIN: ${u.pincode}) is now active. Verified artisans are ready for dispatch!`
+              : `Notice: Operations in ${area.city}, ${area.district} (PIN: ${u.pincode}) are temporarily suspended. We are coordinating with local cooperatives to resume coverage soon.`,
+            type: "SYSTEM",
+            read: false,
+            metadata: { serviceAreaId: area._id, pincode: u.pincode, event: area.isActive ? "AREA_ACTIVATED" : "AREA_DEACTIVATED" }
+          }));
+          await Notification.insertMany(notifs);
+          notifiedCount = affectedUsers.length;
+        }
+      }
+    } catch (notifErr) {
+      console.warn("Could not dispatch toggle notifications:", notifErr);
+    }
+
     res.json({
       success: true,
-      message: `Service area ${area.city}, ${area.district} is now ${area.isActive ? "ACTIVE" : "INACTIVE"}.`,
-      data: area
+      message: `Service area ${area.city}, ${area.district} is now ${area.isActive ? "ACTIVE" : "INACTIVE"}. Notified ${notifiedCount} user(s).`,
+      data: area,
+      notifiedCount
     });
   } catch (error: any) {
     console.error("toggleServiceArea error:", error);
     res.status(500).json({ success: false, message: "Failed to toggle service area.", error: error.message });
+  }
+};
+
+/**
+ * Super Admin: Expand service area with new pincodes
+ */
+export const expandServiceAreaPincodes = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { pincodes } = req.body;
+
+    const area = await ServiceArea.findById(id);
+    if (!area) {
+      res.status(404).json({ success: false, message: "Service area not found." });
+      return;
+    }
+
+    let newPins: string[] = [];
+    if (Array.isArray(pincodes)) {
+      newPins = pincodes.map((p) => String(p).trim()).filter((p) => /^[1-9][0-9]{5}$/.test(p));
+    } else if (typeof pincodes === "string") {
+      newPins = pincodes.split(",").map((p) => p.trim()).filter((p) => /^[1-9][0-9]{5}$/.test(p));
+    }
+
+    if (newPins.length === 0) {
+      res.status(400).json({ success: false, message: "Please enter at least one valid 6-digit Indian PIN code." });
+      return;
+    }
+
+    const existingSet = new Set(area.pincodes || []);
+    const addedPins: string[] = [];
+    for (const pin of newPins) {
+      if (!existingSet.has(pin)) {
+        existingSet.add(pin);
+        addedPins.push(pin);
+      }
+    }
+
+    if (addedPins.length === 0) {
+      res.json({
+        success: true,
+        message: "All provided pincodes are already part of this service area.",
+        data: { area, addedPincodes: [] }
+      });
+      return;
+    }
+
+    area.pincodes = Array.from(existingSet);
+    area.isActive = true;
+    area.launchPhase = "PHASE_1_LAUNCH";
+    await area.save();
+
+    // Inform existing customers & workers already in database with these pincodes
+    let notifiedUsersCount = 0;
+    try {
+      const affectedUsers = await User.find({ pincode: { $in: addedPins } });
+      if (affectedUsers.length > 0) {
+        const notifs = affectedUsers.map((u) => ({
+          userId: u._id,
+          title: `COOPNEX Service Now Live in Your Area (${u.pincode})`,
+          message: `Great news! COOPNEX cooperative marketplace is now active in ${area.city} (PIN: ${u.pincode}). Verified artisans are ready for immediate dispatch!`,
+          type: "SYSTEM",
+          read: false,
+          metadata: { serviceAreaId: area._id, pincode: u.pincode, event: "AREA_EXPANDED" }
+        }));
+        await Notification.insertMany(notifs);
+        notifiedUsersCount = affectedUsers.length;
+      }
+    } catch (notifErr) {
+      console.warn("Could not dispatch expansion notifications:", notifErr);
+    }
+
+    res.json({
+      success: true,
+      message: `Expanded ${area.city} with ${addedPins.length} new pincode(s) (${addedPins.join(", ")}). Notified ${notifiedUsersCount} registered user(s).`,
+      data: {
+        area,
+        addedPincodes: addedPins,
+        notifiedUsersCount
+      }
+    });
+  } catch (error: any) {
+    console.error("expandServiceAreaPincodes error:", error);
+    res.status(500).json({ success: false, message: "Failed to expand service area.", error: error.message });
+  }
+};
+
+/**
+ * Super Admin: Remove a pincode from a service area
+ */
+export const removeServiceAreaPincode = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id, pincode } = req.params;
+    const cleanPin = String(pincode).trim();
+
+    const area = await ServiceArea.findById(id);
+    if (!area) {
+      res.status(404).json({ success: false, message: "Service area not found." });
+      return;
+    }
+
+    const prevList = area.pincodes || [];
+    area.pincodes = prevList.filter((p) => p !== cleanPin);
+    await area.save();
+
+    // Inform customers & workers already in database for this pincode
+    let notifiedUsersCount = 0;
+    try {
+      const affectedUsers = await User.find({ pincode: cleanPin });
+      if (affectedUsers.length > 0) {
+        const notifs = affectedUsers.map((u) => ({
+          userId: u._id,
+          title: `COOPNEX Service Update: PIN ${cleanPin}`,
+          message: `Important notice: Cooperative dispatch service in PIN ${cleanPin} is currently unavailable. We are working with regional federations to restore active coverage soon.`,
+          type: "SYSTEM",
+          read: false,
+          metadata: { serviceAreaId: area._id, pincode: cleanPin, event: "PINCODE_REMOVED" }
+        }));
+        await Notification.insertMany(notifs);
+        notifiedUsersCount = affectedUsers.length;
+      }
+    } catch (notifErr) {
+      console.warn("Could not dispatch removal notifications:", notifErr);
+    }
+
+    res.json({
+      success: true,
+      message: `Pincode ${cleanPin} removed from ${area.city}. Notified ${notifiedUsersCount} affected user(s).`,
+      data: {
+        area,
+        removedPincode: cleanPin,
+        notifiedUsersCount
+      }
+    });
+  } catch (error: any) {
+    console.error("removeServiceAreaPincode error:", error);
+    res.status(500).json({ success: false, message: "Failed to remove pincode.", error: error.message });
+  }
+};
+
+/**
+ * Super Admin: Delete a service area
+ */
+export const deleteServiceArea = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const area = await ServiceArea.findByIdAndDelete(id);
+    if (!area) {
+      res.status(404).json({ success: false, message: "Service area not found." });
+      return;
+    }
+
+    try {
+      if (Array.isArray(area.pincodes) && area.pincodes.length > 0) {
+        const affectedUsers = await User.find({ pincode: { $in: area.pincodes } });
+        if (affectedUsers.length > 0) {
+          const notifs = affectedUsers.map((u) => ({
+            userId: u._id,
+            title: `COOPNEX Notice for ${area.city}`,
+            message: `Operations in ${area.city}, ${area.district} have been deactivated. We apologize for any inconvenience.`,
+            type: "SYSTEM",
+            read: false
+          }));
+          await Notification.insertMany(notifs);
+        }
+      }
+    } catch {}
+
+    res.json({ success: true, message: `Service area ${area.city} deleted successfully.` });
+  } catch (error: any) {
+    console.error("deleteServiceArea error:", error);
+    res.status(500).json({ success: false, message: "Failed to delete service area.", error: error.message });
   }
 };
 

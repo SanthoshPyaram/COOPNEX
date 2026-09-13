@@ -25,6 +25,8 @@ interface CustomerBookingModalProps {
   onClose: () => void;
   onBookingCreated: (booking: Booking) => void;
   customerAddressDefault?: string;
+  customerPincodeDefault?: string;
+  isAreaAvailable?: boolean;
 }
 
 export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
@@ -32,7 +34,9 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
   isOpen,
   onClose,
   onBookingCreated,
-  customerAddressDefault = ""
+  customerAddressDefault = "",
+  customerPincodeDefault = "",
+  isAreaAvailable = true
 }) => {
   const [step, setStep] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(false);
@@ -104,6 +108,10 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
         setLandmarkError(null);
       }
       if (hasErr) return;
+      if (!isAreaAvailable) {
+        setErrorMsg(`COOPNEX service is currently paused/unavailable in PIN ${customerPincodeDefault || "your selected area"}. Booking dispatch cannot proceed.`);
+        return;
+      }
     }
     setErrorMsg("");
     setStep((prev) => Math.min(prev + 1, 4));
@@ -119,6 +127,10 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
   };
 
   const handleSubmitBooking = async () => {
+    if (!isAreaAvailable) {
+      setErrorMsg(`COOPNEX service is currently paused/unavailable in PIN ${customerPincodeDefault || "your selected area"}. Booking dispatch is blocked.`);
+      return;
+    }
     setLoading(true);
     setErrorMsg("");
     try {
@@ -447,6 +459,18 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
                 </span>
               </div>
 
+              {!isAreaAvailable && (
+                <div className="p-3.5 bg-rose-50 border border-rose-300 rounded-2xl text-xs text-rose-900 flex items-start gap-2.5 shadow-xs">
+                  <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="block font-bold">COOPNEX Service Paused in PIN {customerPincodeDefault || "this area"}</strong>
+                    <p className="text-[11px] text-rose-700 leading-relaxed mt-0.5">
+                      Cooperative field dispatch is temporarily suspended or not available for this pincode. Booking cannot be confirmed until operations resume.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
@@ -458,7 +482,7 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
                 <button
                   type="button"
                   onClick={handleNextStep}
-                  disabled={!address.trim() || !landmark.trim() || (addressTouched && !!addressError) || (landmarkTouched && !!landmarkError)}
+                  disabled={!address.trim() || !landmark.trim() || (addressTouched && !!addressError) || (landmarkTouched && !!landmarkError) || !isAreaAvailable}
                   className="flex-1 py-3 rounded-full bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white font-bold transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <span>Review Fair Wage</span>
@@ -517,6 +541,18 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
                 </p>
               </div>
 
+              {!isAreaAvailable && (
+                <div className="p-3.5 bg-rose-50 border border-rose-300 rounded-2xl text-xs text-rose-900 flex items-start gap-2.5 shadow-xs">
+                  <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="block font-bold">Service Suspended in PIN {customerPincodeDefault || "this area"}</strong>
+                    <p className="text-[11px] text-rose-700 leading-relaxed mt-0.5">
+                      COOPNEX service has been temporarily paused or discontinued in this sector by administration. Booking cannot be dispatched.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
@@ -529,11 +565,13 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
                 <button
                   type="button"
                   onClick={handleSubmitBooking}
-                  disabled={loading}
+                  disabled={loading || !isAreaAvailable}
                   className="flex-1 py-3 rounded-full bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white font-bold transition shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
                 >
                   {loading ? (
                     <span>Registering Order...</span>
+                  ) : !isAreaAvailable ? (
+                    <span>Service Paused in this Area</span>
                   ) : (
                     <>
                       <span>Confirm &amp; Dispatch</span>

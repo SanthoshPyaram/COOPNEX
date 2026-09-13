@@ -447,6 +447,38 @@ export const api = {
     return res.json();
   },
 
+  expandServiceArea: async (id: string, pincodes: string[]) => {
+    const res = await fetch(`${API_BASE}/admin/service-areas/${id}/expand`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      },
+      body: JSON.stringify({ pincodes })
+    });
+    return res.json();
+  },
+
+  removeServiceAreaPincode: async (id: string, pincode: string) => {
+    const res = await fetch(`${API_BASE}/admin/service-areas/${id}/pincodes/${pincode}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      }
+    });
+    return res.json();
+  },
+
+  deleteServiceArea: async (id: string) => {
+    const res = await fetch(`${API_BASE}/admin/service-areas/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      }
+    });
+    return res.json();
+  },
+
   // Real-time Booking Messages
   getMessagesByBooking: async (bookingId: string) => {
     const res = await fetch(`${API_BASE}/messages/booking/${bookingId}`, {

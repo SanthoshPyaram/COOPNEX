@@ -170,6 +170,24 @@ apiRouter.post(
   requireRoles(USER_ROLES.SUPER_ADMIN),
   adminCtrl.createServiceArea
 );
+apiRouter.patch(
+  "/admin/service-areas/:id/expand",
+  authenticateJwt,
+  requireRoles(USER_ROLES.SUPER_ADMIN),
+  adminCtrl.expandServiceAreaPincodes
+);
+apiRouter.delete(
+  "/admin/service-areas/:id/pincodes/:pincode",
+  authenticateJwt,
+  requireRoles(USER_ROLES.SUPER_ADMIN),
+  adminCtrl.removeServiceAreaPincode
+);
+apiRouter.delete(
+  "/admin/service-areas/:id",
+  authenticateJwt,
+  requireRoles(USER_ROLES.SUPER_ADMIN),
+  adminCtrl.deleteServiceArea
+);
 
 
 // --- WORKER WELFARE & INSURANCE ---

@@ -229,6 +229,44 @@ export const WorkerPage: React.FC = () => {
   // Selected Job for inspection
   const [inspectJob, setInspectJob] = useState<Booking | null>(null);
 
+  // Worker Notifications State (Real Database Notifications)
+  const [workerNotifications, setWorkerNotifications] = useState<any[]>([]);
+  const [workerNotifsLoading, setWorkerNotifsLoading] = useState(false);
+
+  const fetchWorkerNotifications = async () => {
+    try {
+      setWorkerNotifsLoading(true);
+      const res = await api.getNotifications();
+      if (res?.success && Array.isArray(res.notifications)) {
+        setWorkerNotifications(res.notifications);
+      }
+    } catch (err) {
+      console.warn("Could not load worker notifications:", err);
+    } finally {
+      setWorkerNotifsLoading(false);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await api.markAllNotificationsRead();
+      setWorkerNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    } catch (err) {
+      console.warn("Failed to mark notifications read:", err);
+    }
+  };
+
+  const handleMarkSingleRead = async (id: string) => {
+    try {
+      await api.markNotificationRead(id);
+      setWorkerNotifications((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, read: true } : n))
+      );
+    } catch (err) {
+      console.warn("Failed to mark single notification read:", err);
+    }
+  };
+
   const workerCardData: WorkerIdCardData = {
     employeeId: (user as any)?.employeeId || wp?.employeeId || wp?.workerIdNumber || "COOP-WRK-MEMBER",
     name: user?.name || "Registered Member",
@@ -238,9 +276,17 @@ export const WorkerPage: React.FC = () => {
     bloodGroup: (user as any)?.bloodGroup || "O+",
     languagesKnown: (wp?.languages && wp.languages.length > 0) ? wp.languages : ["Telugu", "Hindi", "English"],
     district: user?.district || "Vijayawada",
-    societyName: wp?.societyName || (user as any)?.societyName || "Vijayawada Central Labour Co-op Society",
-    photoUrl: (user as any)?.avatarUrl || wp?.avatarUrl || "",
-    signatureText: user?.name || "Member",
+    societyName: (user as any)?.workerProfile?.societyName || (user as any)?.societyName || wp?.societyName || `${user?.district || "Vijayawada"} Labour Cooperative Society`,
+    photoUrl:
+      (user as any)?.avatarUrl ||
+      (user as any)?.profileImage ||
+      wp?.avatarUrl ||
+      wp?.profileImage ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem(`coopnex_worker_avatar_${(user as any)?.employeeId || wp?.employeeId}`) ||
+          localStorage.getItem("coopnex_worker_avatar")
+        : "") ||
+      "",
     issueDate: isVerified ? "Certified" : "Pending Review",
     validUntil: isVerified ? "Active 2028" : "Pending Review",
     nsqfLevel: isVerified ? `NSQF Level-${wp?.verificationLevel || 4} Certified Artisan` : "Pending Super Admin Verification",
@@ -263,6 +309,7 @@ export const WorkerPage: React.FC = () => {
           if (profileRes.worker.pendingEscrowBalance !== undefined) setPendingEscrowBalance(profileRes.worker.pendingEscrowBalance);
           if (profileRes.worker.escrowItems) setEscrowItems(profileRes.worker.escrowItems);
         }
+        fetchWorkerNotifications();
       } catch (err) {
         console.warn("Worker bookings fetch error:", err);
       }
@@ -403,6 +450,7 @@ export const WorkerPage: React.FC = () => {
       onTabChange={setActiveTab}
       isAvailable={isAvailable}
       onToggleAvailability={() => setIsAvailable(!isAvailable)}
+      unreadNotificationsCount={workerNotifications.filter((n) => !n.read).length}
       newRequestsCount={newRequestsCount}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
@@ -716,27 +764,90 @@ export const WorkerPage: React.FC = () => {
 
           {activeTab === "notifications" && (
             <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4 shadow-xs">
-              <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                <Bell className="w-5 h-5 text-amber-500" />
-                <span>Worker Dispatch Alerts</span>
-              </h3>
-              <div className="space-y-3 divide-y divide-slate-100 text-xs">
-                <div className="pt-2">
-                  <span className="text-[10px] text-slate-400">10 minutes ago</span>
-                  <h4 className="font-bold text-slate-900 mt-0.5">Emergency Dispatch Assigned</h4>
-                  <p className="text-slate-600">MCB Tripping at Benz Circle. Estimated SLA: 12 minutes.</p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                    <Bell className="w-5 h-5 text-amber-500" />
+                    <span>Worker Dispatch &amp; Service Area Alerts</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Real-time cooperative announcements, service coverage alerts, and dispatch assignments.
+                  </p>
                 </div>
-                <div className="pt-3">
-                  <span className="text-[10px] text-slate-400">Today, 11:30 AM</span>
-                  <h4 className="font-bold text-slate-900 mt-0.5">Instant DBT Payout Settled</h4>
-                  <p className="text-slate-600">₹720 credited via IMPS to APGB Account ending 9821.</p>
-                </div>
-                <div className="pt-3">
-                  <span className="text-[10px] text-slate-400">Yesterday</span>
-                  <h4 className="font-bold text-slate-900 mt-0.5">Cooperative Safety Advisory</h4>
-                  <p className="text-slate-600">Ensure insulated gloves are worn on all 3-phase commercial panel inspections.</p>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={fetchWorkerNotifications}
+                    className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer border border-slate-200"
+                    title="Refresh alerts"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${workerNotifsLoading ? "animate-spin" : ""}`} />
+                  </button>
+                  {workerNotifications.some((n) => !n.read) && (
+                    <button
+                      onClick={handleMarkAllRead}
+                      className="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-xs transition cursor-pointer"
+                    >
+                      Mark All Read
+                    </button>
+                  )}
                 </div>
               </div>
+
+              {workerNotifications.length === 0 ? (
+                <div className="py-12 text-center text-slate-400 space-y-2">
+                  <Bell className="w-10 h-10 mx-auto text-slate-300 opacity-60" />
+                  <p className="text-sm font-bold text-slate-700">No Notifications Yet</p>
+                  <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                    When administrators expand coverage, pause service in your sector, or assign jobs, notices will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3 divide-y divide-slate-100 text-xs">
+                  {workerNotifications.map((n) => (
+                    <div
+                      key={n._id}
+                      onClick={() => !n.read && handleMarkSingleRead(n._id)}
+                      className={`pt-3.5 pb-2 transition cursor-pointer flex items-start justify-between gap-3 ${
+                        !n.read ? "bg-blue-50/40 -mx-4 px-4 rounded-xl" : ""
+                      }`}
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          {!n.read && (
+                            <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                          )}
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                            {new Date(n.createdAt).toLocaleDateString([], {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit"
+                            })}
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">
+                            {n.type || "SYSTEM"}
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-slate-900 text-sm">{n.title}</h4>
+                        <p className="text-slate-600 leading-relaxed">{n.message}</p>
+                      </div>
+
+                      {!n.read && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMarkSingleRead(n._id);
+                          }}
+                          className="shrink-0 text-[10px] font-bold text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                        >
+                          Mark read
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

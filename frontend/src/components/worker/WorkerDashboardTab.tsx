@@ -2,7 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../context/AuthContext";
 import { Booking } from "../../types";
-import { HumanVisual } from "../HumanVisual";
+import { AvatarPlaceholder } from "../common/AvatarPlaceholder";
 import {
   Briefcase,
   Calendar,
@@ -19,7 +19,9 @@ import {
   HeartHandshake,
   Wallet,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  QrCode,
+  Award
 } from "lucide-react";
 
 interface WorkerDashboardTabProps {
@@ -80,10 +82,20 @@ export const WorkerDashboardTab: React.FC<WorkerDashboardTabProps> = ({
 
   const verificationLevel = wp?.verificationLevel || (user as any)?.verificationLevel || 1;
   const societyName = wp?.societyName || (user as any)?.societyName || `${user?.district || "District"} Cooperative Labour Society`;
+  const empId = user?.employeeId || wp?.employeeId || (user as any)?.workerProfile?.workerIdNumber || "COOP-WRK";
+  const workerAvatarUrl =
+    (user as any)?.avatarUrl ||
+    (user as any)?.profileImage ||
+    wp?.avatarUrl ||
+    wp?.profileImage ||
+    (typeof window !== "undefined"
+      ? localStorage.getItem(`coopnex_worker_avatar_${empId}`) ||
+        localStorage.getItem("coopnex_worker_avatar")
+      : null);
 
   return (
     <div className="space-y-6">
-      {/* 1. TOP GREETING BANNER WITH DYNAMIC HUMAN VISUAL */}
+      {/* 1. TOP GREETING BANNER WITH AUTHENTIC WORKER AVATAR */}
       <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -98,13 +110,13 @@ export const WorkerDashboardTab: React.FC<WorkerDashboardTabProps> = ({
           <p className="text-xs text-slate-500 flex flex-wrap items-center gap-2">
             <span className="font-bold text-blue-600">{primarySkill}</span>
             <span>&bull;</span>
-            <span className="font-mono text-slate-400">Employee ID: {user?.employeeId || wp?.employeeId || "COOP-WRK"}</span>
+            <span className="font-mono text-slate-400">Employee ID: {empId}</span>
             <span>&bull;</span>
             <span className="text-slate-600">{societyName}</span>
           </p>
         </div>
 
-        {/* Dynamic Human Visual on Right */}
+        {/* Authentic Worker Face & Accreditation Badge */}
         <div className="flex items-center gap-3 self-end sm:self-auto">
           <div className="text-right hidden md:block">
             <span className="text-xs font-black text-slate-900 block">Level {verificationLevel} Artisan</span>
@@ -113,14 +125,61 @@ export const WorkerDashboardTab: React.FC<WorkerDashboardTabProps> = ({
               UIDAI &amp; PCC Verified
             </span>
           </div>
-          <HumanVisual
-            role={primaryTrade}
-            size="sm"
-            animation="breathe"
-            background="glow"
-            showStatusBadge
-          />
+          <div className="relative">
+            <div className="w-14 h-16 sm:w-16 sm:h-20 rounded-2xl overflow-hidden border-2 border-emerald-500 shadow-md bg-slate-100 dark:bg-slate-800">
+              <AvatarPlaceholder
+                src={workerAvatarUrl}
+                name={user?.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs border border-white dark:border-slate-900">
+              <CheckCircle2 className="w-3 h-3 text-white" />
+            </div>
+          </div>
         </div>
+      </div>
+
+      {/* 1B. OFFICIAL SMART ID PASS BANNER (Directly on Main Screen) */}
+      <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white rounded-3xl p-4 sm:p-5 border border-slate-700/60 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="relative shrink-0">
+            <div className="w-12 h-14 rounded-xl overflow-hidden border-2 border-emerald-400 bg-slate-800 shadow-inner">
+              <AvatarPlaceholder
+                src={workerAvatarUrl}
+                name={user?.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-slate-900 flex items-center justify-center">
+              <CheckCircle2 className="w-2.5 h-2.5 text-slate-900" />
+            </div>
+          </div>
+          <div className="space-y-0.5 text-left">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 font-mono">
+                Official Cooperative Smart ID
+              </span>
+              <span className="px-2 py-0.2 rounded-full bg-blue-500/30 text-blue-200 border border-blue-400/30 text-[9px] font-mono">
+                {empId}
+              </span>
+            </div>
+            <h3 className="text-sm font-extrabold text-white">
+              {user?.name || "Registered Member"} • {primarySkill}
+            </h3>
+            <p className="text-[11px] text-slate-300">
+              UIDAI Aadhaar Verhoeff Checked • Police PCC Verified • {societyName}
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => onNavigate("smart-id")}
+          className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-md cursor-pointer shrink-0"
+        >
+          <QrCode className="w-4 h-4" />
+          <span>Flip &amp; View Hologram Smart ID &rarr;</span>
+        </button>
       </div>
 
       {/* 2. QUICK ACTIONS ROW */}
@@ -269,11 +328,11 @@ export const WorkerDashboardTab: React.FC<WorkerDashboardTabProps> = ({
                   </div>
 
                   <div className="shrink-0 hidden sm:block">
-                    <HumanVisual
-                      role={primaryTrade}
+                    <AvatarPlaceholder
+                      src={workerAvatarUrl}
+                      name={user?.name || "Assigned Worker"}
                       size="md"
-                      animation="float"
-                      background="glow"
+                      shape="rounded"
                     />
                   </div>
                 </div>

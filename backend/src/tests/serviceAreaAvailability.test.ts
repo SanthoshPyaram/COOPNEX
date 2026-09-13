@@ -124,5 +124,11 @@ describe("COOPNEX Service Area Availability System", () => {
       expect(res.available).toBe(false);
       expect(res.nearestHub).toBeDefined();
     });
+
+    it("should reject non-existent or removed pincodes outside active clusters", async () => {
+      const res = await ServiceCoverageEngine.checkAvailabilityAsync("999999");
+      expect(res.available).toBe(false);
+      expect(res.status).toBe("COMING_SOON");
+    });
   });
 });

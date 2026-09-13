@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useTranslation } from "react-i18next";
 import { CoopnexLogo } from "../brand/CoopnexLogo";
 import { LanguageDropdown } from "../LanguageDropdown";
-import { HumanVisual } from "../HumanVisual";
+import { api } from "../../services/api";
 import { AvatarPlaceholder } from "../common/AvatarPlaceholder";
 import {
   LayoutDashboard,
@@ -56,7 +56,7 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
   onTabChange,
   isAvailable,
   onToggleAvailability,
-  unreadNotificationsCount = 2,
+  unreadNotificationsCount,
   newRequestsCount = 1,
   searchQuery = "",
   onSearchChange,
@@ -70,14 +70,47 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [liveNotifications, setLiveNotifications] = useState<any[]>([]);
+  const [autoUnreadCount, setAutoUnreadCount] = useState<number>(0);
   const notifRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchNotifs = async () => {
+      try {
+        const res = await api.getNotifications();
+        if (isMounted && res && res.success && Array.isArray(res.notifications)) {
+          setLiveNotifications(res.notifications);
+          setAutoUnreadCount(res.notifications.filter((n: any) => !n.read).length);
+        }
+      } catch (err) {
+        console.warn("Worker notif fetch failed", err);
+      }
+    };
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 25000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const displayUnreadCount = unreadNotificationsCount !== undefined ? unreadNotificationsCount : autoUnreadCount;
 
   const employeeId = (user as any)?.employeeId || (user as any)?.workerProfile?.employeeId || (user as any)?.workerProfile?.workerIdNumber || "COOP-WRK-MEMBER";
   const workerName = user?.name || "COOPNEX Member";
   const verificationStatus = (user as any)?.verificationStatus || (user as any)?.workerProfile?.verificationStatus || "PENDING";
   const verificationLevel = (user as any)?.verificationLevel || (user as any)?.workerProfile?.level || 1;
   const isVerified = verificationStatus === "VERIFIED" || verificationStatus === "APPROVED";
-  const workerAvatarUrl = (user as any)?.avatarUrl || (user as any)?.profileImage || (user as any)?.workerProfile?.avatarUrl || (user as any)?.workerProfile?.profileImage;
+  const workerAvatarUrl =
+    (user as any)?.avatarUrl ||
+    (user as any)?.profileImage ||
+    (user as any)?.workerProfile?.avatarUrl ||
+    (user as any)?.workerProfile?.profileImage ||
+    (typeof window !== "undefined"
+      ? localStorage.getItem(`coopnex_worker_avatar_${employeeId}`) ||
+        localStorage.getItem("coopnex_worker_avatar")
+      : undefined);
 
   // Close notifications popover on click outside
   useEffect(() => {
@@ -113,7 +146,7 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
       id: "notifications",
       label: t("worker_nav.notifications", "Notifications"),
       icon: Bell,
-      badge: unreadNotificationsCount > 0 ? unreadNotificationsCount : undefined,
+      badge: displayUnreadCount > 0 ? displayUnreadCount : undefined,
       badgeColor: "bg-amber-500 text-white"
     },
     { id: "welfare", label: t("worker_nav.welfare", "Welfare"), icon: HeartHandshake },
@@ -243,9 +276,9 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
                 aria-label="Notifications"
               >
                 <Bell className="w-5 h-5" />
-                {unreadNotificationsCount > 0 && (
+                {displayUnreadCount > 0 && (
                   <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-amber-500 text-[10px] font-extrabold text-white rounded-full flex items-center justify-center animate-pulse">
-                    {unreadNotificationsCount}
+                    {displayUnreadCount}
                   </span>
                 )}
               </button>
@@ -255,18 +288,31 @@ export const WorkerAppShell: React.FC<WorkerAppShellProps> = ({
                   <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                     <h4 className="text-xs font-bold text-slate-900">Worker Alerts</h4>
                     <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                      {unreadNotificationsCount} pending
+                      {displayUnreadCount} pending
                     </span>
                   </div>
-                  <div className="py-2 divide-y divide-slate-100 text-xs text-slate-700">
-                    <div className="py-2">
-                      <p className="font-bold text-slate-900">New Emergency Request</p>
-                      <p className="text-[11px] text-slate-500">MCB Tripping at Benz Circle (₹800 wage)</p>
-                    </div>
-                    <div className="py-2">
-                      <p className="font-bold text-slate-900">Instant DBT Settlement Credited</p>
-                      <p className="text-[11px] text-slate-500">₹720 credited via IMPS to APGB account</p>
-                    </div>
+                  <div className="py-2 divide-y divide-slate-100 text-xs text-slate-700 max-h-60 overflow-y-auto">
+                    {liveNotifications.length === 0 ? (
+                      <div className="py-4 text-center text-slate-400">
+                        <p className="text-xs font-semibold">No recent alerts</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Service updates & assignments will show here</p>
+                      </div>
+                    ) : (
+                      liveNotifications.slice(0, 5).map((n) => (
+                        <div key={n._id} className="py-2.5">
+                          <div className="flex items-center justify-between">
+                            <p className="font-bold text-slate-900">{n.title}</p>
+                            {!n.read && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0 ml-2" />
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{n.message}</p>
+                          <span className="text-[9px] text-slate-400 font-mono mt-1 block">
+                            {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
+                      ))
+                    )}
                   </div>
                   <button
                     type="button"

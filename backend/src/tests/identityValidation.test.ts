@@ -41,6 +41,11 @@ describe("Identity Validation Engine - UIDAI Verhoeff & NSDL PAN", () => {
       expect(validateAadhaarVerhoeff("9999 9999 0019").valid).toBe(true);
       expect(validateAadhaarVerhoeff(" 9999 9999 0019 ").valid).toBe(true);
     });
+
+    it("should handle formatting with hyphens gracefully without failing checksum", () => {
+      expect(validateAadhaarVerhoeff("9999-9999-0019").valid).toBe(true);
+      expect(validateAadhaarVerhoeff(" 9999-9999-0019 ").valid).toBe(true);
+    });
   });
 
   describe("PAN Format Validation", () => {

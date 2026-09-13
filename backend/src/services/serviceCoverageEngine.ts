@@ -137,9 +137,126 @@ export class ServiceCoverageEngine {
     const cleaned = raw;
     const prefix3 = cleaned.substring(0, 3);
 
-    // 2. Query MongoDB LocationMaster or ServiceArea if available
+    // 2. Query MongoDB live ServiceArea collection as authoritative source
     if (mongoose.connection.readyState === 1) {
       try {
+        const { ServiceArea } = await import("../models/ServiceArea");
+
+        // Priority A: Direct match on specific 6-digit pincode in ServiceArea
+        const directPincodeArea = await ServiceArea.findOne({ pincodes: cleaned }).lean();
+        if (directPincodeArea) {
+          const coords = directPincodeArea.location?.coordinates || [79.0, 16.5];
+          const nearestCoords = directPincodeArea.nearestHubCoordinates || coords;
+          if (directPincodeArea.isActive) {
+            return {
+              pincode: cleaned,
+              isValidPincode: true,
+              available: true,
+              status: "AVAILABLE",
+              isCovered: true,
+              activeCooperative: true,
+              state: directPincodeArea.state,
+              stateCode: directPincodeArea.stateCode,
+              district: directPincodeArea.district,
+              city: directPincodeArea.city,
+              coordinates: coords,
+              services: directPincodeArea.supportedServices || ALL_SERVICES,
+              servicesAvailable: directPincodeArea.supportedServices || ALL_SERVICES,
+              serviceSupported: requestedService ? directPincodeArea.supportedServices?.includes(requestedService) : true,
+              cooperativeName: directPincodeArea.cooperativeName || `${directPincodeArea.city} Central Labour Cooperative Society`,
+              slaMinutes: directPincodeArea.slaMinutes || 15,
+              nearestHub: directPincodeArea.nearestHub || `${directPincodeArea.city} Cooperative Kendra`,
+              nearestHubCoordinates: nearestCoords,
+              nearestServiceArea: `${directPincodeArea.city} Cooperative Kendra`,
+              cooperativeFederation: `${directPincodeArea.state} Primary Labour Cooperative Federation`,
+              launchPhase: directPincodeArea.launchPhase || "PHASE_1_LAUNCH",
+              message: `✓ COOPNEX is actively operating in ${directPincodeArea.city}, ${directPincodeArea.state}. Verified cooperative artisans are available for dispatch.`
+            };
+          } else {
+            return {
+              pincode: cleaned,
+              isValidPincode: true,
+              available: false,
+              status: "COMING_SOON",
+              isCovered: false,
+              activeCooperative: false,
+              state: directPincodeArea.state,
+              stateCode: directPincodeArea.stateCode,
+              district: directPincodeArea.district,
+              city: directPincodeArea.city,
+              coordinates: coords,
+              services: [],
+              servicesAvailable: [],
+              serviceSupported: false,
+              nearestHub: directPincodeArea.nearestHub || "Regional Cooperative Kendra",
+              nearestHubCoordinates: nearestCoords,
+              launchPhase: "FUTURE_EXPANSION",
+              message: `COOPNEX service in ${directPincodeArea.city} (PIN ${cleaned}) is currently paused or coming soon. Our cooperative federation is working to expand coverage.`
+            };
+          }
+        }
+
+        // Priority B: Check if matching prefix area exists
+        const prefixArea = await ServiceArea.findOne({ pincodePrefixes: prefix3 }).lean();
+        if (prefixArea) {
+          const coords = prefixArea.location?.coordinates || [79.0, 16.5];
+          const nearestCoords = prefixArea.nearestHubCoordinates || coords;
+
+          // If the area has explicit pincodes configured, and this pincode is NOT among them,
+          // then this pincode has either been removed or not yet expanded.
+          const hasExplicitPincodes = Array.isArray(prefixArea.pincodes) && prefixArea.pincodes.length > 0;
+          const isIncludedInPincodes = hasExplicitPincodes ? prefixArea.pincodes.includes(cleaned) : true;
+
+          if (prefixArea.isActive && isIncludedInPincodes) {
+            return {
+              pincode: cleaned,
+              isValidPincode: true,
+              available: true,
+              status: "AVAILABLE",
+              isCovered: true,
+              activeCooperative: true,
+              state: prefixArea.state,
+              stateCode: prefixArea.stateCode,
+              district: prefixArea.district,
+              city: prefixArea.city,
+              coordinates: coords,
+              services: prefixArea.supportedServices || ALL_SERVICES,
+              servicesAvailable: prefixArea.supportedServices || ALL_SERVICES,
+              serviceSupported: requestedService ? prefixArea.supportedServices?.includes(requestedService) : true,
+              cooperativeName: prefixArea.cooperativeName || `${prefixArea.city} Central Labour Cooperative Society`,
+              slaMinutes: prefixArea.slaMinutes || 15,
+              nearestHub: prefixArea.nearestHub || `${prefixArea.city} Cooperative Kendra`,
+              nearestHubCoordinates: nearestCoords,
+              nearestServiceArea: `${prefixArea.city} Cooperative Kendra`,
+              cooperativeFederation: `${prefixArea.state} Primary Labour Cooperative Federation`,
+              launchPhase: prefixArea.launchPhase || "PHASE_1_LAUNCH",
+              message: `✓ COOPNEX is actively operating in ${prefixArea.city}, ${prefixArea.state}. Verified cooperative artisans are available for dispatch.`
+            };
+          } else {
+            return {
+              pincode: cleaned,
+              isValidPincode: true,
+              available: false,
+              status: "COMING_SOON",
+              isCovered: false,
+              activeCooperative: false,
+              state: prefixArea.state,
+              stateCode: prefixArea.stateCode,
+              district: prefixArea.district,
+              city: prefixArea.city,
+              coordinates: coords,
+              services: [],
+              servicesAvailable: [],
+              serviceSupported: false,
+              nearestHub: prefixArea.nearestHub || "Regional Cooperative Kendra",
+              nearestHubCoordinates: nearestCoords,
+              launchPhase: "FUTURE_EXPANSION",
+              message: `Sorry, COOPNEX service is currently not available in PIN ${cleaned} (${prefixArea.district}). We are actively working with local cooperatives to expand coverage.`
+            };
+          }
+        }
+
+        // Priority C: LocationMaster fallback
         const { LocationMaster } = await import("../models/LocationMaster");
         const locRecord = await LocationMaster.findOne({ pincode: cleaned }).lean();
         if (locRecord) {
@@ -202,70 +319,8 @@ export class ServiceCoverageEngine {
             };
           }
         }
-
-        // Secondary check against ServiceArea collection
-        const dbArea = await ServiceArea.findOne({
-          $or: [
-            { pincodes: cleaned },
-            { pincodePrefixes: prefix3 }
-          ]
-        }).lean();
-
-        if (dbArea) {
-          const coords = dbArea.location?.coordinates || [79.0, 16.5];
-          const nearestCoords = dbArea.nearestHubCoordinates || coords;
-          const isApOrTs = dbArea.stateCode === "AP" || dbArea.stateCode === "TG" || /andhra|telangana/i.test(dbArea.state);
-
-          if (dbArea.isActive || isApOrTs) {
-            return {
-              pincode: cleaned,
-              isValidPincode: true,
-              available: true,
-              status: "AVAILABLE",
-              isCovered: true,
-              activeCooperative: true,
-              state: dbArea.state,
-              stateCode: dbArea.stateCode,
-              district: dbArea.district,
-              city: dbArea.city,
-              coordinates: coords,
-              services: dbArea.supportedServices || ALL_SERVICES,
-              servicesAvailable: dbArea.supportedServices || ALL_SERVICES,
-              serviceSupported: requestedService ? dbArea.supportedServices?.includes(requestedService) : true,
-              cooperativeName: dbArea.cooperativeName || `${dbArea.city} Central Labour Cooperative Society`,
-              slaMinutes: dbArea.slaMinutes || 15,
-              nearestHub: dbArea.nearestHub || `${dbArea.city} Cooperative Kendra`,
-              nearestHubCoordinates: nearestCoords,
-              nearestServiceArea: `${dbArea.city} Cooperative Kendra`,
-              cooperativeFederation: `${dbArea.state} Primary Labour Cooperative Federation`,
-              launchPhase: dbArea.launchPhase || "PHASE_1_LAUNCH",
-              message: `✓ COOPNEX is actively operating in ${dbArea.city}, ${dbArea.state}. Verified cooperative artisans are available for dispatch.`
-            };
-          } else {
-            return {
-              pincode: cleaned,
-              isValidPincode: true,
-              available: false,
-              status: "COMING_SOON",
-              isCovered: false,
-              activeCooperative: false,
-              state: dbArea.state,
-              stateCode: dbArea.stateCode,
-              district: dbArea.district,
-              city: dbArea.city,
-              coordinates: coords,
-              services: [],
-              servicesAvailable: [],
-              serviceSupported: false,
-              nearestHub: dbArea.nearestHub || "Regional Cooperative Kendra",
-              nearestHubCoordinates: nearestCoords,
-              launchPhase: dbArea.launchPhase,
-              message: `Sorry, COOPNEX isn't available in your area yet. We're expanding soon!`
-            };
-          }
-        }
       } catch (dbErr) {
-        console.warn("[ServiceCoverageEngine] Database query error, using geographical fallback:", dbErr);
+        console.warn("MongoDB service area query error, falling back to geography engine:", dbErr);
       }
     }
 

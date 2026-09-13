@@ -307,3 +307,4 @@ export const HeroWorkflowPipeline: React.FC = () => {
     </div>
   );
 };
+

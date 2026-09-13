@@ -925,6 +925,28 @@ export const CustomerDashboardPage: React.FC = () => {
         {/* ======================================================== */}
         {activeTab === "browse" && (
           <div className="space-y-6">
+            {!areaAvailability.checking && !areaAvailability.available && (
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs">Service Currently Paused in PIN {activePincode}</h4>
+                    <p className="text-[11px] text-amber-800">
+                      Cooperative field dispatch is temporarily unavailable or coming soon for {areaAvailability.city || areaAvailability.district || "this area"}. You can browse technicians, but booking dispatches are restricted.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setLocationModalOpen(true)}
+                  className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs whitespace-nowrap cursor-pointer transition shadow-xs self-start sm:self-auto"
+                >
+                  Change Pincode
+                </button>
+              </div>
+            )}
+
             {/* Filter Card */}
             <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-xs space-y-5">
               {/* Category Pills */}
@@ -1978,6 +2000,8 @@ export const CustomerDashboardPage: React.FC = () => {
         isOpen={!!bookingModalWorker}
         onClose={() => setBookingModalWorker(null)}
         customerAddressDefault={profileFormData.address}
+        customerPincodeDefault={activePincode}
+        isAreaAvailable={areaAvailability.available}
         onBookingCreated={(newBooking) => {
           loadBookings();
         }}

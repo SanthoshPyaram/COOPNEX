@@ -14,6 +14,7 @@ import { PaymentFlow3D } from "../components/admin/3d/PaymentFlow3D";
 import { AiDemand3D } from "../components/admin/3d/AiDemand3D";
 import { EmergencyDispatch3D } from "../components/admin/3d/EmergencyDispatch3D";
 import { AdminAiIntelligenceDashboard } from "../components/admin/AdminAiIntelligenceDashboard";
+import { AdminServiceAreasTab } from "../components/admin/AdminServiceAreasTab";
 import { AvatarPlaceholder } from "../components/common/AvatarPlaceholder";
 import { API_BASE, api } from "../services/api";
 
@@ -2536,39 +2537,7 @@ export const SuperAdminPage: React.FC = () => {
         {/* =========================================================================
             9. TAB: SERVICE AREAS
         ========================================================================== */}
-        {activeTab === "areas" && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E4E9F0] dark:border-slate-800 pb-4">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                  Service Availability &amp; Pincode Coverage
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Manage geographical operational zones and cooperative cluster boundaries.
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-[#101828] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-3 text-xs">
-              <div className="font-bold text-slate-900 dark:text-white">Active Service Pincodes (AP &amp; Metro Hubs)</div>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  "520001 (Vijayawada Central)",
-                  "520002 (Benz Circle)",
-                  "520007 (Auto Nagar)",
-                  "522001 (Guntur Urban)",
-                  "500081 (Cyber Hub, Hyderabad)",
-                  "560001 (Bengaluru Urban)",
-                  "530001 (Visakhapatnam Port)"
-                ].map((pin, i) => (
-                  <span key={i} className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono font-medium">
-                    {pin}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        {activeTab === "areas" && <AdminServiceAreasTab />}
 
         {/* =========================================================================
             10. TAB: AI INTELLIGENCE
