@@ -21,6 +21,7 @@ export interface FairWageBreakdown {
   emergencyAllowance: number;
   workerEarning: number;
   cooperativeContribution: number;
+  adminMaintenanceFee?: number;
   taxGst: number;
 }
 

@@ -13,6 +13,7 @@ import * as locationCtrl from "../controllers/locationController";
 import * as ttsCtrl from "../controllers/ttsController";
 import * as docCtrl from "../controllers/documentController";
 import * as translationCtrl from "../controllers/translationController";
+import * as messageCtrl from "../controllers/messageController";
 import { AiService } from "../services/aiService";
 import { authenticateJwt } from "../middleware/auth";
 import { requireRoles } from "../middleware/rbac";
@@ -101,7 +102,15 @@ apiRouter.get("/fair-wage/policy", fairWageCtrl.getPolicyRules);
 // --- PAYMENTS & INVOICES ---
 apiRouter.post("/payments/create-order", authenticateJwt, paymentCtrl.createPaymentOrder);
 apiRouter.post("/payments/verify", authenticateJwt, paymentCtrl.verifyPayment);
+apiRouter.post("/payments/withdraw", authenticateJwt, paymentCtrl.requestWorkerWithdrawal);
+apiRouter.post("/payments/mature-check", authenticateJwt, paymentCtrl.releaseMatureEscrows);
+apiRouter.get("/payments/admin/ledger", authenticateJwt, paymentCtrl.getAdminFinancialLedger);
 apiRouter.get("/invoices/:bookingId", paymentCtrl.getInvoiceByBooking);
+
+// --- REAL-TIME BOOKING MESSAGING ---
+apiRouter.get("/messages/booking/:bookingId", authenticateJwt, messageCtrl.getMessagesByBooking);
+apiRouter.post("/messages/booking/:bookingId", authenticateJwt, messageCtrl.sendMessage);
+apiRouter.get("/messages/admin/all", authenticateJwt, messageCtrl.getAllBookingConversations);
 
 // --- ADMIN AUTHENTICATION & SECURITY (SUPER_ADMIN ONLY) ---
 apiRouter.post("/admin/auth/login", adminAuthCtrl.adminLogin);

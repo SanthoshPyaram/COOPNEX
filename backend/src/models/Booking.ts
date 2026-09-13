@@ -9,6 +9,7 @@ export interface IFairWageBreakdown {
   travelAllowance: number;
   emergencyAllowance: number;
   workerEarning: number;
+  adminMaintenanceFee?: number;
   cooperativeContribution: number;
   taxGst: number;
   serviceAmount?: number;
@@ -51,6 +52,8 @@ export interface IBooking extends Document {
   fairWageBreakdown: IFairWageBreakdown;
   paymentStatus: "PENDING" | "PAID" | "REFUNDED";
   paymentId?: string;
+  escrowStatus?: "HELD_24H" | "RELEASED" | "REFUNDED";
+  escrowMaturesAt?: Date;
   rating?: number;
   reviewComment?: string;
   completedAt?: Date;
@@ -100,6 +103,7 @@ const BookingSchema = new Schema<IBooking>(
       travelAllowance: { type: Number, default: 0 },
       emergencyAllowance: { type: Number, default: 0 },
       workerEarning: { type: Number, required: true },
+      adminMaintenanceFee: { type: Number, default: 50 },
       cooperativeContribution: { type: Number, required: true },
       taxGst: { type: Number, default: 0 }
     },
@@ -110,6 +114,12 @@ const BookingSchema = new Schema<IBooking>(
       index: true
     },
     paymentId: { type: String },
+    escrowStatus: {
+      type: String,
+      enum: ["HELD_24H", "RELEASED", "REFUNDED"],
+      default: "HELD_24H"
+    },
+    escrowMaturesAt: { type: Date },
     rating: { type: Number, min: 1, max: 5 },
     reviewComment: { type: String },
     completedAt: { type: Date }

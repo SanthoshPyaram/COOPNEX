@@ -131,17 +131,18 @@ export class FairWageEngine {
     // Total Worker Earning (100% credited to Worker Wallet)
     const workerEarning = serviceAmount + transportCost + returnTravelCost;
 
-    // 6. Cooperative Welfare Contribution (Funds health insurance, tool upgrades, child scholarships)
-    const cooperativeContribution = Math.round(workerEarning * this.policy.cooperativeFundPercentage);
-    explanations.push(`Cooperative Welfare Fund: +₹${cooperativeContribution} (12% retained by Society for member medical insurance & tool fund)`);
+    // 6. Platform Maintenance & Welfare Contribution (₹50 flat fee)
+    const adminMaintenanceFee = 50;
+    const cooperativeContribution = adminMaintenanceFee;
+    explanations.push(`Platform Maintenance & Member Welfare: +₹${adminMaintenanceFee} (Flat maintenance, dispute warranty & welfare charge)`);
 
     // 7. Applicable GST
-    const taxGst = Math.round((workerEarning + cooperativeContribution) * this.policy.gstTaxPercentage);
+    const taxGst = 0;
 
-    // Total Paid by Customer
-    const customerPaid = workerEarning + cooperativeContribution + taxGst;
+    // Total Paid by Customer: Worker Wage + ₹50 Platform Maintenance
+    const customerPaid = workerEarning + adminMaintenanceFee;
     const totalAmount = customerPaid;
-    const platformFee = 0; // 0% platform commission model
+    const platformFee = adminMaintenanceFee;
 
     // Long-distance & scheduling feasibility evaluation
     const maxSameDayDistanceKm = 25.0;
@@ -164,7 +165,7 @@ export class FairWageEngine {
       scheduleReason = `It is past ${sameDayCutoffHour}:00 PM. Same-day non-emergency slots may experience delays; tomorrow morning is recommended.`;
     }
 
-    const summaryMessage = `Worker receives ₹${workerEarning} (direct take-home with transit compensation). Society retains ₹${cooperativeContribution} for member healthcare. Total invoice: ₹${customerPaid}.`;
+    const summaryMessage = `Worker allocated ₹${workerEarning} (subject to 24-hr quality hold). Admin maintenance & welfare retains ₹${adminMaintenanceFee}. Total invoice: ₹${customerPaid}.`;
 
     return {
       breakdown: {
@@ -175,6 +176,7 @@ export class FairWageEngine {
         travelAllowance,
         emergencyAllowance,
         workerEarning,
+        adminMaintenanceFee,
         cooperativeContribution,
         taxGst,
         serviceAmount,

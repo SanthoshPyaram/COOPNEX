@@ -28,11 +28,12 @@ describe("Sahakari Seva - Fair Wage Engine", () => {
     // Total Worker Earning = 450 + 70 + 50 + 30 + 60 = 660
     expect(b.workerEarning).toBe(660);
 
-    // Cooperative Welfare Fund (12% of worker earning) = Math.round(660 * 0.12) = 79
-    expect(b.cooperativeContribution).toBe(79);
+    // Platform Maintenance & Welfare Fund (₹50 flat fee)
+    expect(b.cooperativeContribution).toBe(50);
+    expect(b.adminMaintenanceFee).toBe(50);
 
-    // Customer Paid = Worker Earning + Co-op Fund + GST (5%)
-    expect(b.customerPaid).toBeGreaterThan(b.workerEarning);
+    // Customer Paid = Worker Earning (660) + Platform Maintenance (50) = 710
+    expect(b.customerPaid).toBe(710);
     expect(result.explanations.length).toBeGreaterThanOrEqual(5);
   });
 

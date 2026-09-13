@@ -436,6 +436,88 @@ export const api = {
       body: JSON.stringify(payload)
     });
     return res.json();
+  },
+
+  // Real-time Booking Messages
+  getMessagesByBooking: async (bookingId: string) => {
+    const res = await fetch(`${API_BASE}/messages/booking/${bookingId}`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      }
+    });
+    return res.json();
+  },
+
+  sendMessage: async (bookingId: string, text: string) => {
+    const res = await fetch(`${API_BASE}/messages/booking/${bookingId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      },
+      body: JSON.stringify({ text })
+    });
+    return res.json();
+  },
+
+  // Worker Escrow & Withdrawals
+  requestWorkerWithdrawal: async (payload: {
+    amount: number;
+    payoutMethod: "BANK" | "UPI";
+    accountDetails: string;
+    bankName?: string;
+    ifsc?: string;
+    upiId?: string;
+  }) => {
+    const res = await fetch(`${API_BASE}/payments/withdraw`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      },
+      body: JSON.stringify(payload)
+    });
+    return res.json();
+  },
+
+  releaseMatureEscrows: async () => {
+    const res = await fetch(`${API_BASE}/payments/mature-check`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      }
+    });
+    return res.json();
+  },
+
+  // Admin Financial Ledger
+  getAdminFinancialLedger: async () => {
+    const res = await fetch(`${API_BASE}/payments/admin/ledger`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      }
+    });
+    return res.json();
+  },
+
+  // Worker Me Profile
+  getWorkerMe: async () => {
+    const res = await fetch(`${API_BASE}/workers/me`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      }
+    });
+    return res.json();
+  },
+
+  // Admin All Conversations Audit
+  getAllBookingConversations: async () => {
+    const res = await fetch(`${API_BASE}/messages/admin/all`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      }
+    });
+    return res.json();
   }
 };
 

@@ -63,12 +63,13 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
 
   if (!isOpen || !worker) return null;
 
-  // Pricing calculations
-  const baseRate = worker.baseHourlyRate || 350;
+  // Pricing calculations: e.g. Worker wage ₹300 + flat ₹50 platform maintenance = ₹350 total
+  const baseRate = worker.baseHourlyRate || 300;
   const rateMultiplier = isEmergency ? 1.35 : 1.0;
-  const hourlyRate = Math.round(baseRate * rateMultiplier);
+  const workerWage = Math.round(baseRate * rateMultiplier);
+  const adminMaintenanceFee = 50;
   const estimatedHours = 1;
-  const totalAmount = hourlyRate * estimatedHours;
+  const totalAmount = workerWage * estimatedHours + adminMaintenanceFee;
 
   const handleNextStep = () => {
     if (step === 1) {
@@ -444,8 +445,8 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
 
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2.5 font-mono text-xs">
                 <div className="flex justify-between text-slate-700">
-                  <span className="font-sans">Base Hourly Rate ({worker.name})</span>
-                  <span>₹{hourlyRate}</span>
+                  <span className="font-sans">Artisan Fair Wage ({worker.name})</span>
+                  <span>₹{workerWage}</span>
                 </div>
                 <div className="flex justify-between text-slate-700">
                   <span className="font-sans">Estimated Service Duration</span>
@@ -457,9 +458,9 @@ export const CustomerBookingModal: React.FC<CustomerBookingModalProps> = ({
                     <span>Included</span>
                   </div>
                 )}
-                <div className="flex justify-between text-emerald-800 font-semibold">
-                  <span className="font-sans">Cooperative Platform Commission</span>
-                  <span className="font-bold text-emerald-700">₹0 (Zero Middleman)</span>
+                <div className="flex justify-between text-blue-800 font-semibold">
+                  <span className="font-sans">Platform Maintenance &amp; Welfare Fund</span>
+                  <span className="font-bold text-blue-700">₹{adminMaintenanceFee}</span>
                 </div>
                 <div className="flex justify-between text-emerald-800 font-semibold">
                   <span className="font-sans">PMSBY Safety &amp; Accidental Cover</span>

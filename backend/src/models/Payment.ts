@@ -15,7 +15,10 @@ export interface IPayment extends Document {
   gatewayPaymentId?: string;
   workerWageDisbursed: boolean;
   workerEarningAmount: number;
+  adminMaintenanceFee: number;
   coopFundAmount: number;
+  escrowStatus: "HELD_24H" | "RELEASED_TO_WORKER" | "REFUNDED";
+  escrowMaturesAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,7 +39,10 @@ const PaymentSchema = new Schema<IPayment>(
     gatewayPaymentId: { type: String },
     workerWageDisbursed: { type: Boolean, default: false },
     workerEarningAmount: { type: Number, required: true },
-    coopFundAmount: { type: Number, required: true }
+    adminMaintenanceFee: { type: Number, default: 50 },
+    coopFundAmount: { type: Number, required: true },
+    escrowStatus: { type: String, enum: ["HELD_24H", "RELEASED_TO_WORKER", "REFUNDED"], default: "HELD_24H" },
+    escrowMaturesAt: { type: Date }
   },
   { timestamps: true }
 );

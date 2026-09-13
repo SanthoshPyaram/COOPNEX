@@ -15,7 +15,7 @@ import { AiDemand3D } from "../components/admin/3d/AiDemand3D";
 import { EmergencyDispatch3D } from "../components/admin/3d/EmergencyDispatch3D";
 import { AdminAiIntelligenceDashboard } from "../components/admin/AdminAiIntelligenceDashboard";
 import { AvatarPlaceholder } from "../components/common/AvatarPlaceholder";
-import { API_BASE } from "../services/api";
+import { API_BASE, api } from "../services/api";
 
 import {
   Users,
@@ -52,6 +52,9 @@ import {
   ExternalLink,
   ChevronRight,
   ArrowUpRight,
+  ArrowDownRight,
+  MessageSquare,
+  RefreshCw,
   Search,
   X
 } from "lucide-react";
@@ -603,11 +606,72 @@ export const SuperAdminPage: React.FC = () => {
   const [isWelfareFlipped, setIsWelfareFlipped] = useState<boolean>(false);
 
   // Payments & Revenue Center state
-  const [paymentTransactions] = useState<AdminPaymentTransaction[]>(DETAILED_PAYMENT_TRANSACTIONS);
+  const [paymentTransactions, setPaymentTransactions] = useState<AdminPaymentTransaction[]>(DETAILED_PAYMENT_TRANSACTIONS);
   const [selectedPaymentTx, setSelectedPaymentTx] = useState<AdminPaymentTransaction | null>(null);
   const [paymentSearch, setPaymentSearch] = useState<string>("");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("ALL");
   const [paymentSettlementFilter, setPaymentSettlementFilter] = useState<string>("ALL");
+  const [paymentsSubTab, setPaymentsSubTab] = useState<"LEDGER" | "WITHDRAWALS" | "CHATS">("LEDGER");
+  const [adminLedgerSummary, setAdminLedgerSummary] = useState<any>(null);
+  const [adminWithdrawals, setAdminWithdrawals] = useState<any[]>([]);
+  const [adminChatAudit, setAdminChatAudit] = useState<any[]>([]);
+  const [adminChatLoading, setAdminChatLoading] = useState<boolean>(false);
+
+  const loadAdminFinancialLedger = async () => {
+    try {
+      const res = await api.getAdminFinancialLedger();
+      if (res && res.success) {
+        if (res.summary) setAdminLedgerSummary(res.summary);
+        if (Array.isArray(res.withdrawals)) setAdminWithdrawals(res.withdrawals);
+        if (Array.isArray(res.transactions) && res.transactions.length > 0) {
+          const liveMapped: AdminPaymentTransaction[] = res.transactions.map((t: any) => ({
+            txId: t._id || `TXN-${String(t.bookingId).slice(-6)}`,
+            bookingId: t.bookingNumber || `#BK-${String(t.bookingId).slice(-6).toUpperCase()}`,
+            timestamp: t.paidAt ? new Date(t.paidAt).toLocaleString("en-IN") : "Recent",
+            customer: t.customerName || "Citizen Customer",
+            customerPhone: "+91 98480 22341",
+            worker: t.workerName || "Cooperative Artisan",
+            employeeId: t.employeeId || "COOP-WRK-MEMBER",
+            service: t.serviceCategory || "Trade Service",
+            grossAmount: t.amount || 350,
+            workerEarning: t.workerEarning || 300,
+            coopFee: t.adminMaintenanceFee || 50,
+            platformFee: 0,
+            paymentMethod: t.paymentMethod === "UPI_QR" ? "Razorpay UPI QR" : "Razorpay NetBanking",
+            paymentStatus: t.paymentStatus === "PAID" ? "COMPLETED" : "PENDING",
+            settlementStatus: t.escrowStatus === "RELEASED" ? "SETTLED" : "IN_ESCROW",
+            utrRef: t.razorpayPaymentId || `pay_${String(t._id).slice(-8)}`,
+            society: "Vijayawada Central Labour Co-op (PLCS-04)",
+            bankAccount: "Aadhaar Linked DBT Account"
+          }));
+          setPaymentTransactions([...liveMapped, ...DETAILED_PAYMENT_TRANSACTIONS]);
+        }
+      }
+    } catch (err) {
+      console.warn("Could not retrieve admin financial ledger:", err);
+    }
+  };
+
+  const loadAdminChatAudit = async () => {
+    setAdminChatLoading(true);
+    try {
+      const res = await api.getAllBookingConversations();
+      if (res && res.success && Array.isArray(res.conversations)) {
+        setAdminChatAudit(res.conversations);
+      }
+    } catch (err) {
+      console.warn("Could not retrieve admin chat audit:", err);
+    } finally {
+      setAdminChatLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "payments") {
+      loadAdminFinancialLedger();
+      loadAdminChatAudit();
+    }
+  }, [activeTab]);
 
   // Security Center state
   const [securityEvents, setSecurityEvents] = useState<any[]>([
@@ -1515,215 +1579,417 @@ export const SuperAdminPage: React.FC = () => {
 
               {/* 7 TOP SUMMARY METRIC CARDS */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
-                {/* 1. Total Revenue */}
-                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-1">
-                  <div className="text-[10px] uppercase font-bold text-slate-400">Total Revenue</div>
-                  <div className="text-xl font-black font-mono text-slate-900 dark:text-white">₹24,85,600</div>
-                  <div className="text-[10px] text-emerald-600 font-semibold">1,248 Bookings</div>
-                </div>
-
-                {/* 2. Worker Earnings */}
-                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-emerald-200/90 dark:border-emerald-900 shadow-xs space-y-1 bg-emerald-50/30">
-                  <div className="text-[10px] uppercase font-bold text-emerald-700">Worker Earnings</div>
-                  <div className="text-xl font-black font-mono text-emerald-700">₹22,37,040</div>
-                  <div className="text-[10px] text-emerald-600 font-bold">90% Direct Pay</div>
-                </div>
-
-                {/* 3. Cooperative Share */}
+                {/* 1. Platform Maintenance Corpus */}
                 <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-blue-200/90 dark:border-blue-900 shadow-xs space-y-1">
-                  <div className="text-[10px] uppercase font-bold text-blue-700">Co-op Share</div>
-                  <div className="text-xl font-black font-mono text-blue-700">₹2,48,560</div>
-                  <div className="text-[10px] text-slate-500">10% Welfare Fund</div>
+                  <div className="text-[10px] uppercase font-bold text-blue-700">Platform Fund (₹50/job)</div>
+                  <div className="text-xl font-black font-mono text-blue-700">
+                    ₹{(adminLedgerSummary?.totalMaintenanceFund ?? 248560).toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-blue-600 font-semibold">Flat Maintenance Corpus</div>
                 </div>
 
-                {/* 4. Platform Revenue */}
+                {/* 2. Worker Earnings in 24h Escrow */}
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-amber-200/90 dark:border-amber-900 shadow-xs space-y-1 bg-amber-50/20">
+                  <div className="text-[10px] uppercase font-bold text-amber-700">24H Warranty Escrow</div>
+                  <div className="text-xl font-black font-mono text-amber-600">
+                    ₹{(adminLedgerSummary?.totalWorkerEarningsHeld ?? 48200).toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-amber-700 font-bold">{adminLedgerSummary?.activeEscrowHolds ?? 12} Defect Holds</div>
+                </div>
+
+                {/* 3. Matured / Released Wages */}
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-emerald-200/90 dark:border-emerald-900 shadow-xs space-y-1 bg-emerald-50/30">
+                  <div className="text-[10px] uppercase font-bold text-emerald-700">Released Wages</div>
+                  <div className="text-xl font-black font-mono text-emerald-700">
+                    ₹{(adminLedgerSummary?.totalWorkerEarningsReleased ?? 2237040).toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-emerald-600 font-semibold">100% Unlocked</div>
+                </div>
+
+                {/* 4. Worker Withdrawals */}
                 <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-1">
-                  <div className="text-[10px] uppercase font-bold text-slate-400">Platform Revenue</div>
-                  <div className="text-xl font-black font-mono text-slate-700 dark:text-slate-300">₹0</div>
-                  <div className="text-[10px] text-emerald-600 font-bold">0% Cut (Public Grid)</div>
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Total DBT Disbursed</div>
+                  <div className="text-xl font-black font-mono text-slate-700 dark:text-slate-300">
+                    ₹{(adminLedgerSummary?.totalDisbursedToWorkers ?? 1850000).toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-emerald-600 font-bold">IMPS / UPI Dispatched</div>
                 </div>
 
-                {/* 5. Pending Payments */}
-                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-amber-200/90 dark:border-amber-900 shadow-xs space-y-1">
-                  <div className="text-[10px] uppercase font-bold text-amber-700">Pending Payments</div>
-                  <div className="text-xl font-black font-mono text-amber-600">₹48,200</div>
-                  <div className="text-[10px] text-amber-700 font-medium">In Escrow Lock</div>
-                </div>
-
-                {/* 6. Completed Payments */}
+                {/* 5. Total Transactions */}
                 <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-1">
-                  <div className="text-[10px] uppercase font-bold text-slate-400">Completed Payouts</div>
-                  <div className="text-xl font-black font-mono text-slate-900 dark:text-white">₹24,37,400</div>
-                  <div className="text-[10px] text-emerald-600 font-semibold">99.8% Success</div>
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Total Transactions</div>
+                  <div className="text-xl font-black font-mono text-slate-900 dark:text-white">
+                    {adminLedgerSummary?.totalTransactions ?? filteredTransactions.length}
+                  </div>
+                  <div className="text-[10px] text-emerald-600 font-medium">Razorpay Verified</div>
                 </div>
 
-                {/* 7. Refunds Issued */}
+                {/* 6. Pricing Structure */}
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-1">
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Fair Wage Model</div>
+                  <div className="text-xl font-black font-mono text-slate-900 dark:text-white">₹300 + ₹50</div>
+                  <div className="text-[10px] text-slate-500">Worker + Platform</div>
+                </div>
+
+                {/* 7. Dispute Rate */}
                 <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-rose-200/90 dark:border-rose-900 shadow-xs space-y-1">
-                  <div className="text-[10px] uppercase font-bold text-rose-700">Refunds Issued</div>
-                  <div className="text-xl font-black font-mono text-rose-600">₹12,400</div>
-                  <div className="text-[10px] text-slate-500">0.5% Dispute Rate</div>
+                  <div className="text-[10px] uppercase font-bold text-rose-700">Warranty Claims</div>
+                  <div className="text-xl font-black font-mono text-rose-600">0.0%</div>
+                  <div className="text-[10px] text-slate-500">24H Quality Lock</div>
                 </div>
               </div>
 
               {/* 3D Payment Flow Telemetry */}
               <PaymentFlow3D />
 
-              {/* Filter Controls Bar */}
-              <div className="bg-white dark:bg-[#101828] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-                <div className="flex-1 w-full sm:w-auto relative">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={paymentSearch}
-                    onChange={(e) => setPaymentSearch(e.target.value)}
-                    placeholder="Search by Tx ID, Booking ID, Worker, Customer, Service..."
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:border-blue-600 text-xs"
-                  />
-                </div>
+              {/* PAYMENTS NAVIGATION SUB-TABS */}
+              <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setPaymentsSubTab("LEDGER")}
+                  className={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-2 ${
+                    paymentsSubTab === "LEDGER"
+                      ? "bg-blue-600 text-white shadow-xs"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+                  }`}
+                >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>Customer &amp; Worker Transactions Ledger ({filteredTransactions.length})</span>
+                </button>
 
-                <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-slate-500 font-bold text-[11px]">Status:</span>
-                    <select
-                      value={paymentStatusFilter}
-                      onChange={(e) => setPaymentStatusFilter(e.target.value)}
-                      className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold focus:outline-none"
-                    >
-                      <option value="ALL">All Statuses</option>
-                      <option value="COMPLETED">Completed</option>
-                      <option value="PENDING">Pending</option>
-                      <option value="REFUNDED">Refunded</option>
-                    </select>
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => setPaymentsSubTab("WITHDRAWALS")}
+                  className={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-2 ${
+                    paymentsSubTab === "WITHDRAWALS"
+                      ? "bg-blue-600 text-white shadow-xs"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+                  }`}
+                >
+                  <ArrowDownRight className="w-3.5 h-3.5" />
+                  <span>Worker DBT Payouts &amp; Withdrawals ({adminWithdrawals.length})</span>
+                </button>
 
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-slate-500 font-bold text-[11px]">Settlement:</span>
-                    <select
-                      value={paymentSettlementFilter}
-                      onChange={(e) => setPaymentSettlementFilter(e.target.value)}
-                      className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold focus:outline-none"
-                    >
-                      <option value="ALL">All Settlements</option>
-                      <option value="SETTLED">Settled</option>
-                      <option value="IN_ESCROW">In Escrow</option>
-                    </select>
-                  </div>
-
-                  <span className="text-[11px] font-mono text-slate-500 pl-1">
-                    Showing {filteredTransactions.length} of {paymentTransactions.length}
-                  </span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setPaymentsSubTab("CHATS")}
+                  className={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-2 ${
+                    paymentsSubTab === "CHATS"
+                      ? "bg-blue-600 text-white shadow-xs"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+                  }`}
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>Booking Encrypted Chat Audit ({adminChatAudit.length})</span>
+                </button>
               </div>
 
-              {/* 14-COLUMN ESCROW & PAYMENTS LEDGER TABLE */}
-              <div className="bg-white dark:bg-[#101828] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                        <th className="py-3 px-3">1. Tx ID</th>
-                        <th className="py-3 px-3">2. Booking ID</th>
-                        <th className="py-3 px-3">3. Date &amp; Time</th>
-                        <th className="py-3 px-3">4. Customer</th>
-                        <th className="py-3 px-3">5. Worker</th>
-                        <th className="py-3 px-3">6. Employee ID</th>
-                        <th className="py-3 px-3">7. Service</th>
-                        <th className="py-3 px-3 text-right">8. Gross</th>
-                        <th className="py-3 px-3 text-right">9. Worker Net</th>
-                        <th className="py-3 px-3 text-right">10. Co-op Fee</th>
-                        <th className="py-3 px-3 text-center">11. Platform</th>
-                        <th className="py-3 px-3">12. Method</th>
-                        <th className="py-3 px-3 text-center">13. Status</th>
-                        <th className="py-3 px-3 text-center">14. Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 font-medium">
-                      {filteredTransactions.map((tx) => (
-                        <tr
-                          key={tx.txId}
-                          onClick={() => setSelectedPaymentTx(tx)}
-                          className="hover:bg-blue-50/40 dark:hover:bg-slate-900/40 transition cursor-pointer"
+              {/* 1. SUB-TAB: LEDGER */}
+              {paymentsSubTab === "LEDGER" && (
+                <>
+                  {/* Filter Controls Bar */}
+                  <div className="bg-white dark:bg-[#101828] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                    <div className="flex-1 w-full sm:w-auto relative">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={paymentSearch}
+                        onChange={(e) => setPaymentSearch(e.target.value)}
+                        placeholder="Search by Tx ID, Booking ID, Worker, Customer, Service..."
+                        className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:border-blue-600 text-xs"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-500 font-bold text-[11px]">Status:</span>
+                        <select
+                          value={paymentStatusFilter}
+                          onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                          className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold focus:outline-none"
                         >
-                          {/* 1. Tx ID */}
-                          <td className="py-3 px-3 font-mono font-bold text-blue-700 dark:text-blue-400 whitespace-nowrap">
-                            {tx.txId}
-                          </td>
-                          {/* 2. Booking ID */}
-                          <td className="py-3 px-3 font-mono text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                            {tx.bookingId}
-                          </td>
-                          {/* 3. Date & Time */}
-                          <td className="py-3 px-3 text-slate-500 whitespace-nowrap">
-                            {tx.timestamp}
-                          </td>
-                          {/* 4. Customer */}
-                          <td className="py-3 px-3 text-slate-900 dark:text-white font-bold whitespace-nowrap">
-                            {tx.customer}
-                          </td>
-                          {/* 5. Worker */}
-                          <td className="py-3 px-3 text-slate-900 dark:text-white font-semibold whitespace-nowrap">
-                            {tx.worker}
-                          </td>
-                          {/* 6. Employee ID */}
-                          <td className="py-3 px-3 font-mono text-slate-600 whitespace-nowrap">
-                            {tx.employeeId}
-                          </td>
-                          {/* 7. Service */}
-                          <td className="py-3 px-3 text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                            {tx.service}
-                          </td>
-                          {/* 8. Gross */}
-                          <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
-                            ₹{tx.grossAmount}
-                          </td>
-                          {/* 9. Worker Net */}
-                          <td className="py-3 px-3 text-right font-mono font-bold text-emerald-700 whitespace-nowrap">
-                            ₹{tx.workerEarning}
-                          </td>
-                          {/* 10. Co-op Fee */}
-                          <td className="py-3 px-3 text-right font-mono text-amber-700 whitespace-nowrap">
-                            ₹{tx.coopFee}
-                          </td>
-                          {/* 11. Platform Fee */}
-                          <td className="py-3 px-3 text-center font-mono text-slate-500 whitespace-nowrap">
-                            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-600">
-                              ₹0 (0%)
-                            </span>
-                          </td>
-                          {/* 12. Payment Method */}
-                          <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
-                            {tx.paymentMethod}
-                          </td>
-                          {/* 13. Status */}
-                          <td className="py-3 px-3 text-center whitespace-nowrap">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                              tx.paymentStatus === "COMPLETED"
-                                ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                                : tx.paymentStatus === "PENDING"
-                                ? "bg-amber-50 text-amber-800 border-amber-300"
-                                : "bg-rose-50 text-rose-800 border-rose-300"
-                            }`}>
-                              {tx.paymentStatus}
-                            </span>
-                          </td>
-                          {/* 14. Action */}
-                          <td className="py-3 px-3 text-center whitespace-nowrap">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedPaymentTx(tx);
-                              }}
-                              className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11px] transition"
+                          <option value="ALL">All Statuses</option>
+                          <option value="COMPLETED">Completed</option>
+                          <option value="PENDING">Pending</option>
+                          <option value="REFUNDED">Refunded</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-500 font-bold text-[11px]">Settlement:</span>
+                        <select
+                          value={paymentSettlementFilter}
+                          onChange={(e) => setPaymentSettlementFilter(e.target.value)}
+                          className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold focus:outline-none"
+                        >
+                          <option value="ALL">All Settlements</option>
+                          <option value="SETTLED">Settled</option>
+                          <option value="IN_ESCROW">In Escrow</option>
+                        </select>
+                      </div>
+
+                      <span className="text-[11px] font-mono text-slate-500 pl-1">
+                        Showing {filteredTransactions.length} of {paymentTransactions.length}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 14-COLUMN ESCROW & PAYMENTS LEDGER TABLE */}
+                  <div className="bg-white dark:bg-[#101828] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                            <th className="py-3 px-3">1. Tx ID</th>
+                            <th className="py-3 px-3">2. Booking ID</th>
+                            <th className="py-3 px-3">3. Date &amp; Time</th>
+                            <th className="py-3 px-3">4. Customer</th>
+                            <th className="py-3 px-3">5. Worker</th>
+                            <th className="py-3 px-3">6. Employee ID</th>
+                            <th className="py-3 px-3">7. Service</th>
+                            <th className="py-3 px-3 text-right">8. Gross</th>
+                            <th className="py-3 px-3 text-right">9. Worker Net</th>
+                            <th className="py-3 px-3 text-right">10. Co-op Fee</th>
+                            <th className="py-3 px-3 text-center">11. Platform</th>
+                            <th className="py-3 px-3">12. Method</th>
+                            <th className="py-3 px-3 text-center">13. Status</th>
+                            <th className="py-3 px-3 text-center">14. Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 font-medium">
+                          {filteredTransactions.map((tx) => (
+                            <tr
+                              key={tx.txId}
+                              onClick={() => setSelectedPaymentTx(tx)}
+                              className="hover:bg-slate-50/70 dark:hover:bg-slate-900/40 transition cursor-pointer"
                             >
-                              Audit View
-                            </button>
-                          </td>
+                              {/* 1. Tx ID */}
+                              <td className="py-3 px-3 font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                                {tx.txId}
+                              </td>
+                              {/* 2. Booking ID */}
+                              <td className="py-3 px-3 font-mono text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                                {tx.bookingId}
+                              </td>
+                              {/* 3. Date */}
+                              <td className="py-3 px-3 text-slate-500 whitespace-nowrap">
+                                {tx.timestamp}
+                              </td>
+                              {/* 4. Customer */}
+                              <td className="py-3 px-3 font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                {tx.customer}
+                              </td>
+                              {/* 5. Worker */}
+                              <td className="py-3 px-3 font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                                {tx.worker}
+                              </td>
+                              {/* 6. Employee ID */}
+                              <td className="py-3 px-3 font-mono text-slate-500 whitespace-nowrap">
+                                {tx.employeeId}
+                              </td>
+                              {/* 7. Service */}
+                              <td className="py-3 px-3 text-slate-700 dark:text-slate-300 whitespace-nowrap max-w-[150px] truncate">
+                                {tx.service}
+                              </td>
+                              {/* 8. Gross */}
+                              <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                                ₹{tx.grossAmount}
+                              </td>
+                              {/* 9. Worker Net */}
+                              <td className="py-3 px-3 text-right font-mono font-bold text-emerald-700 whitespace-nowrap">
+                                ₹{tx.workerEarning}
+                              </td>
+                              {/* 10. Co-op Fee */}
+                              <td className="py-3 px-3 text-right font-mono text-amber-700 whitespace-nowrap">
+                                ₹{tx.coopFee}
+                              </td>
+                              {/* 11. Platform Fee */}
+                              <td className="py-3 px-3 text-center font-mono text-slate-500 whitespace-nowrap">
+                                <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-600">
+                                  ₹0 (0%)
+                                </span>
+                              </td>
+                              {/* 12. Payment Method */}
+                              <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
+                                {tx.paymentMethod}
+                              </td>
+                              {/* 13. Status */}
+                              <td className="py-3 px-3 text-center whitespace-nowrap">
+                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                  tx.paymentStatus === "COMPLETED"
+                                    ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                                    : tx.paymentStatus === "PENDING"
+                                    ? "bg-amber-50 text-amber-800 border-amber-300"
+                                    : "bg-rose-50 text-rose-800 border-rose-300"
+                                }`}>
+                                  {tx.paymentStatus}
+                                </span>
+                              </td>
+                              {/* 14. Action */}
+                              <td className="py-3 px-3 text-center whitespace-nowrap">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedPaymentTx(tx);
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11px] transition cursor-pointer"
+                                >
+                                  Audit View
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* 2. SUB-TAB: WORKER WITHDRAWALS */}
+              {paymentsSubTab === "WITHDRAWALS" && (
+                <div className="bg-white dark:bg-[#101828] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+                  <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white">Worker Instant DBT Payouts &amp; Withdrawals</h4>
+                      <p className="text-xs text-slate-500">Real-time NPCI IMPS / UPI transfers directly disbursed to worker bank accounts.</p>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                      0% Deduction Guaranteed
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                          <th className="py-3 px-4">Transaction UTR Ref</th>
+                          <th className="py-3 px-4">Artisan Name</th>
+                          <th className="py-3 px-4">Destination Account</th>
+                          <th className="py-3 px-4">Method</th>
+                          <th className="py-3 px-4 text-right">Amount Disbursed</th>
+                          <th className="py-3 px-4 text-center">Status</th>
+                          <th className="py-3 px-4">Timestamp</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 font-medium">
+                        {adminWithdrawals.length > 0 ? (
+                          adminWithdrawals.map((w: any, idx: number) => (
+                            <tr key={w.txId || idx} className="hover:bg-slate-50/70 dark:hover:bg-slate-900/40 transition">
+                              <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white">
+                                {w.txId || `NPCI-DBT-${idx + 101}`}
+                              </td>
+                              <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">
+                                {w.workerName || "Cooperative Specialist"}
+                              </td>
+                              <td className="py-3 px-4 text-slate-600 dark:text-slate-300 font-mono">
+                                {w.accountDetails || w.account || "Aadhaar Linked Direct DBT"}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                                  {w.payoutMethod || "IMPS / DBT"}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-right font-black text-slate-900 dark:text-white font-mono">
+                                ₹{(w.amount || 0).toLocaleString()}
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                  {w.status || "SETTLED"}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-slate-500 text-[11px]">
+                                {w.createdAt ? new Date(w.createdAt).toLocaleString("en-IN") : "Recent"}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={7} className="py-12 text-center text-slate-400">
+                              No worker withdrawal records logged yet. Direct bank transfers appear here immediately upon disbursement.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* 3. SUB-TAB: CHAT AUDITS */}
+              {paymentsSubTab === "CHATS" && (
+                <div className="bg-white dark:bg-[#101828] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+                  <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white">Booking Conversation Audit &amp; Quality Logs</h4>
+                      <p className="text-xs text-slate-500">Live inspection of citizen-artisan field dispatches for SLA compliance and dispute prevention.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={loadAdminChatAudit}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${adminChatLoading ? "animate-spin" : ""}`} />
+                      <span>Refresh Chats</span>
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                          <th className="py-3 px-4">Booking Number</th>
+                          <th className="py-3 px-4">Service Category</th>
+                          <th className="py-3 px-4">Citizen Customer</th>
+                          <th className="py-3 px-4">Assigned Worker</th>
+                          <th className="py-3 px-4 text-center">Messages</th>
+                          <th className="py-3 px-4">Latest Message</th>
+                          <th className="py-3 px-4 text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 font-medium">
+                        {adminChatAudit.length > 0 ? (
+                          adminChatAudit.map((chat: any) => (
+                            <tr key={chat.bookingId} className="hover:bg-slate-50/70 dark:hover:bg-slate-900/40 transition">
+                              <td className="py-3 px-4 font-mono font-bold text-blue-600">
+                                {chat.bookingNumber || `#BK-${chat.bookingId.slice(-6).toUpperCase()}`}
+                              </td>
+                              <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">
+                                {chat.serviceCategory}
+                              </td>
+                              <td className="py-3 px-4 text-slate-700 dark:text-slate-300">
+                                {chat.customerName}
+                              </td>
+                              <td className="py-3 px-4 text-slate-700 dark:text-slate-300">
+                                {chat.workerName}
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">
+                                  {chat.messageCount} msgs
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-slate-600 dark:text-slate-400 max-w-xs truncate">
+                                "{chat.lastMessage}"
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                  {chat.bookingStatus}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={7} className="py-12 text-center text-slate-400">
+                              No active booking chat sessions currently recorded in database.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               {/* TRANSACTION DETAILS AUDIT DRAWER / MODAL */}
               {selectedPaymentTx && (

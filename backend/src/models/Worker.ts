@@ -89,6 +89,26 @@ export interface IWorker extends Document {
   activeJobsToday: number;
   baseHourlyRate: number;
   walletBalance: number;
+  pendingEscrowBalance: number;
+  escrowItems: {
+    bookingId: mongoose.Types.ObjectId | string;
+    bookingNumber?: string;
+    customerName?: string;
+    serviceCategory?: string;
+    amount: number;
+    maturesAt: Date;
+    status: "HELD_24H" | "MATURED" | "DISPUTED";
+    createdAt: Date;
+  }[];
+  withdrawals: {
+    withdrawalId: string;
+    amount: number;
+    payoutMethod: "BANK" | "UPI";
+    accountDetails: string;
+    transactionRef: string;
+    status: "SUCCESS" | "PROCESSING";
+    timestamp: Date;
+  }[];
   totalEarnings: number;
   insuranceInfo: {
     policyNumber: string;
@@ -206,6 +226,30 @@ const WorkerSchema = new Schema<IWorker>(
     activeJobsToday: { type: Number, default: 0 },
     baseHourlyRate: { type: Number, default: 350 },
     walletBalance: { type: Number, default: 0 },
+    pendingEscrowBalance: { type: Number, default: 0 },
+    escrowItems: [
+      {
+        bookingId: { type: Schema.Types.ObjectId, ref: "Booking" },
+        bookingNumber: { type: String },
+        customerName: { type: String },
+        serviceCategory: { type: String },
+        amount: { type: Number, required: true },
+        maturesAt: { type: Date, required: true },
+        status: { type: String, enum: ["HELD_24H", "MATURED", "DISPUTED"], default: "HELD_24H" },
+        createdAt: { type: Date, default: Date.now }
+      }
+    ],
+    withdrawals: [
+      {
+        withdrawalId: { type: String, required: true },
+        amount: { type: Number, required: true },
+        payoutMethod: { type: String, enum: ["BANK", "UPI"], default: "BANK" },
+        accountDetails: { type: String, required: true },
+        transactionRef: { type: String, required: true },
+        status: { type: String, enum: ["SUCCESS", "PROCESSING"], default: "SUCCESS" },
+        timestamp: { type: Date, default: Date.now }
+      }
+    ],
     totalEarnings: { type: Number, default: 0 },
     insuranceInfo: {
       policyNumber: { type: String, default: "" },

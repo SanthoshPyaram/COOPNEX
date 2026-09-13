@@ -21,6 +21,7 @@ import { ServiceComingSoonView } from "../components/customer/ServiceComingSoonV
 import { LeafletMap } from "../components/LeafletMap";
 import { HierarchicalAddressForm, AddressData } from "../components/location/HierarchicalAddressForm";
 import { LiveWorkerTrackingModal } from "../components/location/LiveWorkerTrackingModal";
+import { RazorpayCheckoutModal } from "../components/payment/RazorpayCheckoutModal";
 import { FormField } from "../components/common/FormField";
 import {
   validateName,
@@ -202,6 +203,7 @@ export const CustomerDashboardPage: React.FC = () => {
   const [whyWorker, setWhyWorker] = useState<WorkerProfile | null>(null);
   const [reviewBooking, setReviewBooking] = useState<Booking | null>(null);
   const [trackingBooking, setTrackingBooking] = useState<Booking | null>(null);
+  const [paymentModalBooking, setPaymentModalBooking] = useState<Booking | null>(null);
   const [isEditingAddress, setIsEditingAddress] = useState<boolean>(false);
 
   // Profile Edit Form State
@@ -1429,6 +1431,17 @@ export const CustomerDashboardPage: React.FC = () => {
                       </span>
 
                       <div className="flex items-center gap-2">
+                        {b.status !== "CANCELLED" && (b as any).paymentStatus !== "PAID" && (
+                          <button
+                            type="button"
+                            onClick={() => setPaymentModalBooking(b)}
+                            className="px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <CreditCard className="w-3.5 h-3.5" />
+                            <span>Pay ₹{b.pricing?.customerTotalINR || (b as any).fairWageBreakdown?.customerPaid || 350} (Razorpay)</span>
+                          </button>
+                        )}
+
                         {b.status !== "COMPLETED" && b.status !== "CANCELLED" && (
                           <>
                             <button
@@ -1913,7 +1926,7 @@ export const CustomerDashboardPage: React.FC = () => {
         {/* TAB 8: PAYMENTS & ESCROW LEDGER */}
         {/* ======================================================== */}
         {activeTab === "payments" && (
-          <CustomerPaymentsView bookings={myBookings} />
+          <CustomerPaymentsView bookings={myBookings} onPaymentCompleted={loadBookings} />
         )}
 
         {/* ======================================================== */}
@@ -2078,6 +2091,19 @@ export const CustomerDashboardPage: React.FC = () => {
         <LiveWorkerTrackingModal
           booking={trackingBooking}
           onClose={() => setTrackingBooking(null)}
+        />
+      )}
+
+      {/* Razorpay Gateway Checkout Modal */}
+      {paymentModalBooking && (
+        <RazorpayCheckoutModal
+          booking={paymentModalBooking}
+          isOpen={!!paymentModalBooking}
+          onClose={() => setPaymentModalBooking(null)}
+          onSuccess={() => {
+            setPaymentModalBooking(null);
+            loadBookings();
+          }}
         />
       )}
 

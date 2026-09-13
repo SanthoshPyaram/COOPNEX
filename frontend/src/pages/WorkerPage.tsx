@@ -106,6 +106,8 @@ export const WorkerPage: React.FC = () => {
   const [activeJobs, setActiveJobs] = useState<Booking[]>([]);
   const [isAvailable, setIsAvailable] = useState(true);
   const [walletBalance, setWalletBalance] = useState<number>(() => wp?.walletBalance ?? 0);
+  const [pendingEscrowBalance, setPendingEscrowBalance] = useState<number>(() => wp?.pendingEscrowBalance ?? 0);
+  const [escrowItems, setEscrowItems] = useState<any[]>(() => wp?.escrowItems ?? []);
   const [searchQuery, setSearchQuery] = useState("");
   const [payoutSuccessMsg, setPayoutSuccessMsg] = useState<string | null>(null);
 
@@ -113,7 +115,13 @@ export const WorkerPage: React.FC = () => {
     if (wp?.walletBalance !== undefined && wp?.walletBalance !== null) {
       setWalletBalance(wp.walletBalance);
     }
-  }, [wp?.walletBalance]);
+    if (wp?.pendingEscrowBalance !== undefined && wp?.pendingEscrowBalance !== null) {
+      setPendingEscrowBalance(wp.pendingEscrowBalance);
+    }
+    if (wp?.escrowItems) {
+      setEscrowItems(wp.escrowItems);
+    }
+  }, [wp?.walletBalance, wp?.pendingEscrowBalance, wp?.escrowItems]);
 
   // Silent Withdrawal State
   const [lastWithdrawal, setLastWithdrawal] = useState<{
@@ -162,6 +170,12 @@ export const WorkerPage: React.FC = () => {
         if (Array.isArray(bookings)) {
           setActiveJobs(bookings);
         }
+        const profileRes = await api.getWorkerMe();
+        if (profileRes?.success && profileRes?.worker) {
+          if (profileRes.worker.walletBalance !== undefined) setWalletBalance(profileRes.worker.walletBalance);
+          if (profileRes.worker.pendingEscrowBalance !== undefined) setPendingEscrowBalance(profileRes.worker.pendingEscrowBalance);
+          if (profileRes.worker.escrowItems) setEscrowItems(profileRes.worker.escrowItems);
+        }
       } catch (err) {
         console.warn("Worker bookings fetch error:", err);
       }
@@ -208,7 +222,7 @@ export const WorkerPage: React.FC = () => {
       setCompletionOtpError("Please enter the 4-digit citizen completion OTP (or test code '8421').");
       return;
     }
-    const earning = selectedJobForComplete.fairWageBreakdown?.workerEarning || 720;
+    const earning = selectedJobForComplete.fairWageBreakdown?.workerEarning || 300;
     try {
       const res = await api.updateBookingStatus(selectedJobForComplete._id, "COMPLETED", "Completed with citizen OTP");
       if (res && res.booking) {
@@ -216,11 +230,24 @@ export const WorkerPage: React.FC = () => {
           prev.map((j) => (j._id === selectedJobForComplete._id ? res.booking : j))
         );
       }
-      setWalletBalance((prev) => prev + earning);
+      // Place into 24-hour defect warranty escrow
+      setPendingEscrowBalance((prev) => prev + earning);
+      setEscrowItems((prev) => [
+        {
+          bookingId: selectedJobForComplete._id,
+          bookingNumber: selectedJobForComplete.bookingNumber || `#BK-${selectedJobForComplete._id.slice(-6).toUpperCase()}`,
+          serviceCategory: selectedJobForComplete.serviceCategory,
+          amount: earning,
+          heldAt: Date.now(),
+          maturesAt: Date.now() + 24 * 60 * 60 * 1000,
+          status: "HELD_24H"
+        },
+        ...prev
+      ]);
       setCompleteOtpModalOpen(false);
       setSelectedJobForComplete(null);
-      setPayoutSuccessMsg(`Job #${selectedJobForComplete.bookingNumber} completed! ₹${earning} credited to worker wallet.`);
-      setTimeout(() => setPayoutSuccessMsg(null), 5000);
+      setPayoutSuccessMsg(`Job #${selectedJobForComplete.bookingNumber} completed! ₹${earning} placed into statutory 24-Hour Quality Escrow.`);
+      setTimeout(() => setPayoutSuccessMsg(null), 6000);
 
       const refreshed = await api.getMyBookings();
       if (Array.isArray(refreshed)) {
@@ -447,6 +474,12 @@ export const WorkerPage: React.FC = () => {
           {activeTab === "wallet" && (
             <WorkerWalletTab
               walletBalance={walletBalance}
+              pendingEscrowBalance={pendingEscrowBalance}
+              escrowItems={escrowItems}
+              onBalanceUpdated={(newW, newE) => {
+                setWalletBalance(newW);
+                setPendingEscrowBalance(newE);
+              }}
               onInstantPayout={handleInstantPayout}
               workerProfile={wp}
               lastWithdrawal={lastWithdrawal}
@@ -454,7 +487,7 @@ export const WorkerPage: React.FC = () => {
           )}
 
           {activeTab === "messages" && (
-            <WorkerMessagesTab jobs={activeJobs} />
+            <WorkerMessagesTab jobs={activeJobs} workerName={user?.name || "Assigned Artisan"} />
           )}
 
           {activeTab === "notifications" && (
