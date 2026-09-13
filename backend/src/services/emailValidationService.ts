@@ -483,9 +483,9 @@ export async function validateEmailAddress(
           status: "unknown",
           safeToSendOtp: false,
           reason: "timeout",
-          message: "⏱️ Email verification is taking too long. Please try again. 📧"
+          message: "The email verification service took too long to respond. Please try again."
         });
-      }, 3500)
+      }, 8000)
     )
   ]);
 

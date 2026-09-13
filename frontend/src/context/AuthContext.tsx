@@ -42,7 +42,7 @@ interface AuthContextType {
   login: (identifier: string, pass: string, expectedRole?: UserRole) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
   workerLogin: (employeeIdOrEmail: string, pass: string) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
   validateEmail: (email: string, mode?: string) => Promise<{ success: boolean; status: string; safeToSendOtp: boolean; message: string; reason?: string }>;
-  sendOtp: (identifier: string, purpose?: string, name?: string) => Promise<{ success: boolean; message?: string; emailDispatched?: boolean; retryAfterSeconds?: number; notRegistered?: boolean }>;
+  sendOtp: (identifier: string, purpose?: string, name?: string) => Promise<{ success: boolean; code?: string; message?: string; emailDispatched?: boolean; retryAfterSeconds?: number; notRegistered?: boolean }>;
   verifyOtp: (identifier: string, otpCode: string, purpose?: string) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
   forgotPasswordSendOtp: (identifier: string) => Promise<{ success: boolean; code?: string; message?: string; otpCode?: string; emailDispatched?: boolean; previewUrl?: string; notRegistered?: boolean; retryAfterSeconds?: number }>;
   forgotPasswordReset: (identifier: string, otpCode: string, newPass: string) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
@@ -297,7 +297,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4500);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       let res = await fetch(`${API_BASE}/auth/validate-email`, {
@@ -351,19 +351,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     identifier: string,
     purpose: string = "REGISTER",
     name?: string
-  ): Promise<{ success: boolean; message?: string; emailDispatched?: boolean; retryAfterSeconds?: number; notRegistered?: boolean }> => {
+  ): Promise<{ success: boolean; code?: string; message?: string; emailDispatched?: boolean; retryAfterSeconds?: number; notRegistered?: boolean }> => {
     try {
       const cleanEmail = identifier.trim().toLowerCase();
 
       // STEP 1: Client-Side Syntax Validation
       const formatCheck = validateEmailFormat(cleanEmail);
       if (!formatCheck.isValid) {
-        return { success: false, message: "❌ Please enter a valid email address. 📧" };
+        return { success: false, code: "INVALID_EMAIL", message: "❌ Please enter a valid email address. 📧" };
       }
 
       // STEP 2: Dispatch through backend /auth/send-otp (Server-Side Real Validation + Cryptographic OTP)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const timeoutId = setTimeout(() => controller.abort(), 45000);
 
       try {
         let res = await fetch(`${API_BASE}/auth/send-otp`, {
@@ -391,33 +391,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         clearTimeout(timeoutId);
-        const data = await res.json();
+        const data = await res.json().catch(() => null);
 
-        if (res.ok && data.success) {
+        if (res.ok && data?.success) {
           return {
             success: true,
+            code: "SUCCESS",
             emailDispatched: true,
             message: data.message || "✅ OTP sent successfully! 📩",
             retryAfterSeconds: data.retryAfterSeconds
           };
         }
 
+        if (res.status === 404 || data?.code === "EMAIL_NOT_FOUND" || data?.exists === false) {
+          return {
+            success: false,
+            code: "EMAIL_NOT_FOUND",
+            notRegistered: true,
+            message: data?.message || "❌ This email address is not registered.",
+            retryAfterSeconds: data?.retryAfterSeconds
+          };
+        }
+
+        if (res.status === 429 || data?.code === "RATE_LIMITED" || data?.code === "OTP_RATE_LIMITED") {
+          return {
+            success: false,
+            code: "RATE_LIMITED",
+            message: data?.message || "⏱️ Too many requests. Please wait and try again.",
+            retryAfterSeconds: data?.retryAfterSeconds
+          };
+        }
+
+        if (res.status === 504 || data?.code === "TIMEOUT") {
+          return {
+            success: false,
+            code: "TIMEOUT",
+            message: data?.message || "⏱️ OTP dispatch is taking too long. Please try again. 📩",
+            retryAfterSeconds: data?.retryAfterSeconds
+          };
+        }
+
         return {
           success: false,
-          notRegistered: res.status === 404,
-          message: data.message || "❌ We couldn't send the verification code. Please try again. 📩",
-          retryAfterSeconds: data.retryAfterSeconds
+          code: data?.code || "OTP_SEND_FAILED",
+          notRegistered: false,
+          message: data?.message || "❌ We couldn't send the verification code. Please try again. 📩",
+          retryAfterSeconds: data?.retryAfterSeconds
         };
       } catch (netErr: any) {
         clearTimeout(timeoutId);
         if (netErr?.name === "AbortError") {
           return {
             success: false,
+            code: "TIMEOUT",
             message: "⏱️ OTP dispatch is taking too long. Please try again. 📩"
           };
         }
         return {
           success: false,
+          code: "NETWORK_ERROR",
           message: "❌ We couldn't connect to the verification server. Please try again. 📩"
         };
       }
@@ -425,6 +457,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("[Auth] sendOtp unexpected error:", err);
       return {
         success: false,
+        code: "OTP_SEND_FAILED",
         message: "❌ We couldn't send the verification code. Please try again. 📩"
       };
     }
@@ -487,11 +520,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 45000);
+
       try {
         let res = await fetch(`${API_BASE}/auth/forgot-password/send-otp`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ identifier: cleanEmail, email: cleanEmail })
+          body: JSON.stringify({ identifier: cleanEmail, email: cleanEmail }),
+          signal: controller.signal
         });
 
         // If a proxy or static host gives 404 HTML without JSON, try route alias
@@ -501,11 +538,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             res = await fetch(`${API_BASE}/forgot-password/send-otp`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ identifier: cleanEmail, email: cleanEmail })
+              body: JSON.stringify({ identifier: cleanEmail, email: cleanEmail }),
+              signal: controller.signal
             });
           }
         }
 
+        clearTimeout(timeoutId);
         const data = await res.json().catch(() => null);
 
         if (res.ok && data?.success) {
@@ -535,12 +574,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
         }
 
+        if (res.status === 504 || data?.code === "TIMEOUT") {
+          return {
+            success: false,
+            code: "TIMEOUT",
+            message: data?.message || "⏱️ OTP dispatch is taking too long. Please try again. 📩"
+          };
+        }
+
         return {
           success: false,
           code: data?.code || "OTP_SEND_FAILED",
           message: data?.message || "We couldn't send the OTP to this email right now. Please try again."
         };
-      } catch {
+      } catch (fetchErr: any) {
+        clearTimeout(timeoutId);
+        if (fetchErr?.name === "AbortError") {
+          return {
+            success: false,
+            code: "TIMEOUT",
+            message: "⏱️ OTP dispatch is taking too long. Please check your connection and try again. 📩"
+          };
+        }
         return {
           success: false,
           code: "NETWORK_ERROR",

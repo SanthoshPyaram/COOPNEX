@@ -15,6 +15,7 @@ import { sendEmailJsOtp } from "../services/emailJsService";
 import { validateEmailAddress } from "../services/emailValidationService";
 import { validateAadhaarVerhoeff, validatePanFormat, evaluatePreliminaryValidation } from "../utils/identityValidation";
 import { saveDocument, saveAvatar } from "../services/documentService";
+import { OtpRequestTracer } from "../utils/tracer";
 
 const hashOtp = (identifier: string, code: string): string => {
   const salt = process.env.OTP_SALT || "coopnex_production_otp_salt_2026";
@@ -1454,14 +1455,17 @@ export const recordEmailJsOtp = async (req: Request, res: Response): Promise<voi
  * OTP is generated cryptographically on the server, hashed with salt, and stored in MongoDB.
  */
 export const sendOtp = async (req: Request, res: Response): Promise<void> => {
+  const tracer = new OtpRequestTracer(req.body?.identifier || req.body?.email || req.body?.phone || "");
   try {
     const { identifier, phone, email, name, purpose = "REGISTER" } = req.body;
     const target = (identifier || email || phone || "").trim().toLowerCase();
 
     if (!target) {
+      tracer.finish("INVALID_TARGET");
       res.status(400).json({
         success: false,
         safeToSendOtp: false,
+        code: "INVALID_EMAIL",
         message: "❌ Please enter a valid email address. 📧"
       });
       return;
@@ -1469,13 +1473,16 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
 
     // STRICT STEP: If target is an email, run server-side real validation FIRST
     if (target.includes("@")) {
+      tracer.mark("email format validation");
       const clientIp = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").toString().split(",")[0].trim();
       const valResult = await validateEmailAddress(target, clientIp);
 
       if (!valResult.safeToSendOtp) {
+        tracer.finish("EMAIL_VALIDATION_FAILED");
         res.status(400).json({
           success: false,
           safeToSendOtp: false,
+          code: valResult.reason === "timeout" ? "TIMEOUT" : "INVALID_EMAIL",
           status: valResult.status,
           reason: valResult.reason,
           subStatus: valResult.subStatus,
@@ -1484,16 +1491,19 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
         return;
       }
 
-      // Check registration duplicate or recovery existence
+      // Check registration duplicate or recovery existence using direct index lookup
+      tracer.mark("user lookup started");
       if (purpose === "REGISTER") {
         if (mongoose.connection.readyState === 1) {
-          const existingUser = await User.findOne({ email: target });
-          const existingWorker = existingUser ? null : await Worker.findOne({ email: target });
-          const existingAdmin = (existingUser || existingWorker) ? null : await Admin.findOne({ email: target });
+          const existingUser = await User.findOne({ email: target }).select("_id email");
+          const existingWorker = existingUser ? null : await Worker.findOne({ email: target }).select("_id email");
+          const existingAdmin = (existingUser || existingWorker) ? null : await Admin.findOne({ email: target }).select("_id email");
           if (existingUser || existingWorker || existingAdmin) {
+            tracer.finish("EMAIL_ALREADY_EXISTS");
             res.status(409).json({
               success: false,
               safeToSendOtp: false,
+              code: "EMAIL_ALREADY_REGISTERED",
               message: "❌ This email is already registered. Please sign in or use another email. 📧"
             });
             return;
@@ -1501,10 +1511,11 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
         }
       } else if (purpose === "RECOVER_EMPLOYEE_ID" || purpose === "FORGOT_PASSWORD") {
         if (mongoose.connection.readyState === 1) {
-          const existingUser = await User.findOne({ email: target });
-          const existingWorker = existingUser ? null : await Worker.findOne({ email: target });
-          const existingAdmin = (existingUser || existingWorker) ? null : await Admin.findOne({ email: target });
+          const existingUser = await User.findOne({ email: target }).select("_id email");
+          const existingWorker = existingUser ? null : await Worker.findOne({ email: target }).select("_id email");
+          const existingAdmin = (existingUser || existingWorker) ? null : await Admin.findOne({ email: target }).select("_id email");
           if (!existingUser && !existingWorker && !existingAdmin) {
+            tracer.finish("EMAIL_NOT_FOUND");
             res.status(404).json({
               success: false,
               exists: false,
@@ -1516,6 +1527,7 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
           }
         }
       }
+      tracer.mark("user lookup completed");
     }
 
     // Rate Limiting: 60-Second Resend Cooldown
@@ -1524,10 +1536,12 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
       const timeSinceLastSent = (Date.now() - new Date(recentOtp.lastSentAt).getTime()) / 1000;
       if (timeSinceLastSent < 60) {
         const waitTime = Math.ceil(60 - timeSinceLastSent);
+        tracer.finish("RATE_LIMITED");
         res.status(429).json({
           success: false,
           safeToSendOtp: false,
-          message: `Please wait ${waitTime}s before requesting a new verification code.`,
+          code: "RATE_LIMITED",
+          message: `Too many OTP requests. Please wait ${waitTime}s before requesting a new code.`,
           retryAfterSeconds: waitTime
         });
         return;
@@ -1541,20 +1555,24 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
       createdAt: { $gte: tenMinutesAgo }
     });
     if (recentCount >= 3) {
+      tracer.finish("MAX_OTP_LIMIT");
       res.status(429).json({
         success: false,
         safeToSendOtp: false,
-        message: "Maximum OTP request limit reached. Please wait 10 minutes before requesting a new code.",
+        code: "RATE_LIMITED",
+        message: "Too many OTP requests. Please wait before trying again.",
         retryAfterSeconds: 600
       });
       return;
     }
 
     // Generate cryptographically secure 6-digit OTP code using crypto.randomInt
+    tracer.mark("OTP generation");
     const otpCode = crypto.randomInt(100000, 1000000).toString();
     const otpHash = hashOtp(target, otpCode);
 
     // Clean up any stale unverified OTPs for this target & purpose
+    tracer.mark("OTP persistence");
     await Otp.deleteMany({ identifier: target, purpose, verified: false });
 
     // Store in MongoDB with automatic 300s (5-minute) TTL expiration
@@ -1570,33 +1588,51 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
 
     // Real Email Dispatch via Server-Side Hierarchy (Brevo -> EmailJS Server -> SMTP)
     if (target.includes("@")) {
+      tracer.mark("email provider request started");
       const emailResult = await sendOtpEmail(target, otpCode, purpose, name);
+      tracer.mark("email provider response");
 
       if (!emailResult.success) {
         // Rollback OTP on dispatch failure so un-sent OTP cannot be used
         await Otp.deleteMany({ identifier: target, purpose, verified: false });
+        if (emailResult.error === "TIMEOUT") {
+          tracer.finish("TIMEOUT");
+          res.status(504).json({
+            success: false,
+            safeToSendOtp: false,
+            code: "TIMEOUT",
+            message: "The OTP service is taking too long to respond. Please try again."
+          });
+          return;
+        }
+        tracer.finish("OTP_SEND_FAILED");
         res.status(500).json({
           success: false,
           safeToSendOtp: false,
-          message: "❌ We couldn't send the verification code. Please try again. 📩"
+          code: "OTP_SEND_FAILED",
+          message: "We couldn't send the OTP right now. Please try again."
         });
         return;
       }
     }
 
-    // NEVER return plain OTP code
+    tracer.finish("SUCCESS");
     res.json({
       success: true,
       safeToSendOtp: true,
-      message: "✅ OTP sent successfully! 📩",
-      expiresInSeconds: 300
+      code: "SUCCESS",
+      message: "OTP sent successfully. Please check your email.",
+      expiresInSeconds: 300,
+      retryAfterSeconds: 60
     });
   } catch (error: any) {
     console.error("sendOtp error:", error);
+    tracer.finish("SERVER_ERROR");
     res.status(500).json({
       success: false,
       safeToSendOtp: false,
-      message: "❌ We couldn't send the verification code. Please try again. 📩"
+      code: "SERVER_ERROR",
+      message: "We couldn't send the OTP right now. Please try again."
     });
   }
 };
@@ -1735,22 +1771,50 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
  * Employs anti-enumeration response to prevent user existence probing.
  */
 export const forgotPasswordSendOtp = async (req: Request, res: Response): Promise<void> => {
+  const tracer = new OtpRequestTracer(req.body?.identifier || req.body?.email || req.body?.employeeId || req.body?.phone || "");
   try {
     const { identifier, email, employeeId, phone } = req.body;
     const cleanTarget = (identifier || email || employeeId || phone || "").trim().toLowerCase();
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!cleanTarget || (!emailRegex.test(cleanTarget) && cleanTarget.length < 4)) {
+      tracer.finish("INVALID_EMAIL");
       res.status(400).json({
         success: false,
         code: "INVALID_EMAIL",
-        message: "Please provide a valid registered email address or Employee ID."
+        message: "Please enter a valid email address."
       });
       return;
     }
 
-    // 1. Check if eligible account exists in User or Worker collection
-    if (mongoose.connection.readyState !== 1) {
+    // 1. Check if eligible account exists in User or Worker collection via direct index lookup
+    tracer.mark("user lookup started");
+    let user: any = null;
+
+    if (mongoose.connection.readyState === 1) {
+      if (cleanTarget.includes("@")) {
+        user = await User.findOne({ email: cleanTarget }).select("_id name email status isActive role");
+        if (!user) {
+          const worker = await Worker.findOne({ email: cleanTarget }).select("userId email name");
+          if (worker && worker.userId) {
+            user = await User.findById(worker.userId).select("_id name email status isActive role");
+          }
+        }
+      } else {
+        user = await User.findOne({
+          $or: [
+            { employeeId: cleanTarget.toUpperCase() },
+            { phone: cleanTarget }
+          ]
+        }).select("_id name email status isActive role");
+        if (!user) {
+          const worker = await Worker.findOne({ employeeId: cleanTarget.toUpperCase() }).select("userId email name");
+          if (worker && worker.userId) {
+            user = await User.findById(worker.userId).select("_id name email status isActive role");
+          }
+        }
+      }
+    } else {
       const DEMO_EMAILS = [
         "demo.customer@coopnex.in",
         "demo.worker@coopnex.in",
@@ -1760,39 +1824,15 @@ export const forgotPasswordSendOtp = async (req: Request, res: Response): Promis
         "superadmin@coopnex.in",
         "priya.sharma@coopnex.customer.in"
       ];
-      if (!DEMO_EMAILS.includes(cleanTarget)) {
-        res.status(404).json({
-          success: false,
-          exists: false,
-          code: "EMAIL_NOT_FOUND",
-          message: "This email is not registered. Please try again with another email address."
-        });
-        return;
+      if (DEMO_EMAILS.includes(cleanTarget)) {
+        user = { name: "Demo User", email: cleanTarget, isActive: true, status: "ACTIVE" };
       }
     }
-
-    let user = await User.findOne({
-      $or: [
-        { email: cleanTarget },
-        { employeeId: cleanTarget.toUpperCase() },
-        { phone: cleanTarget }
-      ]
-    });
-
-    if (!user) {
-      const worker = await Worker.findOne({
-        $or: [
-          { employeeId: cleanTarget.toUpperCase() },
-          { email: cleanTarget }
-        ]
-      });
-      if (worker && worker.userId) {
-        user = await User.findById(worker.userId);
-      }
-    }
+    tracer.mark("user lookup completed");
 
     // 2. Strict Check: If user DOES NOT exist or is inactive, DO NOT send OTP
     if (!user || user.status === "SUSPENDED" || user.isActive === false) {
+      tracer.finish("EMAIL_NOT_FOUND");
       res.status(404).json({
         success: false,
         exists: false,
@@ -1805,6 +1845,7 @@ export const forgotPasswordSendOtp = async (req: Request, res: Response): Promis
     // Determine target recipient email
     const emailTarget = user.email || (cleanTarget.includes("@") ? cleanTarget : null);
     if (!emailTarget) {
+      tracer.finish("EMAIL_NOT_FOUND");
       res.status(404).json({
         success: false,
         exists: false,
@@ -1820,6 +1861,7 @@ export const forgotPasswordSendOtp = async (req: Request, res: Response): Promis
       const timeSinceLastSent = (Date.now() - new Date(recentOtp.lastSentAt).getTime()) / 1000;
       if (timeSinceLastSent < 60) {
         const waitTime = Math.ceil(60 - timeSinceLastSent);
+        tracer.finish("RATE_LIMITED");
         res.status(429).json({
           success: false,
           code: "RATE_LIMITED",
@@ -1831,10 +1873,12 @@ export const forgotPasswordSendOtp = async (req: Request, res: Response): Promis
     }
 
     // 4. Cryptographically secure 6-digit OTP code using crypto.randomInt
+    tracer.mark("OTP generation");
     const otpCode = crypto.randomInt(100000, 1000000).toString();
     const otpHash = hashOtp(cleanTarget, otpCode);
 
     // 5. Clean up stale unverified reset OTPs for this target and set new one with 10-minute TTL
+    tracer.mark("OTP persistence");
     await Otp.deleteMany({ identifier: cleanTarget, purpose: "FORGOT_PASSWORD", verified: false });
 
     await Otp.create({
@@ -1847,32 +1891,37 @@ export const forgotPasswordSendOtp = async (req: Request, res: Response): Promis
       createdAt: new Date()
     });
 
-    let emailDispatched = false;
-    // Dispatch via EmailJS using RESET_PASSWORD template first
-    const emailResult = await sendEmailJsOtp(emailTarget, otpCode, user.name, "RESET_PASSWORD");
-    if (emailResult.success) {
-      emailDispatched = true;
-    } else {
-      console.warn(`[AUTH] EmailJS reset template dispatch pending: ${emailResult.message}. Attempting fallback hierarchy...`);
-      const fallbackResult = await sendOtpEmail(emailTarget, otpCode, "FORGOT_PASSWORD", user.name);
-      if (fallbackResult.success) {
-        emailDispatched = true;
-      }
-    }
+    // 6. Real Email Dispatch via single unified sendOtpEmail call
+    tracer.mark("email provider request started");
+    const emailResult = await sendOtpEmail(emailTarget, otpCode, "FORGOT_PASSWORD", user.name);
+    tracer.mark("email provider response");
 
-    if (!emailDispatched) {
+    if (!emailResult.success) {
       // Rollback un-dispatched OTP record so dead OTP cannot linger
       await Otp.deleteMany({ identifier: cleanTarget, purpose: "FORGOT_PASSWORD", verified: false });
+      if (emailResult.error === "TIMEOUT") {
+        tracer.finish("TIMEOUT");
+        res.status(504).json({
+          success: false,
+          exists: true,
+          otpSent: false,
+          code: "TIMEOUT",
+          message: "The OTP service is taking too long to respond. Please try again."
+        });
+        return;
+      }
+      tracer.finish("OTP_SEND_FAILED");
       res.status(500).json({
         success: false,
         exists: true,
         otpSent: false,
         code: "OTP_SEND_FAILED",
-        message: "We couldn't send the OTP to this email right now. Please try again."
+        message: "We couldn't send the OTP right now. Please try again."
       });
       return;
     }
 
+    tracer.finish("SUCCESS");
     res.status(200).json({
       success: true,
       exists: true,
@@ -1884,10 +1933,11 @@ export const forgotPasswordSendOtp = async (req: Request, res: Response): Promis
     });
   } catch (error: any) {
     console.error("forgotPasswordSendOtp error:", error);
+    tracer.finish("SERVER_ERROR");
     res.status(500).json({
       success: false,
       code: "SERVER_ERROR",
-      message: "Server error during password reset request."
+      message: "We couldn't send the OTP right now. Please try again."
     });
   }
 };

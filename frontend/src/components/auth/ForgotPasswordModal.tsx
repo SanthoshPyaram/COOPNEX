@@ -147,6 +147,8 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
       setEmailError(t("auth.emailNotFound", "This email is not registered. Please try again with another email address."));
     } else if (res.code === "RATE_LIMITED") {
       setErrorMessage(res.message || t("auth.rateLimited", "Too many OTP requests. Please wait and try again."));
+    } else if (res.code === "TIMEOUT") {
+      setErrorMessage(t("auth.otpTimeout", "⏱️ OTP dispatch took too long. Please check your connection and try again."));
     } else if (res.code === "NETWORK_ERROR") {
       setErrorMessage(t("auth.networkError", "Unable to connect to the server. Please check your internet connection and try again."));
     } else {
@@ -173,6 +175,8 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
       setErrorMessage(t("auth.emailNotFound", "This email is not registered. Please try again with another email address."));
     } else if (res.code === "RATE_LIMITED") {
       setErrorMessage(res.message || t("auth.rateLimited", "Too many OTP requests. Please wait and try again."));
+    } else if (res.code === "TIMEOUT") {
+      setErrorMessage(t("auth.otpTimeout", "⏱️ OTP dispatch took too long. Please check your connection and try again."));
     } else if (res.code === "NETWORK_ERROR") {
       setErrorMessage(t("auth.networkError", "Unable to connect to the server. Please check your internet connection and try again."));
     } else {
@@ -283,6 +287,8 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
+                role="alert"
+                aria-live="assertive"
                 className="mb-5 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2.5 shadow-xs font-semibold"
               >
                 <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
@@ -294,6 +300,8 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
+                role="status"
+                aria-live="polite"
                 className="mb-5 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-2.5 shadow-xs font-semibold"
               >
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
@@ -355,7 +363,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 className="w-full bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:opacity-95 text-white font-black py-3.5 rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
               >
                 {isLoading ? (
-                  <span className="inline-flex items-center gap-2">
+                  <span className="inline-flex items-center gap-2" aria-live="polite">
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     <span>{t("auth.sendingOtp", "Sending OTP...")}</span>
                   </span>

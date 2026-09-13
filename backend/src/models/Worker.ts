@@ -105,7 +105,7 @@ const WorkerSchema = new Schema<IWorker>(
     name: { type: String, required: true, trim: true },
     gender: { type: String, enum: ["Male", "Female", "Other"], default: "Male", index: true },
     phone: { type: String, required: false, default: "" },
-    email: { type: String, required: true },
+    email: { type: String, required: true, lowercase: true, trim: true, index: true },
     avatarUrl: { type: String, default: "" },
     profileImage: { type: String, default: "" },
     societyId: { type: Schema.Types.ObjectId, ref: "Society", required: true, index: true },

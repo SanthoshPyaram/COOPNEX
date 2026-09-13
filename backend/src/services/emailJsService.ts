@@ -85,12 +85,11 @@ export async function sendEmailJsOtp(
           "Content-Type": "application/json",
           "User-Agent": "COOPNEX-Server/1.0"
         },
-        timeout: 4000
+        timeout: 8000
       }
     );
 
     if (response.status === 200 || response.data === "OK") {
-      console.log(`[EMAILJS] OTP email dispatched successfully to ${cleanEmail} for purpose: ${purpose}`);
       return {
         success: true,
         message: `A 6-digit verification code has been dispatched to ${cleanEmail}.`
@@ -103,11 +102,19 @@ export async function sendEmailJsOtp(
       error: String(response.data)
     };
   } catch (error: any) {
+    if (error.code === "ECONNABORTED") {
+      console.warn(`[EMAILJS TIMEOUT] Request to EmailJS API timed out (8s limit).`);
+      return {
+        success: false,
+        message: "The OTP service is taking too long to respond. Please try again.",
+        error: "TIMEOUT"
+      };
+    }
     const errMsg = error.response?.data || error.message || "Failed to dispatch email via EmailJS";
-    console.error(`[EMAILJS ERROR] Failed to send email to ${cleanEmail}:`, errMsg);
+    console.error(`[EMAILJS ERROR] Failed to send email to ${cleanEmail}:`, typeof errMsg === "string" ? errMsg : JSON.stringify(errMsg));
     return {
       success: false,
-      message: "Failed to dispatch verification code via EmailJS.",
+      message: "We couldn't send the OTP right now. Please try again.",
       error: String(errMsg)
     };
   }
