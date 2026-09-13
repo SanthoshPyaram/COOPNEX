@@ -35,7 +35,9 @@ import {
   X,
   Lock,
   ArrowLeft,
-  Home
+  Home,
+  UserCheck,
+  Star
 } from "lucide-react";
 
 export interface NavItem {
@@ -98,6 +100,7 @@ export const AdminShell: React.FC<AdminShellProps> = ({
       title: "OPERATIONS",
       items: [
         { id: "command", label: "Command Center", icon: LayoutDashboard },
+        { id: "users", label: "Registered Users", icon: UserCheck },
         { id: "workers", label: "Workers", icon: Users },
         {
           id: "kyc",
@@ -107,7 +110,8 @@ export const AdminShell: React.FC<AdminShellProps> = ({
           badgeColor: "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
         },
         { id: "societies", label: "Cooperatives", icon: Building2 },
-        { id: "bookings", label: "Bookings", icon: CalendarCheck },
+        { id: "bookings", label: "Bookings & Operations", icon: CalendarCheck },
+        { id: "reviews", label: "Reviews & Star Ratings", icon: Star },
         {
           id: "emergency",
           label: "Emergency Operations",

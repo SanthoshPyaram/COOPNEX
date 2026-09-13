@@ -33,3 +33,4 @@ const MessageSchema = new Schema<IMessage>(
 MessageSchema.index({ bookingId: 1, timestamp: 1 });
 
 export const Message = mongoose.model<IMessage>("Message", MessageSchema);
+

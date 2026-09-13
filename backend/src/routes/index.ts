@@ -126,6 +126,14 @@ apiRouter.get("/admin/intelligence", adminCtrl.getFederationIntelligence);
 apiRouter.get("/admin/heatmap", adminCtrl.getDemandHeatmap);
 apiRouter.get("/admin/reviews", authenticateJwt, adminCtrl.getAllReviews);
 apiRouter.get("/admin/payments", authenticateJwt, adminCtrl.getAllPayments);
+apiRouter.get("/admin/bookings", authenticateJwt, adminCtrl.getAllBookingsAdmin);
+apiRouter.get("/admin/users", authenticateJwt, adminCtrl.getAllUsersAdmin);
+apiRouter.patch(
+  "/admin/workers/:workerId/rating",
+  authenticateJwt,
+  requireRoles(USER_ROLES.SUPER_ADMIN),
+  adminCtrl.updateWorkerRatingAdmin
+);
 apiRouter.get("/admin/workforce-exchanges", adminCtrl.getWorkforceExchanges);
 apiRouter.post(
   "/admin/workforce-exchanges/:exchangeId/approve",

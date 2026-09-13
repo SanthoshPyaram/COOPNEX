@@ -17,15 +17,40 @@ export const getFederationIntelligence = async (_req: Request, res: Response): P
     const activeWorkers = await Worker.countDocuments({ isAvailable: true });
     const verifiedWorkers = await Worker.countDocuments({ verificationLevel: { $gte: 3 } });
     const totalSocieties = await Society.countDocuments();
+    const totalUsers = await User.countDocuments();
 
     // Aggregate worker earnings
     const earningsAgg = await Worker.aggregate([
       { $group: { _id: null, total: { $sum: "$totalEarnings" } } }
     ]);
-    const totalWorkerEarnings = earningsAgg[0]?.total || 3482900;
+    const totalWorkerEarnings = earningsAgg[0]?.total || 0;
 
+    const totalBookings = await Booking.countDocuments();
     const completedBookings = await Booking.countDocuments({ status: "COMPLETED" });
     const emergencyBookings = await Booking.countDocuments({ bookingType: "EMERGENCY" });
+    
+    // Today's completed jobs
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const jobsCompletedToday = await Booking.countDocuments({
+      status: "COMPLETED",
+      updatedAt: { $gte: startOfToday }
+    });
+
+    // Calculate cooperative welfare / maintenance fees accumulated
+    const paidBookings = await Booking.find({ paymentStatus: "PAID" });
+    const cooperativeWelfareCorpusINR = paidBookings.reduce((sum, b) => {
+      const fee = b.fairWageBreakdown?.adminMaintenanceFee ?? b.fairWageBreakdown?.cooperativeContribution ?? 50;
+      return sum + fee;
+    }, 0);
+
+    // Dynamic average customer satisfaction
+    const avgReviewAgg = await Review.aggregate([
+      { $group: { _id: null, avgRating: { $avg: "$rating" } } }
+    ]);
+    const averageCustomerSatisfaction = avgReviewAgg[0]?.avgRating
+      ? Math.round(avgReviewAgg[0].avgRating * 10) / 10
+      : (totalBookings > 0 ? 4.9 : 5.0);
 
     // Utilization Index by trade
     const trades = ["Electrician", "Plumber", "Carpenter", "Painter", "Caregiver", "Cleaner"];
@@ -34,14 +59,14 @@ export const getFederationIntelligence = async (_req: Request, res: Response): P
         const totalInTrade = await Worker.countDocuments({ skills: trade });
         const activeInTrade = await Worker.countDocuments({ skills: trade, isAvailable: true });
         const busyInTrade = await Worker.countDocuments({ skills: trade, activeJobsToday: { $gt: 0 } });
-        const utilPct = totalInTrade > 0 ? Math.round(((totalInTrade - activeInTrade + busyInTrade) / totalInTrade) * 100) : 65;
+        const utilPct = totalInTrade > 0 ? Math.round(((totalInTrade - activeInTrade + busyInTrade) / totalInTrade) * 100) : 0;
 
         return {
           trade,
-          total: totalInTrade || 25,
-          available: activeInTrade || 18,
-          utilizationPercent: Math.min(95, Math.max(30, utilPct)),
-          status: utilPct > 80 ? "HIGH_DEFICIT" : (utilPct < 45 ? "SURPLUS" : "BALANCED")
+          total: totalInTrade,
+          available: activeInTrade,
+          utilizationPercent: totalInTrade > 0 ? Math.min(100, Math.max(0, utilPct)) : 0,
+          status: totalInTrade === 0 ? "BALANCED" : (utilPct > 80 ? "HIGH_DEFICIT" : (utilPct < 45 ? "SURPLUS" : "BALANCED"))
         };
       })
     );
@@ -50,24 +75,28 @@ export const getFederationIntelligence = async (_req: Request, res: Response): P
       success: true,
       data: {
         kpis: {
-          totalWorkers: totalWorkers || 248,
-          activeWorkers: activeWorkers || 186,
-          verifiedWorkers: verifiedWorkers || 214,
-          jobsCompletedToday: 48,
-          monthlyJobsCount: (completedBookings || 410) + 120,
+          totalWorkers,
+          activeWorkers,
+          verifiedWorkers,
+          totalUsers,
+          jobsCompletedToday,
+          monthlyJobsCount: totalBookings,
+          completedBookingsCount: completedBookings,
           totalWorkerEarningsINR: totalWorkerEarnings,
-          averageCustomerSatisfaction: 4.88,
-          emergencyRequestsToday: emergencyBookings || 14,
-          cooperativeWelfareCorpusINR: 4850000,
-          affiliatedSocietiesCount: totalSocieties || 8
+          averageCustomerSatisfaction,
+          emergencyRequestsToday: emergencyBookings,
+          cooperativeWelfareCorpusINR,
+          affiliatedSocietiesCount: totalSocieties
         },
         workforceUtilization: utilizationMetrics,
         recentSurgeAlert: {
-          isSurge: true,
+          isSurge: emergencyBookings > 0,
           trade: "Electrician",
-          zone: "Vijayawada Sector 4 & Auto Nagar",
-          surgePercentage: "+144%",
-          message: "Unprecedented electrical demand surge (+144% above baseline). Standby activation recommended."
+          zone: "Vijayawada Central & Auto Nagar",
+          surgePercentage: emergencyBookings > 0 ? "+45%" : "Nominal",
+          message: emergencyBookings > 0
+            ? "Emergency dispatch activity detected in Vijayawada region."
+            : "Platform operations nominal across all cooperative zones."
         }
       }
     });
@@ -671,6 +700,192 @@ export const createServiceArea = async (req: Request, res: Response): Promise<vo
   } catch (error: any) {
     console.error("createServiceArea error:", error);
     res.status(500).json({ success: false, message: "Failed to create service area.", error: error.message });
+  }
+};
+
+/**
+ * Super Admin: Track Every Single User Booking with Worker Acceptance & Payment Status
+ */
+export const getAllBookingsAdmin = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const bookings = await Booking.find()
+      .populate("customerId", "name email phone district address city")
+      .populate("workerId", "name phone primaryTrade skills rating avatarUrl employeeId societyName verificationLevel")
+      .sort({ createdAt: -1 });
+
+    const formatted = bookings.map((b) => {
+      const isAccepted = ["ACCEPTED", "ON_THE_WAY", "ARRIVED", "IN_PROGRESS", "COMPLETED"].includes(b.status);
+      const isPending = ["REQUESTED", "MATCHING", "ASSIGNED"].includes(b.status);
+      const isRejected = b.status === "REJECTED";
+      const isCancelled = b.status === "CANCELLED";
+
+      let acceptanceStatus = "PENDING_ACCEPTANCE";
+      if (isAccepted) acceptanceStatus = "ACCEPTED";
+      else if (isRejected) acceptanceStatus = "REJECTED_BY_WORKER";
+      else if (isCancelled) acceptanceStatus = "CANCELLED";
+
+      return {
+        _id: b._id,
+        bookingNumber: b.bookingNumber,
+        serviceCategory: b.serviceCategory,
+        requirementDescription: b.requirementDescription,
+        serviceLocation: b.serviceLocation,
+        bookingType: b.bookingType,
+        status: b.status,
+        workerAccepted: isAccepted,
+        acceptanceStatus,
+        customer: b.customerId || {
+          name: b.customerName,
+          phone: b.customerPhone || "Unspecified"
+        },
+        worker: b.workerId || (b.workerName ? {
+          name: b.workerName,
+          phone: b.workerPhone || "Unspecified",
+          primaryTrade: b.serviceCategory
+        } : null),
+        scheduledAt: b.scheduledAt,
+        fairWageBreakdown: {
+          customerPaid: b.fairWageBreakdown?.customerPaid || 350,
+          workerEarning: b.fairWageBreakdown?.workerEarning || 300,
+          adminMaintenanceFee: b.fairWageBreakdown?.adminMaintenanceFee ?? 50,
+          cooperativeContribution: b.fairWageBreakdown?.cooperativeContribution ?? 50,
+          baseWorkerWage: b.fairWageBreakdown?.baseWorkerWage || 300
+        },
+        paymentStatus: b.paymentStatus || "PENDING",
+        paymentId: b.paymentId,
+        escrowStatus: b.escrowStatus || (b.paymentStatus === "PAID" ? "HELD_24H" : undefined),
+        escrowMaturesAt: b.escrowMaturesAt,
+        statusTimeline: b.statusTimeline,
+        rating: b.rating,
+        reviewComment: b.reviewComment,
+        completedAt: b.completedAt,
+        createdAt: b.createdAt,
+        updatedAt: b.updatedAt
+      };
+    });
+
+    res.json({
+      success: true,
+      count: formatted.length,
+      bookings: formatted
+    });
+  } catch (error: any) {
+    console.error("getAllBookingsAdmin error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch bookings.", error: error.message });
+  }
+};
+
+/**
+ * Super Admin: Track Every Registered User (Citizen Customers, Workers, Society Admins)
+ */
+export const getAllUsersAdmin = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const users = await User.find()
+      .select("-passwordHash")
+      .sort({ createdAt: -1 });
+
+    const userIds = users.map((u) => u._id);
+    const bookingCounts = await Booking.aggregate([
+      { $match: { customerId: { $in: userIds } } },
+      { $group: { _id: "$customerId", count: { $sum: 1 } } }
+    ]);
+    const countMap = new Map(bookingCounts.map((b) => [String(b._id), b.count]));
+
+    const formattedUsers = users.map((u) => ({
+      _id: u._id,
+      name: u.name,
+      email: u.email,
+      phone: u.phone || "Not provided",
+      role: u.role,
+      status: u.status || "ACTIVE",
+      district: u.district || "Vijayawada",
+      city: u.city || "",
+      address: u.address || "",
+      bookingCount: countMap.get(String(u._id)) || 0,
+      createdAt: u.createdAt,
+      lastLoginAt: u.lastLoginAt
+    }));
+
+    res.json({
+      success: true,
+      count: formattedUsers.length,
+      users: formattedUsers
+    });
+  } catch (error: any) {
+    console.error("getAllUsersAdmin error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch registered users.", error: error.message });
+  }
+};
+
+/**
+ * Super Admin: Adjust & Increase Worker Star Rating based on reviews & performance
+ */
+export const updateWorkerRatingAdmin = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { workerId } = req.params;
+    const { rating, stars, reason = "Official cooperative merit recognition" } = req.body;
+
+    const rawRating = rating ?? stars;
+    const newRating = Number(rawRating);
+    if (isNaN(newRating) || newRating < 1 || newRating > 5) {
+      res.status(400).json({ success: false, message: "Rating must be a valid number between 1.0 and 5.0." });
+      return;
+    }
+
+    let worker = null;
+    if (mongoose.Types.ObjectId.isValid(workerId)) {
+      worker = await Worker.findById(workerId);
+    }
+    if (!worker) {
+      const cleanId = String(workerId).replace(/^WRK-/, "");
+      if (mongoose.Types.ObjectId.isValid(cleanId)) {
+        worker = await Worker.findById(cleanId);
+      }
+    }
+    if (!worker) {
+      worker = await Worker.findOne({
+        $or: [
+          { employeeId: workerId },
+          { workerIdNumber: workerId },
+          { phone: workerId },
+          { email: workerId }
+        ]
+      });
+    }
+
+    if (!worker) {
+      res.status(404).json({ success: false, message: `Worker '${workerId}' not found in MongoDB.` });
+      return;
+    }
+
+    const previousRating = worker.rating || 5.0;
+    worker.rating = Math.round(newRating * 10) / 10;
+    worker.reviewCount = Math.max(worker.reviewCount || 0, 1);
+
+    if (!worker.auditHistory) worker.auditHistory = [];
+    worker.auditHistory.push({
+      action: "ADMIN_RATING_OVERRIDE",
+      performedBy: req.user?._id || new mongoose.Types.ObjectId("65b900000000000000000001"),
+      timestamp: new Date(),
+      details: `Rating adjusted by Super Admin from ${previousRating} to ${worker.rating} stars. Reason: ${reason}`
+    });
+
+    await worker.save();
+
+    res.json({
+      success: true,
+      message: `Worker ${worker.name} rating successfully updated to ${worker.rating} stars!`,
+      worker: {
+        _id: worker._id,
+        name: worker.name,
+        rating: worker.rating,
+        reviewCount: worker.reviewCount,
+        auditHistory: worker.auditHistory
+      }
+    });
+  } catch (error: any) {
+    console.error("updateWorkerRatingAdmin error:", error);
+    res.status(500).json({ success: false, message: "Failed to update worker rating.", error: error.message });
   }
 };
 

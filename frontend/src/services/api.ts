@@ -518,6 +518,59 @@ export const api = {
       }
     });
     return res.json();
+  },
+
+  // Admin All Bookings with Worker Acceptance & Fair Wage
+  getAllBookingsAdmin: async () => {
+    const res = await fetch(`${API_BASE}/admin/bookings`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      }
+    });
+    return res.json();
+  },
+
+  // Admin All Registered Users
+  getAllUsersAdmin: async () => {
+    const res = await fetch(`${API_BASE}/admin/users`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      }
+    });
+    return res.json();
+  },
+
+  // Admin All Reviews with Media & Ratings
+  getAllReviewsAdmin: async () => {
+    const res = await fetch(`${API_BASE}/admin/reviews`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      }
+    });
+    return res.json();
+  },
+
+  // Admin All Payments Ledger
+  getAllPaymentsAdmin: async () => {
+    const res = await fetch(`${API_BASE}/admin/payments`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      }
+    });
+    return res.json();
+  },
+
+  // Admin Adjust / Award Worker Stars & Rating
+  updateWorkerRatingAdmin: async (workerId: string, payload: { rating: number; reason?: string }) => {
+    const res = await fetch(`${API_BASE}/admin/workers/${workerId}/rating`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      },
+      body: JSON.stringify(payload)
+    });
+    return res.json();
   }
 };
 

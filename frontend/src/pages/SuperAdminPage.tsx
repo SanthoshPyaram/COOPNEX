@@ -94,248 +94,6 @@ const AnimatedNumber: React.FC<{ value: number; prefix?: string; suffix?: string
   );
 };
 
-// Comprehensive Authenticated Worker Registry
-const INITIAL_WORKFORCE_REGISTRY = [
-  {
-    _id: "WRK-KYC-001",
-    name: "Rajesh Kumar",
-    phone: "+91 98765 43210",
-    email: "rajesh.kumar@coopnex.worker.in",
-    avatarUrl: "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&q=80",
-    gender: "Male",
-    age: 34,
-    skills: ["Senior Electrician (Level 4)", "Solar Inverters", "Safety Earthing"],
-    trade: "Electrical",
-    societyName: "Vijayawada Central Labour Co-op (PLCS-04)",
-    district: "Vijayawada (NTR)",
-    verificationLevel: 4,
-    verificationStatus: "VERIFIED",
-    riskScore: "LOW",
-    riskNum: 4,
-    experienceYears: 8,
-    totalJobs: 184,
-    rating: 4.95,
-    lifetimeEarnings: "₹2,14,500",
-    welfareContribution: "₹4,290",
-    createdAt: "2026-08-12 14:30",
-    policeVerification: {
-      certificateNumber: "PCC-AP-VJA-2026-8941",
-      policeStation: "Gunadala Precinct, Vijayawada City Police",
-      commissionerate: "Vijayawada Police Commissionerate",
-      shoName: "Inspector K. Satyanarayana",
-      crimeRecordStatus: "NO COGNIZABLE CRIMINAL RECORD FOUND",
-      cctnsRecordCheck: "PASSED (Clean background)",
-      issuedDate: "20 Aug 2026",
-      validUntil: "19 Aug 2027",
-      sealText: "COMMISSIONERATE OF POLICE • VIJAYAWADA"
-    },
-    kycDocuments: [
-      { documentType: "Police Clearance Certificate (PCC)", documentNumber: "PCC-AP-VJA-2026-8941", verificationStatus: "VERIFIED", issuer: "Vijayawada Police" },
-      { documentType: "Aadhaar Card", documentNumber: "XXXX-XXXX-8921", verificationStatus: "SYSTEM_VERIFIED", issuer: "UIDAI", systemCheckDetails: "UIDAI Verhoeff D5 Checksum Valid" },
-      { documentType: "PAN Card", documentNumber: "ABCDE1234F", verificationStatus: "SYSTEM_VERIFIED", issuer: "NSDL", systemCheckDetails: "NSDL Active Match 100%" }
-    ]
-  },
-  {
-    _id: "WRK-KYC-002",
-    name: "Lakshmi Narayana",
-    phone: "+91 98765 43211",
-    email: "lakshmi.plumber@coopnex.worker.in",
-    avatarUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&q=80",
-    gender: "Male",
-    age: 38,
-    skills: ["Master Plumber", "Conduit Repair", "Pipeline Diagnostics"],
-    trade: "Plumbing",
-    societyName: "Guntur East Labour Co-op",
-    district: "Guntur Urban",
-    verificationLevel: 4,
-    verificationStatus: "VERIFIED",
-    riskScore: "LOW",
-    riskNum: 5,
-    experienceYears: 11,
-    totalJobs: 142,
-    rating: 4.88,
-    lifetimeEarnings: "₹1,68,400",
-    welfareContribution: "₹3,368",
-    createdAt: "2026-08-20 09:15",
-    policeVerification: {
-      certificateNumber: "PCC-AP-GNT-2026-4412",
-      policeStation: "Arundelpet Precinct, Guntur Urban Police",
-      commissionerate: "Guntur Urban Commissionerate",
-      shoName: "Inspector M. Venkateswarlu",
-      crimeRecordStatus: "NO COGNIZABLE CRIMINAL RECORD FOUND",
-      cctnsRecordCheck: "PASSED (Clean)",
-      issuedDate: "15 Aug 2026",
-      validUntil: "14 Aug 2027",
-      sealText: "GUNTUR URBAN POLICE • CCTNS VERIFIED"
-    },
-    kycDocuments: [
-      { documentType: "Police Clearance Certificate (PCC)", documentNumber: "PCC-AP-GNT-2026-4412", verificationStatus: "VERIFIED", issuer: "Arundelpet Precinct" },
-      { documentType: "Aadhaar Card", documentNumber: "XXXX-XXXX-4412", verificationStatus: "SYSTEM_VERIFIED", issuer: "UIDAI", systemCheckDetails: "UIDAI Verhoeff Checksum Valid" },
-      { documentType: "PAN Card", documentNumber: "XYZPL9021K", verificationStatus: "SYSTEM_VERIFIED", issuer: "NSDL" }
-    ]
-  },
-  {
-    _id: "WRK-KYC-003",
-    name: "Sunita Devi",
-    phone: "+91 98490 88712",
-    email: "sunita.devi@coopnex.worker.in",
-    avatarUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80",
-    gender: "Female",
-    age: 29,
-    skills: ["Certified Caregiver", "Elder Care Specialist", "First Aid Pro"],
-    trade: "Caregiving",
-    societyName: "Auto Nagar Industrial & Domestic Society",
-    district: "Vijayawada",
-    verificationLevel: 1,
-    verificationStatus: "UNDER_REVIEW",
-    riskScore: "LOW",
-    riskNum: 8,
-    experienceYears: 5,
-    totalJobs: 38,
-    rating: 4.96,
-    lifetimeEarnings: "₹52,000",
-    welfareContribution: "₹1,040",
-    createdAt: "2026-09-07 11:20",
-    policeVerification: {
-      certificateNumber: "PCC-AP-VJA-2026-3199",
-      policeStation: "Machavaram Precinct, Vijayawada Police",
-      commissionerate: "Vijayawada Police Commissionerate",
-      shoName: "Inspector S. Kalyani",
-      crimeRecordStatus: "NO COGNIZABLE CRIMINAL RECORD FOUND",
-      cctnsRecordCheck: "PASSED (Clean background)",
-      issuedDate: "28 Aug 2026",
-      validUntil: "27 Aug 2027",
-      sealText: "COMMISSIONERATE OF POLICE • VIJAYAWADA"
-    },
-    kycDocuments: [
-      { documentType: "Police Clearance Certificate (PCC)", documentNumber: "PCC-AP-VJA-2026-3199", verificationStatus: "UNDER_REVIEW", issuer: "Machavaram Precinct" },
-      { documentType: "Aadhaar Card", documentNumber: "XXXX-XXXX-3199", verificationStatus: "SYSTEM_VERIFIED", issuer: "UIDAI" }
-    ]
-  },
-  {
-    _id: "WRK-KYC-004",
-    name: "Vikram R. (Tampered Submission)",
-    phone: "+91 99001 00990",
-    email: "suspect.applicant@tempmail.in",
-    avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80",
-    gender: "Male",
-    age: 26,
-    skills: ["General Appliance Maintenance"],
-    trade: "Appliance",
-    societyName: "Unregistered Hub",
-    district: "Hyderabad Central",
-    verificationLevel: 1,
-    verificationStatus: "SUSPECTED_FAKE",
-    riskScore: "CRITICAL",
-    riskNum: 92,
-    experienceYears: 2,
-    totalJobs: 0,
-    rating: 0,
-    lifetimeEarnings: "₹0",
-    welfareContribution: "₹0",
-    createdAt: "2026-09-07 08:45",
-    policeVerification: {
-      certificateNumber: "PCC-SUSPECT-009",
-      policeStation: "Unknown Precinct",
-      commissionerate: "Unverified",
-      shoName: "Forged Signature Detected",
-      crimeRecordStatus: "FLAGGED: TAMPERED PRECINCT SEAL",
-      cctnsRecordCheck: "FAILED (Serial Not Found)",
-      issuedDate: "N/A",
-      validUntil: "N/A",
-      sealText: "UNVERIFIED STAMP"
-    },
-    kycDocuments: [
-      { documentType: "Police Clearance Certificate (PCC)", documentNumber: "PCC-SUSPECT-009", verificationStatus: "SUSPECTED_FAKE", issuer: "Unverified" },
-      { documentType: "Aadhaar Card", documentNumber: "XXXX-XXXX-0099", verificationStatus: "SYSTEM_FLAGGED", issuer: "UIDAI", systemCheckDetails: "Verhoeff Checksum FAILED" }
-    ]
-  },
-  {
-    _id: "WRK-KYC-005",
-    name: "Anita Rao",
-    phone: "+91 98450 12890",
-    email: "anita.rao@coopnex.worker.in",
-    avatarUrl: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&q=80",
-    gender: "Female",
-    age: 33,
-    skills: ["Guild Certified Chef", "Food Safety Pro", "Traditional Catering"],
-    trade: "Culinary & Domestic",
-    societyName: "Bengaluru South Services Guild",
-    district: "Bengaluru Urban",
-    verificationLevel: 3,
-    verificationStatus: "VERIFIED",
-    riskScore: "LOW",
-    riskNum: 3,
-    experienceYears: 7,
-    totalJobs: 112,
-    rating: 4.92,
-    lifetimeEarnings: "₹1,44,000",
-    welfareContribution: "₹2,880",
-    createdAt: "2026-08-15 10:00",
-    policeVerification: {
-      certificateNumber: "PCC-KA-BLR-2026-7812",
-      policeStation: "Jayanagar Precinct, Bengaluru City Police",
-      commissionerate: "Bengaluru City Police",
-      shoName: "Inspector R. Ramachandra",
-      crimeRecordStatus: "NO COGNIZABLE CRIMINAL RECORD FOUND",
-      cctnsRecordCheck: "PASSED (Clean)",
-      issuedDate: "10 Aug 2026",
-      validUntil: "09 Aug 2027",
-      sealText: "BENGALURU CITY POLICE • CCTNS VERIFIED"
-    },
-    kycDocuments: [
-      { documentType: "Police Clearance Certificate (PCC)", documentNumber: "PCC-KA-BLR-2026-7812", verificationStatus: "VERIFIED", issuer: "Bengaluru Police" },
-      { documentType: "Aadhaar Card", documentNumber: "XXXX-XXXX-7812", verificationStatus: "SYSTEM_VERIFIED", issuer: "UIDAI" }
-    ]
-  },
-  {
-    _id: "WRK-KYC-006",
-    name: "Suresh Babu",
-    phone: "+91 98660 44321",
-    email: "suresh.solar@coopnex.worker.in",
-    avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&q=80",
-    gender: "Male",
-    age: 36,
-    skills: ["Rooftop Solar Master", "High Voltage Earthing", "Battery Inverter Pro"],
-    trade: "Solar & Electrical",
-    societyName: "Visakhapatnam Port Artisan Society",
-    district: "Visakhapatnam",
-    verificationLevel: 3,
-    verificationStatus: "VERIFIED",
-    riskScore: "LOW",
-    riskNum: 6,
-    experienceYears: 9,
-    totalJobs: 98,
-    rating: 4.91,
-    lifetimeEarnings: "₹1,26,000",
-    welfareContribution: "₹2,520",
-    createdAt: "2026-08-25 15:45",
-    policeVerification: {
-      certificateNumber: "PCC-AP-VZG-2026-1190",
-      policeStation: "MVP Colony Precinct, Visakhapatnam City",
-      commissionerate: "Visakhapatnam Police Commissionerate",
-      shoName: "Inspector P. Madhav",
-      crimeRecordStatus: "NO COGNIZABLE CRIMINAL RECORD FOUND",
-      cctnsRecordCheck: "PASSED (Clean background)",
-      issuedDate: "18 Aug 2026",
-      validUntil: "17 Aug 2027",
-      sealText: "VISAKHAPATNAM CITY POLICE • CCTNS VERIFIED"
-    },
-    kycDocuments: [
-      { documentType: "Police Clearance Certificate (PCC)", documentNumber: "PCC-AP-VZG-2026-1190", verificationStatus: "VERIFIED", issuer: "Visakhapatnam Police" },
-      { documentType: "Aadhaar Card", documentNumber: "XXXX-XXXX-1190", verificationStatus: "SYSTEM_VERIFIED", issuer: "UIDAI" }
-    ]
-  }
-];
-
-// Sample Bookings Data
-const SAMPLE_BOOKINGS = [
-  { id: "BK-9021", customer: "Dr. K. Rao", worker: "Rajesh Kumar", service: "Emergency MCB Rewiring", amount: 850, date: "Today, 02:30 PM", status: "IN_PROGRESS" },
-  { id: "BK-9020", customer: "Ananya Sharma", worker: "Lakshmi Narayana", service: "Conduit Leakage Repair", amount: 650, date: "Today, 11:15 AM", status: "COMPLETED" },
-  { id: "BK-9019", customer: "Pooja Hegde", worker: "Anita Rao", service: "Traditional Andhra Catering", amount: 1800, date: "Yesterday", status: "COMPLETED" },
-  { id: "BK-9018", customer: "V. Srinivas", worker: "Suresh Babu", service: "Solar Inverter Synchronization", amount: 1250, date: "05 Sep 2026", status: "COMPLETED" }
-];
-
 export interface AdminPaymentTransaction {
   txId: string;
   bookingId: string;
@@ -357,174 +115,11 @@ export interface AdminPaymentTransaction {
   bankAccount: string;
 }
 
-const DETAILED_PAYMENT_TRANSACTIONS: AdminPaymentTransaction[] = [
-  {
-    txId: "TXN-2026-9021",
-    bookingId: "BK-9021",
-    timestamp: "10 Sep 2026, 02:30 PM",
-    customer: "Dr. K. Rao",
-    customerPhone: "+91 98480 11223",
-    worker: "Rajesh Kumar",
-    employeeId: "COOP-EMP-0001",
-    service: "Emergency MCB Rewiring",
-    grossAmount: 850,
-    workerEarning: 765,
-    coopFee: 85,
-    platformFee: 0,
-    paymentMethod: "Bharat UPI QR",
-    paymentStatus: "COMPLETED",
-    settlementStatus: "SETTLED",
-    utrRef: "NPCI/UPI/2026/89410291",
-    society: "Vijayawada Central Labour Co-op (PLCS-04)",
-    bankAccount: "Andhra Pragathi Grameena Bank ••••9821"
-  },
-  {
-    txId: "TXN-2026-9020",
-    bookingId: "BK-9020",
-    timestamp: "10 Sep 2026, 11:15 AM",
-    customer: "Ananya Sharma",
-    customerPhone: "+91 98492 44556",
-    worker: "Lakshmi Narayana",
-    employeeId: "COOP-EMP-0002",
-    service: "Conduit Leakage Repair",
-    grossAmount: 650,
-    workerEarning: 585,
-    coopFee: 65,
-    platformFee: 0,
-    paymentMethod: "RuPay Card",
-    paymentStatus: "COMPLETED",
-    settlementStatus: "SETTLED",
-    utrRef: "NPCI/RUPAY/2026/78219011",
-    society: "Guntur East Labour Co-op (PLCS-02)",
-    bankAccount: "State Bank of India ••••4412"
-  },
-  {
-    txId: "TXN-2026-9019",
-    bookingId: "BK-9019",
-    timestamp: "09 Sep 2026, 04:15 PM",
-    customer: "Pooja Hegde",
-    customerPhone: "+91 94401 77889",
-    worker: "Anita Rao",
-    employeeId: "COOP-EMP-0005",
-    service: "Traditional Andhra Catering",
-    grossAmount: 1800,
-    workerEarning: 1620,
-    coopFee: 180,
-    platformFee: 0,
-    paymentMethod: "Direct Bank DBT",
-    paymentStatus: "COMPLETED",
-    settlementStatus: "SETTLED",
-    utrRef: "NPCI/DBT/2026/55672109",
-    society: "Bengaluru South Services Guild (KA-09)",
-    bankAccount: "Canara Bank ••••7812"
-  },
-  {
-    txId: "TXN-2026-9018",
-    bookingId: "BK-9018",
-    timestamp: "08 Sep 2026, 01:20 PM",
-    customer: "V. Srinivas",
-    customerPhone: "+91 98660 33221",
-    worker: "Suresh Babu",
-    employeeId: "COOP-EMP-0006",
-    service: "Solar Inverter Synchronization",
-    grossAmount: 1250,
-    workerEarning: 1125,
-    coopFee: 125,
-    platformFee: 0,
-    paymentMethod: "Bharat UPI QR",
-    paymentStatus: "COMPLETED",
-    settlementStatus: "SETTLED",
-    utrRef: "NPCI/UPI/2026/44321908",
-    society: "Visakhapatnam Port Artisan Society (AP-12)",
-    bankAccount: "Union Bank of India ••••1190"
-  },
-  {
-    txId: "TXN-2026-9017",
-    bookingId: "BK-9017",
-    timestamp: "08 Sep 2026, 10:00 AM",
-    customer: "K. Madhuri",
-    customerPhone: "+91 99881 22334",
-    worker: "Rajesh Kumar",
-    employeeId: "COOP-EMP-0001",
-    service: "Ceiling Fan & Switchboard Fix",
-    grossAmount: 550,
-    workerEarning: 495,
-    coopFee: 55,
-    platformFee: 0,
-    paymentMethod: "Escrow Locked",
-    paymentStatus: "PENDING",
-    settlementStatus: "IN_ESCROW",
-    utrRef: "ESC/HOLD/2026/99120481",
-    society: "Vijayawada Central Labour Co-op (PLCS-04)",
-    bankAccount: "Andhra Pragathi Grameena Bank ••••9821"
-  },
-  {
-    txId: "TXN-2026-9016",
-    bookingId: "BK-9016",
-    timestamp: "07 Sep 2026, 06:45 PM",
-    customer: "R. Venkatesh",
-    customerPhone: "+91 97000 66778",
-    worker: "Lakshmi Narayana",
-    employeeId: "COOP-EMP-0002",
-    service: "Water Tank Float Valve Repair",
-    grossAmount: 450,
-    workerEarning: 405,
-    coopFee: 45,
-    platformFee: 0,
-    paymentMethod: "Cash on Service (Audited)",
-    paymentStatus: "COMPLETED",
-    settlementStatus: "SETTLED",
-    utrRef: "CASH/REC/2026/11293844",
-    society: "Guntur East Labour Co-op (PLCS-02)",
-    bankAccount: "State Bank of India ••••4412"
-  },
-  {
-    txId: "TXN-2026-9015",
-    bookingId: "BK-9015",
-    timestamp: "06 Sep 2026, 03:10 PM",
-    customer: "T. Swathi",
-    customerPhone: "+91 99123 45678",
-    worker: "Sunita Devi",
-    employeeId: "COOP-EMP-0003",
-    service: "Elder Care & Patient Assistance",
-    grossAmount: 900,
-    workerEarning: 810,
-    coopFee: 90,
-    platformFee: 0,
-    paymentMethod: "Bharat UPI QR",
-    paymentStatus: "COMPLETED",
-    settlementStatus: "SETTLED",
-    utrRef: "NPCI/UPI/2026/33214567",
-    society: "Auto Nagar Industrial & Domestic Society",
-    bankAccount: "HDFC Bank ••••3199"
-  },
-  {
-    txId: "TXN-2026-9014",
-    bookingId: "BK-9014",
-    timestamp: "05 Sep 2026, 09:30 AM",
-    customer: "M. Harish",
-    customerPhone: "+91 96543 21098",
-    worker: "Suresh Babu",
-    employeeId: "COOP-EMP-0006",
-    service: "Heavy Load Circuit Breaker Fix",
-    grossAmount: 1100,
-    workerEarning: 0,
-    coopFee: 0,
-    platformFee: 0,
-    paymentMethod: "Refund to Source",
-    paymentStatus: "REFUNDED",
-    settlementStatus: "SETTLED",
-    utrRef: "REFUND/REV/2026/88910234",
-    society: "Visakhapatnam Port Artisan Society (AP-12)",
-    bankAccount: "Union Bank of India ••••1190"
-  }
-];
-
-// Helper to combine static and newly registered employees from localStorage
+// Helper to load newly registered employees from localStorage (session support)
 const loadCombinedWorkforce = () => {
   try {
     const localWorkers = JSON.parse(localStorage.getItem("coopnex_registered_workers") || "[]");
-    const mappedLocal = localWorkers.map((w: any) => ({
+    return localWorkers.map((w: any) => ({
       _id: w._id || w.id || `WRK-${w.employeeId}`,
       name: w.name,
       phone: w.phone || "+91 98765 43210",
@@ -587,12 +182,8 @@ const loadCombinedWorkforce = () => {
             }] : [])
           ]
     }));
-
-    const existingEmails = new Set(mappedLocal.map((w: any) => w.email?.toLowerCase()));
-    const filteredInitial = INITIAL_WORKFORCE_REGISTRY.filter((w: any) => !existingEmails.has(w.email?.toLowerCase()));
-    return [...mappedLocal, ...filteredInitial];
   } catch {
-    return INITIAL_WORKFORCE_REGISTRY;
+    return [];
   }
 };
 
@@ -606,7 +197,7 @@ export const SuperAdminPage: React.FC = () => {
   const [isWelfareFlipped, setIsWelfareFlipped] = useState<boolean>(false);
 
   // Payments & Revenue Center state
-  const [paymentTransactions, setPaymentTransactions] = useState<AdminPaymentTransaction[]>(DETAILED_PAYMENT_TRANSACTIONS);
+  const [paymentTransactions, setPaymentTransactions] = useState<AdminPaymentTransaction[]>([]);
   const [selectedPaymentTx, setSelectedPaymentTx] = useState<AdminPaymentTransaction | null>(null);
   const [paymentSearch, setPaymentSearch] = useState<string>("");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("ALL");
@@ -617,36 +208,151 @@ export const SuperAdminPage: React.FC = () => {
   const [adminChatAudit, setAdminChatAudit] = useState<any[]>([]);
   const [adminChatLoading, setAdminChatLoading] = useState<boolean>(false);
 
+  // Live Database States for Users, Bookings, Reviews, KPIs
+  const [usersData, setUsersData] = useState<any[]>([]);
+  const [usersLoading, setUsersLoading] = useState<boolean>(false);
+  const [userSearch, setUserSearch] = useState<string>("");
+
+  const [bookingsData, setBookingsData] = useState<any[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState<boolean>(false);
+  const [bookingSearch, setBookingSearch] = useState<string>("");
+  const [bookingStatusFilter, setBookingStatusFilter] = useState<string>("ALL");
+
+  const [reviewsData, setReviewsData] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState<boolean>(false);
+  const [reviewSearch, setReviewSearch] = useState<string>("");
+
+  const [federationKpis, setFederationKpis] = useState<any>(null);
+
+  // Super Admin Star & Rating Adjustment Modal State
+  const [isStarModalOpen, setIsStarModalOpen] = useState<boolean>(false);
+  const [starWorker, setStarWorker] = useState<any | null>(null);
+  const [selectedStars, setSelectedStars] = useState<number>(5);
+  const [starReason, setStarReason] = useState<string>("");
+  const [starSubmitting, setStarSubmitting] = useState<boolean>(false);
+  const [starSuccessMsg, setStarSuccessMsg] = useState<string>("");
+
+  const loadAllUsers = async () => {
+    setUsersLoading(true);
+    try {
+      const res = await api.getAllUsersAdmin();
+      if (res && res.success && Array.isArray(res.users)) {
+        setUsersData(res.users);
+      }
+    } catch (err) {
+      console.warn("Could not retrieve registered users:", err);
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  const loadAllBookings = async () => {
+    setBookingsLoading(true);
+    try {
+      const res = await api.getAllBookingsAdmin();
+      if (res && res.success && Array.isArray(res.bookings)) {
+        setBookingsData(res.bookings);
+      }
+    } catch (err) {
+      console.warn("Could not retrieve all bookings:", err);
+    } finally {
+      setBookingsLoading(false);
+    }
+  };
+
+  const loadAllReviews = async () => {
+    setReviewsLoading(true);
+    try {
+      const res = await api.getAllReviewsAdmin();
+      if (res && res.success && Array.isArray(res.reviews)) {
+        setReviewsData(res.reviews);
+      }
+    } catch (err) {
+      console.warn("Could not retrieve reviews:", err);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  const loadFederationKpis = async () => {
+    try {
+      const res = await api.getFederationIntelligence();
+      if (res && res.success && res.data?.kpis) {
+        setFederationKpis(res.data.kpis);
+      }
+    } catch (err) {
+      console.warn("Could not retrieve federation intelligence:", err);
+    }
+  };
+
   const loadAdminFinancialLedger = async () => {
     try {
       const res = await api.getAdminFinancialLedger();
+      const liveMapped: AdminPaymentTransaction[] = [];
+
       if (res && res.success) {
         if (res.summary) setAdminLedgerSummary(res.summary);
         if (Array.isArray(res.withdrawals)) setAdminWithdrawals(res.withdrawals);
-        if (Array.isArray(res.transactions) && res.transactions.length > 0) {
-          const liveMapped: AdminPaymentTransaction[] = res.transactions.map((t: any) => ({
-            txId: t._id || `TXN-${String(t.bookingId).slice(-6)}`,
-            bookingId: t.bookingNumber || `#BK-${String(t.bookingId).slice(-6).toUpperCase()}`,
-            timestamp: t.paidAt ? new Date(t.paidAt).toLocaleString("en-IN") : "Recent",
-            customer: t.customerName || "Citizen Customer",
-            customerPhone: "+91 98480 22341",
-            worker: t.workerName || "Cooperative Artisan",
-            employeeId: t.employeeId || "COOP-WRK-MEMBER",
-            service: t.serviceCategory || "Trade Service",
-            grossAmount: t.amount || 350,
-            workerEarning: t.workerEarning || 300,
-            coopFee: t.adminMaintenanceFee || 50,
-            platformFee: 0,
-            paymentMethod: t.paymentMethod === "UPI_QR" ? "Razorpay UPI QR" : "Razorpay NetBanking",
-            paymentStatus: t.paymentStatus === "PAID" ? "COMPLETED" : "PENDING",
-            settlementStatus: t.escrowStatus === "RELEASED" ? "SETTLED" : "IN_ESCROW",
-            utrRef: t.razorpayPaymentId || `pay_${String(t._id).slice(-8)}`,
-            society: "Vijayawada Central Labour Co-op (PLCS-04)",
-            bankAccount: "Aadhaar Linked DBT Account"
-          }));
-          setPaymentTransactions([...liveMapped, ...DETAILED_PAYMENT_TRANSACTIONS]);
+        if (Array.isArray(res.transactions)) {
+          res.transactions.forEach((t: any) => {
+            liveMapped.push({
+              txId: t._id || `TXN-${String(t.bookingId).slice(-6)}`,
+              bookingId: t.bookingNumber || `#BK-${String(t.bookingId).slice(-6).toUpperCase()}`,
+              timestamp: t.paidAt ? new Date(t.paidAt).toLocaleString("en-IN") : "Recent",
+              customer: t.customerName || "Citizen Customer",
+              customerPhone: t.customerPhone || "+91 98480 22341",
+              worker: t.workerName || "Cooperative Artisan",
+              employeeId: t.employeeId || "COOP-WRK-MEMBER",
+              service: t.serviceCategory || "Trade Service",
+              grossAmount: t.amount || 350,
+              workerEarning: t.workerEarning || 300,
+              coopFee: t.adminMaintenanceFee ?? 50,
+              platformFee: 0,
+              paymentMethod: t.paymentMethod === "UPI_QR" ? "Razorpay UPI QR" : "Razorpay NetBanking",
+              paymentStatus: t.paymentStatus === "PAID" ? "COMPLETED" : "PENDING",
+              settlementStatus: t.escrowStatus === "RELEASED" ? "SETTLED" : "IN_ESCROW",
+              utrRef: t.razorpayPaymentId || `pay_${String(t._id).slice(-8)}`,
+              society: "Vijayawada Central Labour Co-op (PLCS-04)",
+              bankAccount: "Aadhaar Linked DBT Account"
+            });
+          });
         }
       }
+
+      // Also supplement from getAllPaymentsAdmin if transactions array is sparse
+      try {
+        const payRes = await api.getAllPaymentsAdmin();
+        if (payRes && payRes.success && Array.isArray(payRes.payments)) {
+          payRes.payments.forEach((p: any) => {
+            if (!liveMapped.some((m) => m.bookingId === p.bookingNumber)) {
+              liveMapped.push({
+                txId: p._id,
+                bookingId: p.bookingNumber || `#BK-${String(p._id).slice(-6)}`,
+                timestamp: p.createdAt ? new Date(p.createdAt).toLocaleString("en-IN") : "Recent",
+                customer: p.customer?.name || "Citizen Customer",
+                customerPhone: p.customer?.phone || "+91 98480 22341",
+                worker: p.worker?.name || "Cooperative Artisan",
+                employeeId: p.worker?.employeeId || "COOP-WRK-MEMBER",
+                service: p.serviceCategory || "Trade Service",
+                grossAmount: p.amount || 350,
+                workerEarning: p.workerEarning || 300,
+                coopFee: p.cooperativeFee ?? 50,
+                platformFee: 0,
+                paymentMethod: "Razorpay Bharat UPI QR",
+                paymentStatus: p.paymentStatus === "PAID" ? "COMPLETED" : "PENDING",
+                settlementStatus: p.paymentStatus === "PAID" ? "IN_ESCROW" : "SETTLED",
+                utrRef: p.paymentId || `pay_${String(p._id).slice(-8)}`,
+                society: "Vijayawada Central Labour Co-op (PLCS-04)",
+                bankAccount: "Aadhaar Linked DBT Account"
+              });
+            }
+          });
+        }
+      } catch (err) {
+        console.warn("getAllPaymentsAdmin fetch notice:", err);
+      }
+
+      setPaymentTransactions(liveMapped);
     } catch (err) {
       console.warn("Could not retrieve admin financial ledger:", err);
     }
@@ -666,10 +372,76 @@ export const SuperAdminPage: React.FC = () => {
     }
   };
 
+  // Open Star Adjustment Modal
+  const openStarModal = (worker: any) => {
+    setStarWorker(worker);
+    setSelectedStars(worker.rating ? Math.min(5, Math.max(1, Math.round(worker.rating))) : 5);
+    setStarReason("Official cooperative performance and citizen feedback recognition");
+    setStarSuccessMsg("");
+    setIsStarModalOpen(true);
+  };
+
+  // Submit Star Rating Adjustment
+  const handleUpdateWorkerRating = async () => {
+    if (!starWorker) return;
+    setStarSubmitting(true);
+    try {
+      const workerId = starWorker._id || starWorker.employeeId;
+      const res = await api.updateWorkerRatingAdmin(workerId, {
+        rating: selectedStars,
+        reason: starReason
+      });
+
+      if (res && res.success) {
+        setStarSuccessMsg(res.message || `Successfully adjusted rating to ${selectedStars} stars!`);
+        // Update local React workforce state
+        setWorkforceData((prev) =>
+          prev.map((w) =>
+            w._id === workerId || w.employeeId === workerId
+              ? { ...w, rating: selectedStars, reviewCount: Math.max(w.reviewCount || 0, 1) }
+              : w
+          )
+        );
+        // Refresh reviews list
+        await loadAllReviews();
+        // Auto close after 1.5s
+        setTimeout(() => {
+          setIsStarModalOpen(false);
+          setStarSuccessMsg("");
+          setStarWorker(null);
+        }, 1200);
+      } else {
+        alert(res?.message || "Failed to update worker rating.");
+      }
+    } catch (err: any) {
+      console.error("Error updating rating:", err);
+      alert(err.message || "Could not update worker rating.");
+    } finally {
+      setStarSubmitting(false);
+    }
+  };
+
   useEffect(() => {
+    loadFederationKpis();
+    loadAllUsers();
+    loadAllBookings();
+    loadAllReviews();
+    loadAdminFinancialLedger();
+    loadAdminChatAudit();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "users") loadAllUsers();
+    if (activeTab === "bookings") loadAllBookings();
+    if (activeTab === "reviews") loadAllReviews();
     if (activeTab === "payments") {
       loadAdminFinancialLedger();
       loadAdminChatAudit();
+    }
+    if (activeTab === "command") {
+      loadFederationKpis();
+      loadAllUsers();
+      loadAllBookings();
     }
   }, [activeTab]);
 
@@ -677,10 +449,10 @@ export const SuperAdminPage: React.FC = () => {
   const [securityEvents, setSecurityEvents] = useState<any[]>([
     { eventId: "SEC-902", eventType: "LOGIN_SUCCESS", riskLevel: "LOW", ipAddress: "127.0.0.1", actionTaken: "MFA TOTP verified successfully (Session authorized)", time: "Today, 02:45 PM" },
     { eventId: "SEC-901", eventType: "MFA_FAILED", riskLevel: "MEDIUM", ipAddress: "192.168.1.45", actionTaken: "Invalid 6-digit TOTP code entered (Attempt 1 of 5)", time: "Today, 01:20 PM" },
-    { eventId: "SEC-900", eventType: "CRITICAL_ACTION", riskLevel: "HIGH", ipAddress: "127.0.0.1", actionTaken: "Worker WRK-KYC-004 blacklisted for forged precinct stamp", time: "Today, 10:15 AM" }
+    { eventId: "SEC-900", eventType: "CRITICAL_ACTION", riskLevel: "HIGH", ipAddress: "127.0.0.1", actionTaken: "Worker verification inspected by Super Admin", time: "Today, 10:15 AM" }
   ]);
 
-  // Sync workforce with MongoDB backend & localStorage
+  // Sync workforce with MongoDB backend & localStorage (strictly real records)
   const fetchBackendAndLocalWorkforce = async () => {
     try {
       let dbWorkersMapped: any[] = [];
@@ -800,7 +572,7 @@ export const SuperAdminPage: React.FC = () => {
             ]
       }));
 
-      // Merge: DB workers first, then local workers not yet in DB, then static registry
+      // Merge purely real: DB workers first, then any session-registered local workers
       const seenIds = new Set<string>();
       const seenEmails = new Set<string>();
       const combined: any[] = [];
@@ -813,16 +585,6 @@ export const SuperAdminPage: React.FC = () => {
 
       for (const w of mappedLocal) {
         const empUpper = String(w.employeeId || "").toUpperCase();
-        const emailLower = String(w.email || "").toLowerCase();
-        if ((!empUpper || !seenIds.has(empUpper)) && (!emailLower || !seenEmails.has(emailLower))) {
-          if (empUpper) seenIds.add(empUpper);
-          if (emailLower) seenEmails.add(emailLower);
-          combined.push(w);
-        }
-      }
-
-      for (const w of INITIAL_WORKFORCE_REGISTRY) {
-        const empUpper = String((w as any).employeeId || "").toUpperCase();
         const emailLower = String(w.email || "").toLowerCase();
         if ((!empUpper || !seenIds.has(empUpper)) && (!emailLower || !seenEmails.has(emailLower))) {
           if (empUpper) seenIds.add(empUpper);
@@ -845,7 +607,6 @@ export const SuperAdminPage: React.FC = () => {
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
   }, []);
-
 
   const handleApproveWorkerKyc = async (workerId: string, level: number) => {
     // 1. Update React state immediately for fast feedback
@@ -1097,6 +858,30 @@ export const SuperAdminPage: React.FC = () => {
       }
     },
     {
+      key: "rating",
+      header: "Stars & Rating",
+      sortable: true,
+      render: (w) => (
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center text-amber-500 font-bold font-mono text-xs">
+            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 mr-1" />
+            <span>{w.rating ? Number(w.rating).toFixed(1) : "5.0"}</span>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              openStarModal(w);
+            }}
+            className="px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-700 dark:text-amber-300 font-bold text-[10px] border border-amber-200 dark:border-amber-800 transition"
+            title={`Adjust or award stars to ${w.name}`}
+          >
+            Award Stars
+          </button>
+        </div>
+      )
+    },
+    {
       key: "actions",
       header: "Inspect",
       align: "center",
@@ -1150,15 +935,15 @@ export const SuperAdminPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Compact 6-Card KPI Strip with Smooth Animated Counters */}
+            {/* Compact 6-Card KPI Strip with Smooth Animated Counters - Pure Real Database Metrics */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
               {[
-                { title: "ACTIVE WORKERS", value: 12480, prefix: "", suffix: "", trend: "↑ 8.4%", desc: "vs 7d", color: "text-[#075E54] dark:text-emerald-400", icon: Users },
-                { title: "PENDING KYC", value: pendingCount, prefix: "", suffix: " Dossiers", trend: "Urgent", desc: "review", color: "text-amber-600 dark:text-amber-400", icon: ShieldCheck },
-                { title: "TODAY'S BOOKINGS", value: 342, prefix: "", suffix: "", trend: "↑ 12%", desc: "vs yesterday", color: "text-blue-600 dark:text-blue-400", icon: Activity },
-                { title: "ESCROW BALANCE", value: 1485000, prefix: "₹", suffix: "", trend: "100%", desc: "held in trust", color: "text-emerald-600 dark:text-emerald-400", icon: CreditCard },
-                { title: "EMERGENCY SLA", value: 6.4, prefix: "", suffix: "m", isDecimal: true, trend: "Target < 7m", desc: "rapid dispatch", color: "text-purple-600 dark:text-purple-400", icon: Zap },
-                { title: "SECURITY FLAGS", value: criticalFraudCount, prefix: "", suffix: " Alert", trend: "Active", desc: "risk", color: "text-rose-600 dark:text-rose-400", icon: AlertTriangle }
+                { title: "REGISTERED CITIZENS", value: usersData.length, prefix: "", suffix: " Users", trend: "Live DB", desc: "active platform accounts", color: "text-blue-600 dark:text-blue-400", icon: Users },
+                { title: "VERIFIED WORKERS", value: workforceData.filter((w) => w.verificationStatus === "VERIFIED").length, prefix: "", suffix: " Artisans", trend: `${workforceData.length} Total`, desc: "registered workforce", color: "text-[#075E54] dark:text-emerald-400", icon: ShieldCheck },
+                { title: "PENDING KYC", value: pendingCount, prefix: "", suffix: " Dossiers", trend: "Review", desc: "statutory checks", color: "text-amber-600 dark:text-amber-400", icon: ShieldAlert },
+                { title: "TOTAL BOOKINGS", value: bookingsData.length, prefix: "", suffix: "", trend: `${bookingsData.filter((b) => b.workerAccepted).length} Accepted`, desc: "user service requests", color: "text-indigo-600 dark:text-indigo-400", icon: Activity },
+                { title: "ADMIN FEES / CORPUS", value: paymentTransactions.reduce((sum, p) => sum + (p.coopFee || 50), 0), prefix: "₹", suffix: "", trend: "₹50/order", desc: "welfare & maintenance", color: "text-emerald-600 dark:text-emerald-400", icon: CreditCard },
+                { title: "AVG SATISFACTION", value: federationKpis?.averageCustomerSatisfaction || 5.0, prefix: "★ ", suffix: " / 5", isDecimal: true, trend: "Audited", desc: "citizen rating", color: "text-purple-600 dark:text-purple-400", icon: Star }
               ].map((kpi, idx) => {
                 const Icon = kpi.icon;
                 return (
@@ -1267,6 +1052,146 @@ export const SuperAdminPage: React.FC = () => {
                 onRowClick={(item) => setSelectedWorkerForDrawer(item)}
               />
             </div>
+          </div>
+        )}
+
+        {/* =========================================================================
+            TAB: REGISTERED CITIZENS & USERS OVERSIGHT
+        ========================================================================== */}
+        {activeTab === "users" && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E4E9F0] dark:border-slate-800 pb-4">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                  Registered Citizens &amp; User Accounts
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Live administrative registry of citizens, workers, and society administrators on the platform.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={loadAllUsers}
+                  disabled={usersLoading}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${usersLoading ? "animate-spin" : ""}`} />
+                  <span>Refresh Users</span>
+                </button>
+                <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                  {usersData.length} Registered Users
+                </span>
+              </div>
+            </div>
+
+            {/* Filter / Search Bar */}
+            <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+              <div className="relative w-full sm:w-80">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search users by name, email, phone, or district..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#101828] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Users Table */}
+            {usersData.length === 0 && !usersLoading ? (
+              <div className="p-12 text-center bg-white dark:bg-[#101828] rounded-2xl border border-dashed border-slate-300 dark:border-slate-800">
+                <Users className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
+                <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">No Registered Users Found</h3>
+                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                  Newly registered citizen customers and workers will appear in real-time as they sign up.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-[#101828] rounded-2xl border border-[#E4E9F0] dark:border-slate-800 overflow-hidden shadow-xs">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                      <tr>
+                        <th className="py-3 px-4">User Details</th>
+                        <th className="py-3 px-4">Role</th>
+                        <th className="py-3 px-4">District & Address</th>
+                        <th className="py-3 px-4">Bookings</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4">Registered Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {usersData
+                        .filter((u) => {
+                          const q = userSearch.toLowerCase();
+                          return (
+                            !userSearch ||
+                            u.name?.toLowerCase().includes(q) ||
+                            u.email?.toLowerCase().includes(q) ||
+                            u.phone?.includes(q) ||
+                            u.district?.toLowerCase().includes(q)
+                          );
+                        })
+                        .map((u) => (
+                          <tr key={u._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition">
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2.5">
+                                <AvatarPlaceholder name={u.name} className="w-8 h-8 rounded-full text-xs font-bold shrink-0" />
+                                <div>
+                                  <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                    <span>{u.name}</span>
+                                    {u.role === "SUPER_ADMIN" && (
+                                      <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 font-bold">Admin</span>
+                                    )}
+                                  </div>
+                                  <div className="text-[11px] text-slate-400 font-mono">{u.email}</div>
+                                  <div className="text-[10px] text-slate-400">{u.phone}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
+                                u.role === "WORKER"
+                                  ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                                  : u.role === "SUPER_ADMIN"
+                                  ? "bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                                  : u.role === "SOCIETY_ADMIN"
+                                  ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"
+                                  : "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                              }`}>
+                                {u.role}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                                <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                                <span>{u.district || "Vijayawada"}</span>
+                              </div>
+                              {u.address && <div className="text-[10px] text-slate-400 truncate max-w-[180px]">{u.address}</div>}
+                            </td>
+                            <td className="py-3 px-4 font-mono font-bold text-slate-700 dark:text-slate-300">
+                              {u.bookingCount || 0}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
+                                u.status === "ACTIVE"
+                                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                  : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
+                              }`}>
+                                {u.status || "ACTIVE"}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">
+                              {u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-IN") : "Recent"}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1423,43 +1348,388 @@ export const SuperAdminPage: React.FC = () => {
         )}
 
         {/* =========================================================================
-            5. TAB: BOOKINGS
+            5. TAB: LIVE BOOKINGS & WORKER ACCEPTANCE OPERATIONS
         ========================================================================== */}
         {activeTab === "bookings" && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E4E9F0] dark:border-slate-800 pb-4">
               <div>
                 <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                  Platform Bookings &amp; Service Operations
+                  Platform Bookings &amp; Worker Acceptance Tracker
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Live monitoring of customer requests, assigned artisans, and completion statuses.
+                  Super Admin oversight: Track every citizen booking, assigned artisan, worker acceptance status, and fair wage escrow.
                 </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={loadAllBookings}
+                  disabled={bookingsLoading}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${bookingsLoading ? "animate-spin" : ""}`} />
+                  <span>Refresh Bookings</span>
+                </button>
+                <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                  {bookingsData.length} Total Bookings
+                </span>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-[#101828] rounded-2xl border border-[#E4E9F0] dark:border-slate-800 p-4 divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-              {SAMPLE_BOOKINGS.map((b) => (
-                <div key={b.id} className="py-3 flex items-center justify-between">
-                  <div>
-                    <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                      <span className="font-mono text-emerald-600 font-bold">{b.id}</span>
-                      <span>{b.service}</span>
-                    </div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">
-                      Customer: {b.customer} • Artisan: {b.worker} • {b.date}
-                    </div>
-                  </div>
+            {/* Filters Bar */}
+            <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+              <div className="relative w-full sm:w-80">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search by booking #, service, customer or artisan..."
+                  value={bookingSearch}
+                  onChange={(e) => setBookingSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#101828] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
 
-                  <div className="text-right font-mono">
-                    <div className="font-bold text-slate-900 dark:text-white">₹{b.amount}</div>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300">
-                      {b.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
+              <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
+                {["ALL", "ACCEPTED", "PENDING_ACCEPTANCE", "IN_PROGRESS", "COMPLETED", "CANCELLED"].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setBookingStatusFilter(st)}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition whitespace-nowrap ${
+                      bookingStatusFilter === st
+                        ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+                    }`}
+                  >
+                    {st.replace(/_/g, " ")}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {/* Bookings Tracker List */}
+            {bookingsData.length === 0 && !bookingsLoading ? (
+              <div className="p-12 text-center bg-white dark:bg-[#101828] rounded-2xl border border-dashed border-slate-300 dark:border-slate-800">
+                <CalendarCheck className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
+                <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">No Bookings Recorded Yet</h3>
+                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                  When citizen customers request artisan services, complete live tracking and worker acceptance records will display here.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {bookingsData
+                  .filter((b) => {
+                    const q = bookingSearch.toLowerCase();
+                    const matchQ =
+                      !bookingSearch ||
+                      b.bookingNumber?.toLowerCase().includes(q) ||
+                      b.serviceCategory?.toLowerCase().includes(q) ||
+                      b.customer?.name?.toLowerCase().includes(q) ||
+                      b.worker?.name?.toLowerCase().includes(q) ||
+                      b.serviceLocation?.address?.toLowerCase().includes(q);
+
+                    const matchFilter =
+                      bookingStatusFilter === "ALL" ||
+                      (bookingStatusFilter === "ACCEPTED" && b.workerAccepted) ||
+                      (bookingStatusFilter === "PENDING_ACCEPTANCE" && !b.workerAccepted && b.status !== "CANCELLED") ||
+                      b.status === bookingStatusFilter;
+
+                    return matchQ && matchFilter;
+                  })
+                  .map((b) => {
+                    const isAccepted = b.workerAccepted;
+                    const isCompleted = b.status === "COMPLETED";
+                    const isCancelled = b.status === "CANCELLED";
+
+                    return (
+                      <div
+                        key={b._id || b.bookingNumber}
+                        className="p-4 rounded-2xl bg-white dark:bg-[#101828] border border-[#E4E9F0] dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono text-xs font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-1 rounded-lg border border-blue-200 dark:border-blue-900">
+                              {b.bookingNumber || `#BK-${String(b._id).slice(-6).toUpperCase()}`}
+                            </span>
+                            <div>
+                              <h4 className="font-bold text-slate-900 dark:text-white text-sm">
+                                {b.serviceCategory}
+                              </h4>
+                              <p className="text-[11px] text-slate-500 line-clamp-1">
+                                {b.requirementDescription || "Standard cooperative service dispatch"}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Acceptance & Live Status Badges */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            {/* Worker Acceptance Badge */}
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold font-mono ${
+                                isAccepted
+                                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                  : isCancelled
+                                  ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                                  : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                              }`}
+                            >
+                              {isAccepted ? (
+                                <>
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>WORKER ACCEPTED</span>
+                                </>
+                              ) : isCancelled ? (
+                                <>
+                                  <XCircle className="w-3.5 h-3.5 text-slate-500" />
+                                  <span>CANCELLED</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Clock className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                                  <span>AWAITING WORKER ACCEPTANCE</span>
+                                </>
+                              )}
+                            </span>
+
+                            {/* Booking Operational Status */}
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
+                                isCompleted
+                                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300"
+                                  : b.status === "IN_PROGRESS"
+                                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300"
+                                  : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200"
+                              }`}
+                            >
+                              {b.status}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Customer, Worker, & Financial Wage Breakdown Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3 text-xs">
+                          {/* 1. Customer Column */}
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-black uppercase text-slate-400">Citizen Customer</span>
+                            <div className="font-bold text-slate-800 dark:text-slate-200">
+                              {b.customer?.name || "Citizen Customer"}
+                            </div>
+                            <div className="text-[11px] text-slate-500 flex items-center gap-1 font-mono">
+                              <Phone className="w-3 h-3 text-slate-400" />
+                              <span>{b.customer?.phone || "Unspecified"}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span className="truncate">{b.serviceLocation?.address || "Vijayawada Sector"}</span>
+                            </div>
+                          </div>
+
+                          {/* 2. Worker Column */}
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-black uppercase text-slate-400">Assigned Cooperative Artisan</span>
+                            {b.worker ? (
+                              <>
+                                <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                  <span>{b.worker.name}</span>
+                                  {b.worker.rating && (
+                                    <span className="inline-flex items-center text-amber-500 font-bold text-[11px]">
+                                      <Star className="w-3 h-3 fill-amber-400 text-amber-400 mr-0.5" />
+                                      {Number(b.worker.rating).toFixed(1)}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[11px] text-slate-500 flex items-center gap-1 font-mono">
+                                  <Phone className="w-3 h-3 text-slate-400" />
+                                  <span>{b.worker.phone || "Protected"}</span>
+                                </div>
+                                <div className="text-[10px] text-slate-400">
+                                  {b.worker.primaryTrade || b.serviceCategory}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="text-amber-600 dark:text-amber-400 font-medium">
+                                Algorithmic dispatch matching in progress...
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 3. Fair Wage Split & Payment Status */}
+                          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-1.5">
+                            <div className="flex items-center justify-between font-mono">
+                              <span className="text-[10px] text-slate-500">Citizen Paid Total:</span>
+                              <span className="font-black text-slate-900 dark:text-white text-xs">
+                                ₹{b.fairWageBreakdown?.customerPaid ?? 350}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between text-[11px] font-mono border-t border-slate-200/60 dark:border-slate-800 pt-1">
+                              <span className="text-slate-500">Worker Wage:</span>
+                              <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                                ₹{b.fairWageBreakdown?.workerEarning ?? 300}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between text-[11px] font-mono">
+                              <span className="text-slate-500">Admin Maintenance Fee:</span>
+                              <span className="font-bold text-blue-600 dark:text-blue-400">
+                                ₹{b.fairWageBreakdown?.adminMaintenanceFee ?? 50}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between text-[10px] font-mono pt-1 border-t border-slate-200/60 dark:border-slate-800">
+                              <span className="text-slate-400">Payment:</span>
+                              <span
+                                className={`font-bold ${
+                                  b.paymentStatus === "PAID"
+                                    ? "text-emerald-600 dark:text-emerald-400"
+                                    : "text-amber-600 dark:text-amber-400"
+                                }`}
+                              >
+                                {b.paymentStatus === "PAID" ? "PAID (Razorpay)" : "PENDING"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* =========================================================================
+            TAB: WORKER REVIEWS & ADMIN STAR ADJUSTMENT
+        ========================================================================== */}
+        {activeTab === "reviews" && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E4E9F0] dark:border-slate-800 pb-4">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                  Artisan Reviews &amp; Rating Governance
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Super Admin control: Inspect citizen reviews, verify work completion proof, and adjust/award stars to workers in MongoDB.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={loadAllReviews}
+                  disabled={reviewsLoading}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${reviewsLoading ? "animate-spin" : ""}`} />
+                  <span>Refresh Reviews</span>
+                </button>
+                <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                  {reviewsData.length} Reviews Recorded
+                </span>
+              </div>
+            </div>
+
+            {/* Reviews Search Bar */}
+            <div className="relative w-full sm:w-80">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search reviews by citizen, worker, or service..."
+                value={reviewSearch}
+                onChange={(e) => setReviewSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#101828] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Reviews Feed */}
+            {reviewsData.length === 0 && !reviewsLoading ? (
+              <div className="p-12 text-center bg-white dark:bg-[#101828] rounded-2xl border border-dashed border-slate-300 dark:border-slate-800">
+                <Star className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
+                <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">No Reviews Recorded Yet</h3>
+                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                  When citizens complete bookings and submit ratings with feedback, they will appear here with instant star adjustment controls.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {reviewsData
+                  .filter((r) => {
+                    const q = reviewSearch.toLowerCase();
+                    return (
+                      !reviewSearch ||
+                      r.customerId?.name?.toLowerCase().includes(q) ||
+                      r.workerId?.name?.toLowerCase().includes(q) ||
+                      r.comment?.toLowerCase().includes(q) ||
+                      r.bookingId?.serviceType?.toLowerCase().includes(q)
+                    );
+                  })
+                  .map((r) => (
+                    <div
+                      key={r._id}
+                      className="p-4 rounded-2xl bg-white dark:bg-[#101828] border border-[#E4E9F0] dark:border-slate-800 shadow-xs flex flex-col justify-between space-y-3"
+                    >
+                      <div>
+                        {/* Top Worker & Rating Info */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <AvatarPlaceholder
+                              name={r.workerId?.name || "Artisan"}
+                              className="w-9 h-9 rounded-xl font-bold text-xs"
+                            />
+                            <div>
+                              <div className="font-bold text-slate-900 dark:text-white text-xs">
+                                {r.workerId?.name || "Cooperative Artisan"}
+                              </div>
+                              <div className="text-[10px] text-slate-400">
+                                {r.workerId?.primaryTrade || "Certified Worker"} • {r.bookingId?.bookingNumber || "Booking"}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Star Display */}
+                          <div className="flex items-center text-amber-500 font-mono font-bold text-xs bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-lg border border-amber-200 dark:border-amber-800">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`w-3.5 h-3.5 ${
+                                  i < (r.rating || 5)
+                                    ? "fill-amber-400 text-amber-400"
+                                    : "text-slate-300 dark:text-slate-700"
+                                }`}
+                              />
+                            ))}
+                            <span className="ml-1.5">{Number(r.rating || 5).toFixed(1)}</span>
+                          </div>
+                        </div>
+
+                        {/* Customer Feedback Body */}
+                        <div className="mt-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/80 text-xs">
+                          <p className="text-slate-700 dark:text-slate-300 italic">
+                            "{r.comment || "Work was carried out with high cooperative craftsmanship and safety standards."}"
+                          </p>
+                          <div className="text-[10px] text-slate-400 mt-2 flex items-center justify-between">
+                            <span>Reviewed by: {r.customerId?.name || "Citizen"}</span>
+                            <span>{r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-IN") : "Recent"}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Admin Star Adjustment Trigger */}
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <span className="text-[11px] text-slate-400">
+                          Current Rating: <strong>{Number(r.workerId?.rating || r.rating || 5.0).toFixed(1)} ★</strong>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => openStarModal(r.workerId || { name: "Worker", _id: r.workerId?._id })}
+                          className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+                        >
+                          <Award className="w-3.5 h-3.5" />
+                          <span>Adjust / Award Stars</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -2439,6 +2709,143 @@ export const SuperAdminPage: React.FC = () => {
           }}
           initialTab={activeTab === "kyc" ? "kyc" : "overview"}
         />
+      )}
+
+      {/* SUPER ADMIN WORKER STAR RATING & COMMENDATION MODAL */}
+      {isStarModalOpen && starWorker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-white dark:bg-[#101828] border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 border border-amber-200 dark:border-amber-800">
+                  <Award className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white">
+                    Award / Adjust Worker Stars
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Official cooperative merit adjustment saved to MongoDB
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsStarModalOpen(false);
+                  setStarSuccessMsg("");
+                  setStarWorker(null);
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Worker Summary Card */}
+            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex items-center gap-3">
+              <AvatarPlaceholder
+                name={starWorker.name}
+                className="w-10 h-10 rounded-xl font-bold text-sm"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-slate-900 dark:text-white text-sm truncate">
+                  {starWorker.name}
+                </div>
+                <div className="text-xs text-slate-400">
+                  {starWorker.primaryTrade || starWorker.trade || "Certified Artisan"} • {starWorker._id || starWorker.employeeId}
+                </div>
+                <div className="text-[11px] text-amber-600 font-bold mt-0.5">
+                  Current Rating: {starWorker.rating ? Number(starWorker.rating).toFixed(1) : "5.0"} ★
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive 5-Star Selector */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Select New Star Rating (1 - 5 Stars):
+              </label>
+              <div className="flex items-center justify-center gap-2 p-3 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-slate-800">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setSelectedStars(star)}
+                    className="p-2 rounded-xl transition hover:scale-110 active:scale-95 cursor-pointer"
+                  >
+                    <Star
+                      className={`w-8 h-8 transition ${
+                        star <= selectedStars
+                          ? "fill-amber-400 text-amber-400 drop-shadow-md"
+                          : "text-slate-300 dark:text-slate-700"
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+              <div className="text-center font-mono font-black text-amber-600 dark:text-amber-400 text-sm">
+                Awarding {selectedStars}.0 Stars
+              </div>
+            </div>
+
+            {/* Administrative Audit Reason */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Official Justification / Commendation Note:
+              </label>
+              <textarea
+                rows={2}
+                value={starReason}
+                onChange={(e) => setStarReason(e.target.value)}
+                placeholder="e.g., Stellar citizen review, exemplary emergency response speed, or cooperative board commendation"
+                className="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#101828] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+
+            {/* Success Message Banner */}
+            {starSuccessMsg && (
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{starSuccessMsg}</span>
+              </div>
+            )}
+
+            {/* Modal Actions */}
+            <div className="flex items-center gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsStarModalOpen(false);
+                  setStarSuccessMsg("");
+                  setStarWorker(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-900 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleUpdateWorkerRating}
+                disabled={starSubmitting}
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-bold shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+              >
+                {starSubmitting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Saving to DB...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Confirm &amp; Update Stars</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </AdminShell>
   );

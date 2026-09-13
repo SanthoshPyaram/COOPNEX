@@ -152,3 +152,4 @@ export const getAllBookingConversations = async (req: AuthenticatedRequest, res:
     res.status(500).json({ success: false, message: "Failed to retrieve conversation audit." });
   }
 };
+
