@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { HumanVisual } from "../HumanVisual";
 import {
   User,
   ShieldCheck,
@@ -19,7 +18,15 @@ import {
   Loader2,
   Save,
   X,
-  AlertCircle
+  AlertCircle,
+  Camera,
+  Upload,
+  Heart,
+  Globe,
+  Briefcase,
+  IndianRupee,
+  Calendar,
+  MessageSquare
 } from "lucide-react";
 import { HierarchicalAddressForm, AddressData } from "../location/HierarchicalAddressForm";
 import { api } from "../../services/api";
@@ -38,6 +45,15 @@ interface WorkerProfileTabProps {
   rating?: number;
   reviewCount?: number;
   jobsCompletedCount?: number;
+  trade?: string;
+  bio?: string;
+  baseHourlyRate?: number;
+  avatarUrl?: string;
+  profileImage?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  bloodGroup?: string;
+  languages?: string[];
   address?: string;
   city?: string;
   state?: string;
@@ -51,17 +67,26 @@ interface WorkerProfileTabProps {
 
 export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
   employeeId,
-  name,
-  skills,
+  name: initialName,
+  skills: initialSkills,
   district,
   societyName,
   verificationStatus = "PENDING",
   rejectionReason = "",
   kycDocuments = [],
-  experienceYears = 3,
+  experienceYears: initialExperienceYears = 3,
   rating = 4.9,
   reviewCount = 0,
   jobsCompletedCount = 0,
+  trade: initialTrade,
+  bio: initialBio,
+  baseHourlyRate: initialBaseRate = 350,
+  avatarUrl: initialAvatarUrl,
+  profileImage: initialProfileImage,
+  emergencyContactName: initialEmergencyName = "",
+  emergencyContactPhone: initialEmergencyPhone = "",
+  bloodGroup: initialBloodGroup = "O+",
+  languages: initialLanguages = ["Telugu", "English", "Hindi"],
   address = "Benz Circle, Vijayawada",
   city = "Vijayawada",
   state = "Andhra Pradesh",
@@ -72,10 +97,188 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
   coordinates = [80.648, 16.5062],
   onProfileUpdated
 }) => {
-  const { refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState<
     "documents" | "address" | "about" | "skills" | "experience" | "reviews" | "cooperative"
   >("documents");
+
+  // Profile editable fields state
+  const [name, setName] = useState(initialName);
+  const [trade, setTrade] = useState(initialTrade || initialSkills?.[0] || "Electrician");
+  const [skills, setSkills] = useState<string[]>(initialSkills && initialSkills.length > 0 ? initialSkills : ["Electrician"]);
+  const [bio, setBio] = useState(initialBio || "");
+  const [baseHourlyRate, setBaseHourlyRate] = useState(initialBaseRate);
+  const [experienceYears, setExperienceYears] = useState(initialExperienceYears);
+  const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl || initialProfileImage || (user as any)?.avatarUrl || "");
+  const [emergencyContactName, setEmergencyContactName] = useState(initialEmergencyName);
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState(initialEmergencyPhone);
+  const [bloodGroup, setBloodGroup] = useState(initialBloodGroup);
+  const [languages, setLanguages] = useState<string[]>(initialLanguages);
+
+  // Profile Edit Modal State
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileSaveSuccess, setProfileSaveSuccess] = useState(false);
+  const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
+
+  // Edit form state
+  const [editForm, setEditForm] = useState({
+    name: initialName,
+    trade: initialTrade || initialSkills?.[0] || "Electrician",
+    skillsInput: (initialSkills || []).join(", "),
+    bio: initialBio || "",
+    baseHourlyRate: initialBaseRate,
+    experienceYears: initialExperienceYears,
+    avatarUrl: initialAvatarUrl || initialProfileImage || (user as any)?.avatarUrl || "",
+    emergencyContactName: initialEmergencyName,
+    emergencyContactPhone: initialEmergencyPhone,
+    bloodGroup: initialBloodGroup,
+    languagesInput: (initialLanguages || []).join(", ")
+  });
+
+  // Sync props when user changes
+  useEffect(() => {
+    setName(initialName);
+    setTrade(initialTrade || initialSkills?.[0] || "Electrician");
+    setSkills(initialSkills && initialSkills.length > 0 ? initialSkills : ["Electrician"]);
+    setBio(initialBio || "");
+    setBaseHourlyRate(initialBaseRate);
+    setExperienceYears(initialExperienceYears);
+    setAvatarUrl(initialAvatarUrl || initialProfileImage || (user as any)?.avatarUrl || "");
+    setEmergencyContactName(initialEmergencyName);
+    setEmergencyContactPhone(initialEmergencyPhone);
+    setBloodGroup(initialBloodGroup);
+    setLanguages(initialLanguages);
+
+    setEditForm({
+      name: initialName,
+      trade: initialTrade || initialSkills?.[0] || "Electrician",
+      skillsInput: (initialSkills || []).join(", "),
+      bio: initialBio || "",
+      baseHourlyRate: initialBaseRate,
+      experienceYears: initialExperienceYears,
+      avatarUrl: initialAvatarUrl || initialProfileImage || (user as any)?.avatarUrl || "",
+      emergencyContactName: initialEmergencyName,
+      emergencyContactPhone: initialEmergencyPhone,
+      bloodGroup: initialBloodGroup,
+      languagesInput: (initialLanguages || []).join(", ")
+    });
+  }, [
+    initialName,
+    initialTrade,
+    initialSkills,
+    initialBio,
+    initialBaseRate,
+    initialExperienceYears,
+    initialAvatarUrl,
+    initialProfileImage,
+    initialEmergencyName,
+    initialEmergencyPhone,
+    initialBloodGroup,
+    initialLanguages
+  ]);
+
+  // Citizen Reviews State (Real MongoDB Reviews)
+  const [workerReviews, setWorkerReviews] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewStats, setReviewStats] = useState<any>(null);
+
+  const fetchReviews = async () => {
+    setReviewsLoading(true);
+    try {
+      const res = await api.getWorkerReviews();
+      if (res?.success) {
+        setWorkerReviews(res.reviews || []);
+        setReviewStats(res.stats || null);
+      }
+    } catch (err) {
+      console.warn("Could not load worker reviews:", err);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeSubTab === "reviews") {
+      fetchReviews();
+    }
+  }, [activeSubTab]);
+
+  // Handle saving profile changes to MongoDB
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingProfile(true);
+    setProfileSaveError(null);
+    try {
+      const parsedSkills = editForm.skillsInput
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      const parsedLanguages = editForm.languagesInput
+        .split(",")
+        .map((l) => l.trim())
+        .filter(Boolean);
+
+      const payload = {
+        name: editForm.name,
+        trade: editForm.trade,
+        skills: parsedSkills.length > 0 ? parsedSkills : [editForm.trade],
+        bio: editForm.bio,
+        baseHourlyRate: Number(editForm.baseHourlyRate) || 350,
+        experienceYears: Number(editForm.experienceYears) || 3,
+        avatarUrl: editForm.avatarUrl,
+        emergencyContactName: editForm.emergencyContactName,
+        emergencyContactPhone: editForm.emergencyContactPhone,
+        bloodGroup: editForm.bloodGroup,
+        languages: parsedLanguages.length > 0 ? parsedLanguages : ["Telugu", "English"]
+      };
+
+      const res = await api.updateProfileDetails(payload);
+      if (res?.success) {
+        setProfileSaveSuccess(true);
+        setName(payload.name);
+        setTrade(payload.trade);
+        setSkills(payload.skills);
+        setBio(payload.bio);
+        setBaseHourlyRate(payload.baseHourlyRate);
+        setExperienceYears(payload.experienceYears);
+        setAvatarUrl(payload.avatarUrl);
+        setEmergencyContactName(payload.emergencyContactName);
+        setEmergencyContactPhone(payload.emergencyContactPhone);
+        setBloodGroup(payload.bloodGroup);
+        setLanguages(payload.languages);
+
+        setIsEditProfileOpen(false);
+        await refreshUser();
+        if (onProfileUpdated) onProfileUpdated();
+        setTimeout(() => setProfileSaveSuccess(false), 4000);
+      } else {
+        setProfileSaveError(res?.message || "Failed to update profile details.");
+      }
+    } catch (err: any) {
+      console.error("Save profile error:", err);
+      setProfileSaveError(err.message || "Failed to save profile.");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  // Avatar file upload handler
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Please select an image smaller than 5MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setEditForm((prev) => ({ ...prev, avatarUrl: result }));
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Address edit state
   const [isEditingAddress, setIsEditingAddress] = useState(false);
@@ -224,36 +427,58 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
         }
       ];
 
-  const primarySkill = skills[0] || "Artisan";
-  const primaryTrade = primarySkill.toLowerCase().includes("plumb")
-    ? "plumber"
-    : primarySkill.toLowerCase().includes("carpent")
-    ? "carpenter"
-    : primarySkill.toLowerCase().includes("paint")
-    ? "painter"
-    : "electrician";
-
-  const badgeText = `${primarySkill} • ${isVerified ? "Level 4 Certified" : "Level 1 Enrolled"}`;
+  const primarySkill = skills[0] || trade || "Artisan";
+  const displayRating = reviewStats?.averageRating || rating || 4.9;
+  const displayReviewsCount = reviewStats?.totalReviews || reviewCount || workerReviews.length || 0;
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-5 sm:p-8 space-y-6">
+      {/* Toast notifications */}
+      {profileSaveSuccess && (
+        <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl text-xs text-emerald-900 flex items-center gap-2 font-bold animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>Profile details updated and synchronized with MongoDB Atlas!</span>
+        </div>
+      )}
+
       {/* 2-COLUMN PROFILE HEADER */}
       <div className="flex flex-col md:flex-row items-center md:items-start gap-6 pb-6 border-b border-slate-200">
-        {/* Left: Large Professional Human Visual */}
-        <div className="shrink-0">
-          <HumanVisual
-            role={primaryTrade}
-            size="xl"
-            animation="breathe"
-            background="glow"
-            showStatusBadge
-            badgeText={badgeText}
-          />
+        {/* Left: Authentic Worker Photo / Avatar */}
+        <div className="relative group shrink-0">
+          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl overflow-hidden border-4 border-blue-50 bg-gradient-to-tr from-blue-600 via-indigo-600 to-slate-900 shadow-md flex items-center justify-center text-white text-3xl font-black relative">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as any).style.display = "none";
+                }}
+              />
+            ) : (
+              <span>{name ? name[0].toUpperCase() : "W"}</span>
+            )}
+            {/* Camera badge to edit photo */}
+            <button
+              type="button"
+              onClick={() => setIsEditProfileOpen(true)}
+              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white text-xs font-bold gap-1 cursor-pointer backdrop-blur-2xs"
+              title="Edit Profile Photo"
+            >
+              <Camera className="w-5 h-5" />
+              <span>Edit Photo</span>
+            </button>
+          </div>
+          <span className={`absolute -bottom-1 -right-1 p-1.5 rounded-full border-2 border-white shadow-xs ${
+            isVerified ? "bg-emerald-500 text-white" : "bg-amber-500 text-white"
+          }`}>
+            <ShieldCheck className="w-4 h-4" />
+          </span>
         </div>
 
         {/* Right: Worker Identity & Metrics */}
         <div className="flex-1 space-y-3 text-center md:text-left">
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5">
             <h2 className="text-2xl font-black text-slate-900">{name}</h2>
             <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full border ${
               isVerified
@@ -263,29 +488,47 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>{isVerified ? "Government Verified" : "Review Pending"}</span>
             </span>
+
+            {/* EDIT PROFILE BUTTON */}
+            <button
+              type="button"
+              onClick={() => setIsEditProfileOpen(true)}
+              className="px-3 py-1 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-bold text-xs border border-slate-200 hover:border-blue-300 transition flex items-center gap-1.5 cursor-pointer shadow-2xs ml-auto"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+              <span>Edit Profile</span>
+            </button>
           </div>
 
           <p className="text-xs text-slate-600 flex flex-wrap items-center justify-center md:justify-start gap-2">
             <span className="font-mono font-bold text-blue-600">ID: {employeeId}</span>
             <span>&bull;</span>
-            <span className="font-bold text-slate-800">{primarySkill}</span>
+            <span className="font-bold text-slate-800 uppercase tracking-wide">{trade}</span>
             <span>&bull;</span>
             <span>{district}</span>
+            <span>&bull;</span>
+            <span className="text-emerald-700 font-bold font-mono">₹{baseHourlyRate}/hr Base Wage</span>
           </p>
 
           <p className="text-xs text-slate-500 max-w-xl leading-relaxed">
-            Registered artisan affiliated with <strong className="text-slate-800">{societyName}</strong> in {district}. Certified in {skills.join(", ") || primarySkill} with {experienceYears} years of verified field craftsmanship.
+            {bio || `Registered artisan affiliated with ${societyName} in ${district}. Certified in ${skills.join(", ") || primarySkill} with ${experienceYears} years of verified field craftsmanship.`}
           </p>
 
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-1 text-xs">
-            <div className="flex items-center gap-1.5 text-amber-600 font-bold">
+            <button
+              type="button"
+              onClick={() => setActiveSubTab("reviews")}
+              className="flex items-center gap-1.5 text-amber-600 font-bold hover:underline cursor-pointer"
+            >
               <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-              <span>4.95 Rating (142 reviews)</span>
-            </div>
+              <span>{Number(displayRating).toFixed(1)} Rating ({displayReviewsCount} citizen reviews)</span>
+            </button>
             <span>&bull;</span>
-            <span className="text-slate-600"><strong>8+ Years</strong> Experience</span>
+            <span className="text-slate-600"><strong>{experienceYears}+ Years</strong> Experience</span>
             <span>&bull;</span>
-            <span className="text-emerald-600 font-bold">184 Completed Jobs</span>
+            <span className="text-emerald-600 font-bold">{jobsCompletedCount || 0} Completed Jobs</span>
+            <span>&bull;</span>
+            <span className="text-rose-600 font-bold font-mono">Blood: {bloodGroup}</span>
           </div>
         </div>
       </div>
@@ -295,10 +538,9 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
         {[
           { id: "documents", label: "Verification & Documents (KYC)" },
           { id: "address", label: "Base Location & Address" },
-          { id: "about", label: "About" },
+          { id: "about", label: "About & Details" },
           { id: "skills", label: "Skills & Badges" },
-          { id: "experience", label: "Experience History" },
-          { id: "reviews", label: "Citizen Reviews" },
+          { id: "reviews", label: `Citizen Reviews (${displayReviewsCount})` },
           { id: "cooperative", label: "Cooperative Society" }
         ].map((tab) => (
           <button
@@ -530,33 +772,75 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
 
       {/* TAB CONTENT: ABOUT */}
       {activeSubTab === "about" && (
-        <div className="space-y-3 text-xs text-slate-700 leading-relaxed max-w-2xl">
-          <h4 className="text-sm font-black text-slate-900">Professional Bio</h4>
-          <p>
-            {name} is an enrolled member artisan specializing in {skills.join(", ") || "skilled cooperative trade"} with hands-on trade practice across {district}.
-          </p>
-          <p>
-            Affiliated with the {societyName}. Covered under cooperative welfare benefits and verified against state standards upon Super Admin credential audit.
-          </p>
+        <div className="space-y-4 text-xs text-slate-700 leading-relaxed max-w-3xl">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-black text-slate-900">Professional Bio &amp; Artisan Profile</h4>
+            <button
+              type="button"
+              onClick={() => setIsEditProfileOpen(true)}
+              className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
+            >
+              <Edit3 className="w-3 h-3" />
+              <span>Edit Details</span>
+            </button>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+            <p className="text-slate-800 font-medium leading-relaxed">
+              {bio || `${name} is a certified trade specialist in ${trade} with ${experienceYears} years of verified field experience across ${district}. Affiliated with ${societyName}.`}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">Primary Trade &amp; Rate</span>
+              <div className="text-sm font-black text-slate-900">{trade}</div>
+              <div className="text-emerald-700 font-bold font-mono">₹{baseHourlyRate}/hour Fair Base Wage</div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">Experience &amp; Accreditation</span>
+              <div className="text-sm font-black text-slate-900">{experienceYears}+ Years Field Experience</div>
+              <div className="text-blue-700 font-semibold">{isVerified ? "NSQF Level-4 Government Verified" : "Review Pending"}</div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">Languages Spoken</span>
+              <div className="text-slate-800 font-bold">
+                {languages.join(", ") || "Telugu, English, Hindi"}
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">Emergency &amp; Blood Profile</span>
+              <div className="text-slate-800 font-bold">Blood Group: <span className="text-rose-600">{bloodGroup}</span></div>
+              <div className="text-slate-500 text-[11px]">
+                Contact: {emergencyContactName || "Nominee"} ({emergencyContactPhone || "Not set"})
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
       {/* TAB CONTENT: SKILLS */}
       {activeSubTab === "skills" && (
-        <div className="space-y-3">
-          <h4 className="text-sm font-black text-slate-900">Verified Technical Competencies</h4>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-black text-slate-900">Verified Technical Competencies</h4>
+            <button
+              type="button"
+              onClick={() => setIsEditProfileOpen(true)}
+              className="text-blue-600 hover:text-blue-800 font-bold text-xs flex items-center gap-1 cursor-pointer"
+            >
+              <Edit3 className="w-3 h-3" />
+              <span>Add / Update Skills</span>
+            </button>
+          </div>
           <div className="flex flex-wrap gap-2">
-            {[
-              "Industrial 3-Phase Wiring",
-              "Domestic MCB & Distribution Board",
-              "Solar Inverter Grid-Tie",
-              "Surge Earthing & Spike Installation",
-              "Heavy Appliance AC 16A Power Lines",
-              "Emergency Rapid Circuit Tripping Diagnostic"
-            ].map((skill, i) => (
+            {skills.map((skill, i) => (
               <span
                 key={i}
-                className="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-800 border border-blue-200 font-bold text-xs flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-800 border border-blue-200 font-bold text-xs flex items-center gap-1.5 shadow-2xs"
               >
                 <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
                 <span>{skill}</span>
@@ -566,55 +850,95 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
         </div>
       )}
 
-      {/* TAB CONTENT: EXPERIENCE */}
-      {activeSubTab === "experience" && (
-        <div className="space-y-3 text-xs text-slate-700">
-          <h4 className="text-sm font-black text-slate-900">Service Milestone Records</h4>
-          <div className="space-y-2">
-            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-              <span className="font-bold text-slate-900 block">Lead Field Electrician &bull; Vijayawada Co-op (2023 - Present)</span>
-              <p className="text-slate-500 mt-0.5">184 completed citizen dispatches with 99.2% on-time SLA adherence.</p>
-            </div>
-            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-              <span className="font-bold text-slate-900 block">Senior Electrical Technician &bull; AP Industrial Hub (2018 - 2023)</span>
-              <p className="text-slate-500 mt-0.5">Apprentice to Master Electrician NSQF Level 4 accreditation.</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB CONTENT: REVIEWS */}
+      {/* TAB CONTENT: CITIZEN REVIEWS (LIVE MONGODB REVIEWS) */}
       {activeSubTab === "reviews" && (
-        <div className="space-y-3">
-          <h4 className="text-sm font-black text-slate-900">Recent Citizen Feedback</h4>
-          <div className="space-y-2.5">
-            {[
-              {
-                customer: "K. Venkata Rao",
-                date: "05 Sep 2026",
-                rating: 5,
-                comment: "Prompt arrival within 15 minutes for the main breaker sparking. Very neat work and explained the fuse issue clearly."
-              },
-              {
-                customer: "Smt. L. Madhavi",
-                date: "28 Aug 2026",
-                rating: 5,
-                comment: "Excellent service for AC wiring. Fair cooperative pricing without any hidden charges."
-              }
-            ].map((rev, i) => (
-              <div key={i} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-900">{rev.customer}</span>
-                  <div className="flex items-center gap-1 text-amber-500">
-                    <Star className="w-3.5 h-3.5 fill-amber-400" />
-                    <span className="font-bold">{rev.rating}.0</span>
-                  </div>
-                </div>
-                <p className="text-slate-600">{rev.comment}</p>
-                <span className="text-[10px] text-slate-400 block">{rev.date}</span>
+        <div className="space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div>
+              <h4 className="text-base font-black text-slate-900">Verified Citizen Ratings &amp; Reviews</h4>
+              <p className="text-xs text-slate-500">
+                Live feedback submitted by citizens upon job completion and digital payment verification.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1 text-amber-600 font-black text-base">
+                <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
+                <span>{Number(displayRating).toFixed(1)}</span>
+                <span className="text-xs text-slate-400 font-normal">/ 5.0</span>
               </div>
-            ))}
+              <span className="text-xs text-slate-400 font-mono">({displayReviewsCount} verified reviews)</span>
+            </div>
           </div>
+
+          {reviewsLoading ? (
+            <div className="py-12 text-center text-xs text-slate-400 space-y-2">
+              <Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-600" />
+              <p>Loading live customer reviews from database...</p>
+            </div>
+          ) : workerReviews.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 border border-slate-200 rounded-2xl bg-slate-50 space-y-2 p-6">
+              <MessageSquare className="w-8 h-8 mx-auto text-slate-300" />
+              <h5 className="font-bold text-slate-800 text-sm">No Citizen Reviews Yet</h5>
+              <p className="text-xs max-w-sm mx-auto">
+                Customer reviews and ratings will appear here as you complete jobs and citizens submit their feedback.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {workerReviews.map((rev: any, i: number) => {
+                const customerName = rev.customerId?.name || rev.customerName || "Verified Citizen";
+                const customerAvatar = rev.customerId?.avatarUrl;
+                const reviewDate = rev.createdAt ? new Date(rev.createdAt).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric"
+                }) : "Recent";
+
+                return (
+                  <div key={rev._id || i} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
+                          {customerAvatar ? (
+                            <img src={customerAvatar} alt={customerName} className="w-full h-full object-cover" />
+                          ) : (
+                            customerName[0].toUpperCase()
+                          )}
+                        </div>
+                        <div>
+                          <span className="font-bold text-slate-900 block">{customerName}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">{reviewDate}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 text-amber-700 font-bold">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <span>{rev.rating}.0</span>
+                      </div>
+                    </div>
+
+                    <p className="text-slate-700 text-xs leading-relaxed pl-10">
+                      "{rev.comment || rev.feedback || "Great service delivered on time."}"
+                    </p>
+
+                    {rev.workProofPhotos && rev.workProofPhotos.length > 0 && (
+                      <div className="pl-10 flex gap-2 pt-1">
+                        {rev.workProofPhotos.map((photo: string, idx: number) => (
+                          <img
+                            key={idx}
+                            src={photo}
+                            alt="Work proof"
+                            className="w-14 h-14 object-cover rounded-xl border border-slate-200 shadow-2xs"
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -633,7 +957,230 @@ export const WorkerProfileTab: React.FC<WorkerProfileTabProps> = ({
           </p>
         </div>
       )}
+
+      {/* EDIT PROFILE MODAL */}
+      {isEditProfileOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 border border-slate-200 space-y-5 my-6 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-blue-600" />
+                <h3 className="text-base font-black text-slate-900">Edit Artisan Profile</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditProfileOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {profileSaveError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl font-bold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{profileSaveError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProfile} className="space-y-4 text-xs">
+              {/* Avatar upload / link */}
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-xl overflow-hidden shrink-0">
+                  {editForm.avatarUrl ? (
+                    <img src={editForm.avatarUrl} alt="Avatar preview" className="w-full h-full object-cover" />
+                  ) : (
+                    editForm.name?.[0] || "W"
+                  )}
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <span className="font-bold text-slate-800 block">Profile Photo</span>
+                  <div className="flex gap-2">
+                    <label className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 rounded-xl font-bold text-slate-700 cursor-pointer flex items-center gap-1 shadow-2xs">
+                      <Upload className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Upload Image</span>
+                      <input type="file" accept="image/*" onChange={handleAvatarFileChange} className="hidden" />
+                    </label>
+                  </div>
+                  <input
+                    type="url"
+                    placeholder="Or paste photo URL (https://...)"
+                    value={editForm.avatarUrl}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, avatarUrl: e.target.value }))}
+                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl font-mono text-[11px]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.name}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl font-bold text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Primary Trade</label>
+                  <select
+                    value={editForm.trade}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, trade: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl font-bold text-slate-900"
+                  >
+                    <option value="Electrician">Electrician</option>
+                    <option value="Plumber">Plumber</option>
+                    <option value="Carpenter">Carpenter</option>
+                    <option value="Painter">Painter</option>
+                    <option value="Mason">Mason / Civil Works</option>
+                    <option value="AC Technician">AC &amp; Refrigeration</option>
+                    <option value="Appliance Repair">Appliance Repair</option>
+                    <option value="Welder">Welder &amp; Metal Craftsman</option>
+                    <option value="Gardener">Gardener / Landscaping</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Base Hourly Wage (₹/hr)</label>
+                  <input
+                    type="number"
+                    min={150}
+                    max={2000}
+                    required
+                    value={editForm.baseHourlyRate}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, baseHourlyRate: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono font-bold text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Experience (Years)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={50}
+                    required
+                    value={editForm.experienceYears}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, experienceYears: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl font-bold text-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Skills &amp; Competencies (Comma-separated)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 3-Phase Wiring, Distribution Board, AC Installation"
+                  value={editForm.skillsInput}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, skillsInput: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl font-semibold text-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Professional Bio</label>
+                <textarea
+                  rows={3}
+                  placeholder="Brief summary of your field craftsmanship, experience, and cooperative ethics..."
+                  value={editForm.bio}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, bio: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-slate-900 leading-relaxed"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Blood Group</label>
+                  <select
+                    value={editForm.bloodGroup}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, bloodGroup: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl font-bold text-slate-900"
+                  >
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Emergency Nominee</label>
+                  <input
+                    type="text"
+                    placeholder="Contact Name"
+                    value={editForm.emergencyContactName}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, emergencyContactName: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl font-semibold text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Emergency Phone</label>
+                  <input
+                    type="tel"
+                    placeholder="10-digit mobile"
+                    value={editForm.emergencyContactPhone}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, emergencyContactPhone: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono text-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Languages Known (Comma-separated)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Telugu, English, Hindi"
+                  value={editForm.languagesInput}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, languagesInput: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl font-semibold text-slate-900"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsEditProfileOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 font-bold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingProfile}
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
+                >
+                  {savingProfile ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving to Atlas...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Save Profile</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-

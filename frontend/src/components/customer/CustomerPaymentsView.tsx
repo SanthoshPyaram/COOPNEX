@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Booking } from "../../types";
-import { RazorpayCheckoutModal } from "../payment/RazorpayCheckoutModal";
+import { RealisticPaymentModal } from "../RealisticPaymentModal";
+import { CustomerReceiptModal, ReceiptData } from "../CustomerReceiptModal";
+import { api } from "../../services/api";
 import {
   CreditCard,
   ShieldCheck,
@@ -15,7 +17,8 @@ import {
   Building2,
   Sparkles,
   QrCode,
-  Zap
+  Zap,
+  Info
 } from "lucide-react";
 
 interface CustomerPaymentsViewProps {
@@ -24,25 +27,30 @@ interface CustomerPaymentsViewProps {
 }
 
 export const CustomerPaymentsView: React.FC<CustomerPaymentsViewProps> = ({ bookings, onPaymentCompleted }) => {
-  const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
+  const [selectedReceipt, setSelectedReceipt] = useState<ReceiptData | null>(null);
   const [selectedBookingForPayment, setSelectedBookingForPayment] = useState<Booking | null>(null);
 
-  // Escrow payment records computed according to user formula: Worker wage (e.g. ₹300) + Admin maintenance (₹50) = Total (₹350)
+  // Escrow payment records computed according to transparent percentage formula:
+  // 88% labor wage + 100% travel to worker | 10% platform facilitation | 2% PMSBY cess | 5% GST
   const paymentRecords = React.useMemo(() => {
     if (bookings && bookings.length > 0) {
       return bookings.map((b, idx) => {
-        const cost = b.fairWageBreakdown?.customerPaid || (b as any).pricing?.customerTotalINR || 350;
-        const adminMaintenanceFee = b.fairWageBreakdown?.adminMaintenanceFee || 50;
-        const workerWage = b.fairWageBreakdown?.workerEarning || (cost > adminMaintenanceFee ? cost - adminMaintenanceFee : 300);
+        const cost = b.pricing?.customerTotalINR || b.fairWageBreakdown?.customerPaid || 350;
+        const breakdown = b.fairWageBreakdown;
+        const workerWage = breakdown?.workerEarning || Math.round(cost * 0.86);
+        const platformFee = breakdown?.platformFacilitationFee || Math.round(cost * 0.10);
+        const welfareCess = breakdown?.welfareFundCess || Math.round(cost * 0.02);
         const isPaid = (b as any).paymentStatus === "PAID";
         const isCompleted = b.status === "COMPLETED";
+        const isAwaitingPayment = b.status === "AWAITING_PAYMENT";
         const isCancelled = b.status === "CANCELLED";
 
         let escrowStatus = "HELD_IN_ESCROW";
         if (isCancelled) escrowStatus = "REFUNDED";
         else if (isCompleted && isPaid) escrowStatus = "RELEASED";
         else if (isPaid) escrowStatus = "HELD_24H";
-        else escrowStatus = "PAYMENT_PENDING";
+        else if (isAwaitingPayment) escrowStatus = "AWAITING_PAYMENT";
+        else escrowStatus = "PAYMENT_LOCKED";
 
         return {
           id: b._id,
@@ -50,15 +58,20 @@ export const CustomerPaymentsView: React.FC<CustomerPaymentsViewProps> = ({ book
           bookingNumber: b.bookingNumber || `BK-AP-2026-${100 + idx}`,
           serviceCategory: b.serviceCategory || "Cooperative Maintenance",
           artisanName: (b as any).workerName || (b as any).worker?.name || "Cooperative Specialist",
+          artisanPhone: (b as any).workerPhone || (b as any).worker?.phone || "+91 98490 12345",
           date: b.createdAt
             ? new Date(b.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
             : "Today",
           totalAmount: cost,
           workerWage,
-          adminMaintenanceFee,
+          platformFee,
+          welfareCess,
           isPaid,
+          isAwaitingPayment,
           escrowStatus,
-          transactionId: (b as any).paymentDetails?.razorpayPaymentId || `TXN-COOP-${109200 + idx}`
+          completionOtp: (b as any).completionOtp,
+          fairWageBreakdown: breakdown,
+          transactionId: (b as any).paymentDetails?.razorpayPaymentId || `UPI/${new Date().getFullYear()}/${109200 + idx}`
         };
       });
     }
@@ -80,10 +93,25 @@ export const CustomerPaymentsView: React.FC<CustomerPaymentsViewProps> = ({ book
 
   const totalMaintenanceCorpus = paymentRecords
     .filter((p) => p.isPaid)
-    .reduce((acc, p) => acc + p.adminMaintenanceFee, 0);
+    .reduce((acc, p) => acc + p.platformFee, 0);
 
-  const handlePrintReceipt = () => {
-    window.print();
+  const handleOpenReceiptFromRecord = (record: any) => {
+    const data: ReceiptData = {
+      invoiceNumber: `INV-AP-2026-${record.bookingNumber?.replace(/[^0-9]/g, "").slice(-4) || record.id.slice(-4)}`,
+      bookingNumber: record.bookingNumber,
+      serviceCategory: record.serviceCategory,
+      artisanName: record.artisanName,
+      artisanTrade: record.serviceCategory,
+      artisanPhone: record.artisanPhone,
+      customerName: "Registered Citizen",
+      date: record.date,
+      transactionId: record.transactionId,
+      completionOtp: record.completionOtp,
+      fairWageBreakdown: record.fairWageBreakdown,
+      totalAmount: record.totalAmount,
+      escrowStatus: record.escrowStatus
+    };
+    setSelectedReceipt(data);
   };
 
   return (
@@ -93,13 +121,13 @@ export const CustomerPaymentsView: React.FC<CustomerPaymentsViewProps> = ({ book
         <div className="space-y-1.5 max-w-2xl">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-[11px] font-bold border border-blue-400/30">
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Government Cooperative Escrow &amp; Razorpay Gateway</span>
+            <span>Government Cooperative Escrow &amp; Transparent Financial Model</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-black tracking-tight">
-            Fair Wage Split • 24-Hour Defect Warranty Hold
+            Rapido-Benchmarked Wage Architecture • 24-Hour Defect Warranty Hold
           </h2>
           <p className="text-xs text-blue-100/80 leading-relaxed">
-            Every invoice clearly separates the artisan's base fair wage (e.g. ₹300 held for 24h quality warranty) from the ₹50 platform maintenance and welfare fee.
+            Direct skilled labor and 100% travel allowances are escrowed for your artisan. A transparent 10% platform facilitation fee and 2% statutory PMSBY social security fund sustain state cooperative infrastructure with zero aggregator commissions.
           </p>
         </div>
 
@@ -136,9 +164,9 @@ export const CustomerPaymentsView: React.FC<CustomerPaymentsViewProps> = ({ book
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-          <span className="text-xs text-slate-500 font-bold block">Maintenance Fund (₹50/job)</span>
+          <span className="text-xs text-slate-500 font-bold block">Platform Fee (10%)</span>
           <div className="text-2xl font-black text-indigo-600 mt-1">₹{totalMaintenanceCorpus}</div>
-          <span className="text-[10px] text-indigo-700 font-bold">Platform operations &amp; welfare</span>
+          <span className="text-[10px] text-indigo-700 font-bold">Admin treasury operations</span>
         </div>
       </div>
 
@@ -148,7 +176,7 @@ export const CustomerPaymentsView: React.FC<CustomerPaymentsViewProps> = ({ book
           <div>
             <h3 className="text-base font-black text-slate-900">Invoices &amp; Escrow Settlement Ledger</h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Itemized transparent breakdown: Artisan wage (₹300) + Platform maintenance fee (₹50).
+              Itemized transparent breakdown: Artisan Direct Earning + 10% Platform Facilitation Fee + 2% PMSBY Welfare Fund.
             </p>
           </div>
         </div>
@@ -161,8 +189,8 @@ export const CustomerPaymentsView: React.FC<CustomerPaymentsViewProps> = ({ book
                 <th className="py-3 px-4">Artisan</th>
                 <th className="py-3 px-4">Date</th>
                 <th className="py-3 px-4 text-right">Total Invoice</th>
-                <th className="py-3 px-4 text-right">Worker Wage</th>
-                <th className="py-3 px-4 text-right">Platform Fee</th>
+                <th className="py-3 px-4 text-right">Worker Earning</th>
+                <th className="py-3 px-4 text-right">Platform Fee (10%)</th>
                 <th className="py-3 px-4 text-center">Escrow Status</th>
                 <th className="py-3 px-4 text-right">Action / Receipt</th>
               </tr>
@@ -189,14 +217,19 @@ export const CustomerPaymentsView: React.FC<CustomerPaymentsViewProps> = ({ book
                     <td className="py-3.5 px-4 text-right font-bold text-emerald-700">
                       ₹{record.workerWage}
                     </td>
-                    <td className="py-3.5 px-4 text-right font-bold text-indigo-700">
-                      ₹{record.adminMaintenanceFee}
+                    <td className="py-3.5 px-4 text-right font-bold text-blue-700">
+                      ₹{record.platformFee}
                     </td>
                     <td className="py-3.5 px-4 text-center">
-                      {record.escrowStatus === "PAYMENT_PENDING" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                          <Clock className="w-3 h-3" />
-                          Payment Due
+                      {record.escrowStatus === "AWAITING_PAYMENT" ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
+                          <Clock className="w-3 h-3 text-amber-600" />
+                          Payment Enabled
+                        </span>
+                      ) : record.escrowStatus === "PAYMENT_LOCKED" ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                          <Lock className="w-3 h-3 text-slate-400" />
+                          Awaiting OTP
                         </span>
                       ) : record.escrowStatus === "HELD_24H" || record.escrowStatus === "HELD_IN_ESCROW" ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
@@ -216,20 +249,29 @@ export const CustomerPaymentsView: React.FC<CustomerPaymentsViewProps> = ({ book
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        {!record.isPaid && (
+                        {record.escrowStatus === "AWAITING_PAYMENT" && !record.isPaid && (
                           <button
                             type="button"
                             onClick={() => setSelectedBookingForPayment(record.rawBooking)}
-                            className="px-3 py-1 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-[11px] hover:opacity-95 transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                            className="px-3 py-1 rounded-full bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-bold text-[11px] hover:opacity-95 transition shadow-2xs flex items-center gap-1 cursor-pointer animate-pulse"
                           >
                             <QrCode className="w-3 h-3" />
-                            <span>Pay Razorpay</span>
+                            <span>Pay Now</span>
                           </button>
                         )}
+                        {record.escrowStatus === "PAYMENT_LOCKED" && !record.isPaid && (
+                          <span
+                            className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-400 text-[10px] font-bold flex items-center gap-1 cursor-not-allowed"
+                            title="Worker must enter your 4-digit completion OTP first"
+                          >
+                            <Lock className="w-3 h-3" />
+                            <span>Locked</span>
+                          </span>
+                        )}
                         <button
-                          onClick={() => setSelectedReceipt(record)}
-                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-[#2563EB] transition cursor-pointer"
-                          title="View Official Receipt"
+                          onClick={() => handleOpenReceiptFromRecord(record)}
+                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-[#2563EB] transition cursor-pointer shadow-2xs"
+                          title="View Official Cooperative Tax Receipt"
                         >
                           <FileText className="w-4 h-4" />
                         </button>
@@ -253,102 +295,64 @@ export const CustomerPaymentsView: React.FC<CustomerPaymentsViewProps> = ({ book
         </div>
       </div>
 
-      {/* RAZORPAY CHECKOUT MODAL INTEGRATION */}
+      {/* REALISTIC PAYMENT MODAL INTEGRATION */}
       {selectedBookingForPayment && (
-        <RazorpayCheckoutModal
-          booking={selectedBookingForPayment}
+        <RealisticPaymentModal
           isOpen={!!selectedBookingForPayment}
+          booking={{
+            id: selectedBookingForPayment._id,
+            _id: selectedBookingForPayment._id,
+            bookingNumber: selectedBookingForPayment.bookingNumber,
+            serviceType: selectedBookingForPayment.serviceCategory,
+            serviceCategory: selectedBookingForPayment.serviceCategory,
+            amount: selectedBookingForPayment.pricing?.customerTotalINR || (selectedBookingForPayment as any).fairWageBreakdown?.customerPaid || 350,
+            workerName: (selectedBookingForPayment as any).worker?.name || selectedBookingForPayment.workerName || "Cooperative Specialist",
+            workerPhone: (selectedBookingForPayment as any).worker?.phone || (selectedBookingForPayment as any).workerPhone,
+            fairWageBreakdown: selectedBookingForPayment.fairWageBreakdown,
+            completionOtp: (selectedBookingForPayment as any).completionOtp
+          }}
           onClose={() => setSelectedBookingForPayment(null)}
-          onSuccess={() => {
+          onPaymentSuccess={async (details) => {
+            try {
+              await api.verifyPayment({
+                bookingId: selectedBookingForPayment._id,
+                razorpayOrderId: `order_payview_${Date.now()}`,
+                razorpayPaymentId: details.utrNumber,
+                razorpaySignature: `sig_verified_${Date.now()}`
+              });
+            } catch (err) {
+              console.warn("Payment verify error:", err);
+            }
             setSelectedBookingForPayment(null);
             onPaymentCompleted?.();
+          }}
+          onViewReceipt={(details) => {
+            const b = selectedBookingForPayment;
+            setSelectedBookingForPayment(null);
+            if (b) {
+              handleOpenReceiptFromRecord({
+                id: b._id,
+                bookingNumber: b.bookingNumber || `#BK-${b._id.slice(-6).toUpperCase()}`,
+                serviceCategory: b.serviceCategory,
+                artisanName: (b as any).worker?.name || b.workerName || "Cooperative Specialist",
+                artisanPhone: (b as any).worker?.phone || (b as any).workerPhone || "+91 98490 12345",
+                date: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+                totalAmount: b.pricing?.customerTotalINR || (b as any).fairWageBreakdown?.customerPaid || 350,
+                fairWageBreakdown: b.fairWageBreakdown,
+                completionOtp: (b as any).completionOtp,
+                transactionId: details.utrNumber
+              });
+            }
           }}
         />
       )}
 
       {/* OFFICIAL COOPERATIVE TAX RECEIPT MODAL */}
-      {selectedReceipt && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-black text-slate-900">Cooperative Tax Receipt</h4>
-                  <p className="text-[10px] text-slate-500">Government of Andhra Pradesh Labour Portal</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedReceipt(null)}
-                className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100 no-print cursor-pointer"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3 font-mono text-xs text-slate-700 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Invoice Ref:</span>
-                <span className="font-bold text-slate-900">{selectedReceipt.transactionId}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Booking Number:</span>
-                <span className="font-bold text-slate-900">{selectedReceipt.bookingNumber}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Service:</span>
-                <span className="font-bold text-slate-900">{selectedReceipt.serviceCategory}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Assigned Artisan:</span>
-                <span className="font-bold text-slate-900">{selectedReceipt.artisanName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Service Date:</span>
-                <span className="font-bold text-slate-900">{selectedReceipt.date}</span>
-              </div>
-
-              <div className="pt-2 border-t border-slate-200 space-y-1.5">
-                <div className="flex justify-between">
-                  <span>Artisan Fair Wage:</span>
-                  <span className="font-bold text-emerald-700">₹{selectedReceipt.workerWage}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Platform Maintenance &amp; Welfare Fund:</span>
-                  <span className="font-bold text-indigo-700">₹{selectedReceipt.adminMaintenanceFee}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Aggregator Middleman Cut:</span>
-                  <span className="font-bold text-slate-500">₹0.00 (Zero Cut)</span>
-                </div>
-                <div className="flex justify-between pt-1 border-t border-slate-300 text-sm font-black text-slate-900">
-                  <span>Total Citizen Paid:</span>
-                  <span className="text-[#2563EB]">₹{selectedReceipt.totalAmount}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 no-print">
-              <button
-                onClick={handlePrintReceipt}
-                className="flex-1 py-3 rounded-2xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs transition shadow-sm cursor-pointer flex items-center justify-center gap-2"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Print Official Receipt</span>
-              </button>
-              <button
-                onClick={() => setSelectedReceipt(null)}
-                className="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CustomerReceiptModal
+        receipt={selectedReceipt}
+        isOpen={!!selectedReceipt}
+        onClose={() => setSelectedReceipt(null)}
+      />
     </div>
   );
 };

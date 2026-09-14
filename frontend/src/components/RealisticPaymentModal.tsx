@@ -23,14 +23,19 @@ export interface RealisticPaymentModalProps {
   onClose: () => void;
   booking: {
     id?: string;
+    _id?: string;
     bookingNumber?: string;
-    serviceType: string;
+    serviceType?: string;
+    serviceCategory?: string;
     amount: number;
     workerName: string;
     workerPhone?: string;
+    fairWageBreakdown?: any;
+    completionOtp?: string;
   };
   onPaymentSuccess?: (paymentDetails: any) => void;
   onOpenReview?: () => void;
+  onViewReceipt?: (paymentDetails?: any) => void;
 }
 
 export const RealisticPaymentModal: React.FC<RealisticPaymentModalProps> = ({
@@ -38,7 +43,8 @@ export const RealisticPaymentModal: React.FC<RealisticPaymentModalProps> = ({
   onClose,
   booking,
   onPaymentSuccess,
-  onOpenReview
+  onOpenReview,
+  onViewReceipt
 }) => {
   const [method, setMethod] = useState<"UPI" | "CARD" | "NETBANKING">("UPI");
   const [upiApp, setUpiApp] = useState<string>("GPAY");
@@ -587,21 +593,27 @@ export const RealisticPaymentModal: React.FC<RealisticPaymentModalProps> = ({
                   <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{utrNumber}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-500 dark:text-slate-400">Worker Take-Home (Zero Commission):</span>
+                  <span className="text-slate-500 dark:text-slate-400">Direct Artisan Earning (Labor + Travel):</span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                    ₹{Math.round((booking.amount || 520) * 0.85)}
+                    ₹{booking.fairWageBreakdown?.workerEarning || Math.round((booking.amount || 350) * 0.86)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-500 dark:text-slate-400">Cooperative Welfare & Health Fund (10%):</span>
+                  <span className="text-slate-500 dark:text-slate-400">Platform Facilitation Fee (10% to Admin Treasury):</span>
                   <span className="font-bold text-blue-600 dark:text-blue-400">
-                    ₹{Math.round((booking.amount || 520) * 0.10)}
+                    ₹{booking.fairWageBreakdown?.platformFacilitationFee || Math.round((booking.amount || 350) * 0.10)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-500 dark:text-slate-400">GSTIN Tax (37AAACS0129F1Z5) (5%):</span>
+                  <span className="text-slate-500 dark:text-slate-400">PMSBY Artisan Social Welfare Fund (2%):</span>
+                  <span className="font-bold text-purple-600 dark:text-purple-400">
+                    ₹{booking.fairWageBreakdown?.welfareFundCess || Math.round((booking.amount || 350) * 0.02)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">GSTIN Remittance (5% on Platform Fee):</span>
                   <span className="font-bold text-slate-700 dark:text-slate-300">
-                    ₹{Math.round((booking.amount || 520) * 0.05)}
+                    ₹{booking.fairWageBreakdown?.gstAmount || Math.round((booking.amount || 350) * 0.01)}
                   </span>
                 </div>
               </div>
@@ -622,14 +634,33 @@ export const RealisticPaymentModal: React.FC<RealisticPaymentModalProps> = ({
                   </button>
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => setShowInvoiceModal(!showInvoiceModal)}
-                  className="w-full py-2.5 px-4 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>{showInvoiceModal ? "Hide Tax Invoice" : "View & Download Official Tax Invoice (PDF)"}</span>
-                </button>
+                {onViewReceipt ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onViewReceipt({
+                        utrNumber,
+                        amount: booking.amount,
+                        method,
+                        timestamp: new Date().toISOString()
+                      });
+                    }}
+                    className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>View &amp; Print Official APCLF Tax Invoice (PDF)</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowInvoiceModal(!showInvoiceModal)}
+                    className="w-full py-2.5 px-4 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{showInvoiceModal ? "Hide Tax Invoice" : "View & Download Official Tax Invoice (PDF)"}</span>
+                  </button>
+                )}
 
                 {showInvoiceModal && (
                   <div className="p-4 bg-white dark:bg-slate-950 border-2 border-blue-500/40 rounded-2xl text-[11px] space-y-2 font-mono text-slate-800 dark:text-slate-200">

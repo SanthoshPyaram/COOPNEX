@@ -4,6 +4,7 @@ import { Payment } from "../models/Payment";
 import { Booking } from "../models/Booking";
 import { Worker } from "../models/Worker";
 import { Invoice } from "../models/Invoice";
+import { AdminWallet } from "../models/AdminWallet";
 import { BOOKING_STATUS } from "../config/constants";
 import { AuthenticatedRequest } from "../middleware/auth";
 
@@ -17,10 +18,14 @@ export const createPaymentOrder = async (req: AuthenticatedRequest, res: Respons
       return;
     }
 
-    // Default wage calculation: Worker wage + ₹50 maintenance fee
-    const workerWage = booking.fairWageBreakdown?.workerEarning || 300;
-    const adminMaintenanceFee = 50;
-    const customerTotal = workerWage + adminMaintenanceFee;
+    // Transparent percentage model: 10% Platform fee, 2% Welfare cess, 5% GST on fee, worker keeps 100% labor + travel
+    const breakdown = booking.fairWageBreakdown || ({} as any);
+    const workerWage = breakdown.workerEarning || breakdown.totalEstimatedWage || 300;
+    const platformFee = breakdown.platformFee || Math.max(25, Math.round(workerWage * 0.10));
+    const welfareCess = breakdown.cooperativeContribution || Math.max(5, Math.round(workerWage * 0.02));
+    const taxGst = breakdown.taxGst || Math.round(platformFee * 0.05);
+    const adminTotalFee = platformFee + welfareCess + taxGst;
+    const customerTotal = breakdown.customerPaid || (workerWage + adminTotalFee);
 
     const amountInPaisa = Math.round(customerTotal * 100);
     const mockOrderId = `order_${crypto.randomBytes(8).toString("hex")}`;
@@ -38,8 +43,8 @@ export const createPaymentOrder = async (req: AuthenticatedRequest, res: Respons
       gatewayOrderId: mockOrderId,
       workerWageDisbursed: false,
       workerEarningAmount: workerWage,
-      adminMaintenanceFee: adminMaintenanceFee,
-      coopFundAmount: adminMaintenanceFee,
+      adminMaintenanceFee: adminTotalFee,
+      coopFundAmount: welfareCess,
       escrowStatus: "HELD_24H",
       escrowMaturesAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
     });
@@ -53,12 +58,18 @@ export const createPaymentOrder = async (req: AuthenticatedRequest, res: Respons
       key: process.env.RAZORPAY_KEY_ID || "rzp_test_coopnex2026",
       paymentId: payment._id,
       workerWage,
-      adminMaintenanceFee,
+      platformFee,
+      welfareCess,
+      taxGst,
+      adminMaintenanceFee: adminTotalFee,
       fairWageBreakdown: {
-        ...booking.fairWageBreakdown,
+        ...breakdown,
         customerPaid: customerTotal,
         workerEarning: workerWage,
-        adminMaintenanceFee
+        platformFee,
+        cooperativeContribution: welfareCess,
+        taxGst,
+        adminMaintenanceFee: adminTotalFee
       }
     });
   } catch (error: any) {
@@ -77,9 +88,13 @@ export const verifyPayment = async (req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    const workerWage = booking.fairWageBreakdown?.workerEarning || 300;
-    const adminMaintenanceFee = 50;
-    const totalPaid = workerWage + adminMaintenanceFee;
+    const breakdown = booking.fairWageBreakdown || ({} as any);
+    const workerWage = breakdown.workerEarning || breakdown.totalEstimatedWage || 300;
+    const platformFee = breakdown.platformFee || Math.max(25, Math.round(workerWage * 0.10));
+    const welfareCess = breakdown.cooperativeContribution || Math.max(5, Math.round(workerWage * 0.02));
+    const taxGst = breakdown.taxGst || Math.round(platformFee * 0.05);
+    const adminTotalFee = platformFee + welfareCess + taxGst;
+    const customerTotal = breakdown.customerPaid || (workerWage + adminTotalFee);
     const escrowMaturesAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24-hour guarantee hold
 
     // Update / Upsert payment record
@@ -90,9 +105,10 @@ export const verifyPayment = async (req: AuthenticatedRequest, res: Response): P
         gatewayPaymentId: razorpayPaymentId || `pay_${crypto.randomBytes(8).toString("hex")}`,
         gatewayOrderId: razorpayOrderId,
         paymentMethod: method,
-        amount: totalPaid,
+        amount: customerTotal,
         workerEarningAmount: workerWage,
-        adminMaintenanceFee: adminMaintenanceFee,
+        adminMaintenanceFee: adminTotalFee,
+        coopFundAmount: welfareCess,
         workerWageDisbursed: false, // In 24h Escrow
         escrowStatus: "HELD_24H",
         escrowMaturesAt
@@ -107,16 +123,54 @@ export const verifyPayment = async (req: AuthenticatedRequest, res: Response): P
     booking.completedAt = new Date();
     booking.escrowStatus = "HELD_24H";
     booking.escrowMaturesAt = escrowMaturesAt;
-    booking.fairWageBreakdown.customerPaid = totalPaid;
+    booking.fairWageBreakdown.customerPaid = customerTotal;
     booking.fairWageBreakdown.workerEarning = workerWage;
-    booking.fairWageBreakdown.adminMaintenanceFee = adminMaintenanceFee;
+    booking.fairWageBreakdown.adminMaintenanceFee = adminTotalFee;
+    booking.fairWageBreakdown.platformFee = platformFee;
+    booking.fairWageBreakdown.cooperativeContribution = welfareCess;
+    booking.fairWageBreakdown.taxGst = taxGst;
 
     booking.statusTimeline.push({
       status: BOOKING_STATUS.COMPLETED,
       timestamp: new Date(),
-      note: `Payment of ₹${totalPaid} verified via Razorpay (${method}). ₹${adminMaintenanceFee} routed to Platform Maintenance; ₹${workerWage} placed in 24-Hour Warranty Escrow (Matures: ${escrowMaturesAt.toLocaleDateString()}).`
+      note: `Payment of ₹${customerTotal} verified via Razorpay (${method}). ₹${platformFee} Platform Fee (10%) + ₹${welfareCess} PMSBY Welfare Cess (2%) credited to Admin Wallet; ₹${workerWage} placed in 24-Hour Warranty Escrow (Matures: ${escrowMaturesAt.toLocaleDateString()}).`
     });
     await booking.save();
+
+    // Credit Admin Wallet with 10% Platform Fee + 2% Welfare Cess + 5% GST
+    let adminWallet = await AdminWallet.findOne();
+    if (!adminWallet) {
+      adminWallet = new AdminWallet({
+        totalBalance: 0,
+        totalCommissionCollected: 0,
+        totalWelfareFundCollected: 0,
+        totalTransactions: 0,
+        transactions: []
+      });
+    }
+
+    adminWallet.totalBalance += adminTotalFee;
+    adminWallet.totalCommissionCollected += (platformFee + taxGst);
+    adminWallet.totalWelfareFundCollected += welfareCess;
+    adminWallet.totalTransactions += 1;
+    adminWallet.transactions.unshift({
+      transactionId: payment.transactionId,
+      bookingId: booking._id,
+      bookingNumber: booking.bookingNumber || `BK-${booking._id.toString().slice(-6).toUpperCase()}`,
+      customerName: booking.customerName || "Citizen Customer",
+      workerName: booking.workerName || "Verified Worker",
+      totalServiceAmount: customerTotal,
+      platformFee,
+      welfareCess,
+      netAdminEarning: adminTotalFee,
+      type: "CREDIT_COMMISSION",
+      description: `Platform fee (10% ₹${platformFee}) + PMSBY Welfare Cess (2% ₹${welfareCess}) + GST (₹${taxGst}) for ${booking.serviceCategory || "Artisan Service"}`,
+      timestamp: new Date()
+    });
+    if (adminWallet.transactions.length > 200) {
+      adminWallet.transactions = adminWallet.transactions.slice(0, 200);
+    }
+    await adminWallet.save();
 
     // Disburse to Worker: Place in pendingEscrowBalance with 24-hour hold (NOT available walletBalance immediately)
     if (booking.workerId) {
@@ -140,7 +194,7 @@ export const verifyPayment = async (req: AuthenticatedRequest, res: Response): P
       });
     }
 
-    // Create / Update Invoice with itemized ₹50 maintenance fee
+    // Create / Update Invoice with SAC 998714 transparent itemized breakdown
     const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
     const invoice = await Invoice.findOneAndUpdate(
       { bookingId: booking._id },
@@ -162,16 +216,16 @@ export const verifyPayment = async (req: AuthenticatedRequest, res: Response): P
         },
         serviceCategory: booking.serviceCategory,
         itemizedBreakdown: {
-          baseWorkerWage: workerWage,
-          skillPremium: 0,
-          experiencePremium: 0,
-          travelAllowance: 0,
-          emergencyAllowance: 0,
+          baseWorkerWage: booking.fairWageBreakdown?.baseWorkerWage || workerWage,
+          skillPremium: booking.fairWageBreakdown?.skillPremium || 0,
+          experiencePremium: booking.fairWageBreakdown?.experiencePremium || 0,
+          travelAllowance: booking.fairWageBreakdown?.travelAllowance || 0,
+          emergencyAllowance: booking.fairWageBreakdown?.emergencyAllowance || 0,
           totalWorkerWage: workerWage,
-          cooperativeWelfareFund: adminMaintenanceFee,
-          platformConvenienceCharge: adminMaintenanceFee,
-          taxGstAmount: 0,
-          totalAmountPaid: totalPaid
+          cooperativeWelfareFund: welfareCess,
+          platformConvenienceCharge: platformFee,
+          taxGstAmount: taxGst,
+          totalAmountPaid: customerTotal
         },
         issuedAt: new Date()
       },
@@ -180,12 +234,15 @@ export const verifyPayment = async (req: AuthenticatedRequest, res: Response): P
 
     res.json({
       success: true,
-      message: `Payment of ₹${totalPaid} verified successfully. ₹50 credited to Platform Maintenance Fund; ₹${workerWage} held in 24-Hour Escrow for worker.`,
+      message: `Payment of ₹${customerTotal} verified successfully. ₹${platformFee} (10%) platform fee and ₹${welfareCess} (2%) welfare fund credited to Admin Wallet; ₹${workerWage} held in 24-Hour Escrow for worker.`,
       payment,
       invoice,
       breakdown: {
-        totalPaid,
-        adminMaintenanceFee,
+        totalPaid: customerTotal,
+        platformFee,
+        welfareCess,
+        taxGst,
+        adminMaintenanceFee: adminTotalFee,
         workerWage,
         escrowMaturesAt
       }
@@ -328,14 +385,20 @@ export const getAdminFinancialLedger = async (req: AuthenticatedRequest, res: Re
 
     const workers = await Worker.find({}, "name employeeId walletBalance pendingEscrowBalance withdrawals escrowItems").lean();
 
+    const adminWallet = await AdminWallet.findOne().lean();
+
     // Calculate aggregations
-    let adminMaintenanceFund = 0;
+    let adminMaintenanceFund = adminWallet?.totalCommissionCollected || 0;
+    let welfareFundCorpus = adminWallet?.totalWelfareFundCollected || 0;
     let totalEscrowHeld = 0;
     let totalGrossRevenue = 0;
     let totalWorkerEarnings = 0;
 
     payments.forEach((p: any) => {
-      adminMaintenanceFund += p.adminMaintenanceFee || 50;
+      if (!adminWallet) {
+        adminMaintenanceFund += p.adminMaintenanceFee || 50;
+        welfareFundCorpus += p.coopFundAmount || 0;
+      }
       totalGrossRevenue += p.amount || 0;
       totalWorkerEarnings += p.workerEarningAmount || 0;
       if (p.escrowStatus === "HELD_24H") {
@@ -361,13 +424,16 @@ export const getAdminFinancialLedger = async (req: AuthenticatedRequest, res: Re
     res.json({
       success: true,
       metrics: {
-        adminMaintenanceFund, // Total ₹50 fees
+        adminMaintenanceFund,
+        welfareFundCorpus,
+        adminWalletBalance: adminWallet?.totalBalance || (adminMaintenanceFund + welfareFundCorpus),
         totalGrossRevenue,
         totalWorkerEarnings,
         totalEscrowHeld,
         totalCompletedJobs: payments.length,
         totalWithdrawalsCount: allWithdrawals.length
       },
+      adminWallet,
       transactions: payments.map((p: any) => ({
         id: p._id,
         txId: p.transactionId,

@@ -216,8 +216,9 @@ export const SuperAdminPage: React.FC = () => {
   const [paymentSearch, setPaymentSearch] = useState<string>("");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("ALL");
   const [paymentSettlementFilter, setPaymentSettlementFilter] = useState<string>("ALL");
-  const [paymentsSubTab, setPaymentsSubTab] = useState<"LEDGER" | "WITHDRAWALS" | "CHATS">("LEDGER");
+  const [paymentsSubTab, setPaymentsSubTab] = useState<"LEDGER" | "WITHDRAWALS" | "CHATS" | "ADMIN_WALLET">("ADMIN_WALLET");
   const [adminLedgerSummary, setAdminLedgerSummary] = useState<any>(null);
+  const [adminWalletData, setAdminWalletData] = useState<any>(null);
   const [adminWithdrawals, setAdminWithdrawals] = useState<any[]>([]);
   const [adminChatAudit, setAdminChatAudit] = useState<any[]>([]);
   const [adminChatLoading, setAdminChatLoading] = useState<boolean>(false);
@@ -305,8 +306,18 @@ export const SuperAdminPage: React.FC = () => {
       const res = await api.getAdminFinancialLedger();
       const liveMapped: AdminPaymentTransaction[] = [];
 
+      try {
+        const walletRes = await api.getAdminWallet();
+        if (walletRes && walletRes.success && walletRes.wallet) {
+          setAdminWalletData(walletRes.wallet);
+        }
+      } catch (wErr) {
+        console.warn("Could not retrieve admin wallet:", wErr);
+      }
+
       if (res && res.success) {
-        if (res.summary) setAdminLedgerSummary(res.summary);
+        if (res.adminWallet) setAdminWalletData(res.adminWallet);
+        if (res.summary || res.metrics) setAdminLedgerSummary(res.summary || res.metrics);
         if (Array.isArray(res.withdrawals)) setAdminWithdrawals(res.withdrawals);
         if (Array.isArray(res.transactions)) {
           res.transactions.forEach((t: any) => {
@@ -1925,16 +1936,34 @@ export const SuperAdminPage: React.FC = () => {
 
               {/* 7 TOP SUMMARY METRIC CARDS */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
-                {/* 1. Platform Maintenance Corpus */}
+                {/* 1. Admin Treasury Wallet */}
                 <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-blue-200/90 dark:border-blue-900 shadow-xs space-y-1">
-                  <div className="text-[10px] uppercase font-bold text-blue-700">Platform Fund (₹50/job)</div>
+                  <div className="text-[10px] uppercase font-bold text-blue-700">Admin Treasury Wallet</div>
                   <div className="text-xl font-black font-mono text-blue-700">
-                    ₹{(adminLedgerSummary?.totalMaintenanceFund ?? paymentTransactions.reduce((sum, p) => sum + (p.coopFee || 0), 0)).toLocaleString()}
+                    ₹{(adminWalletData?.totalBalance ?? adminLedgerSummary?.adminWalletBalance ?? paymentTransactions.reduce((sum, p) => sum + (p.coopFee || 0), 0)).toLocaleString()}
                   </div>
-                  <div className="text-[10px] text-blue-600 font-semibold">Flat Maintenance Corpus</div>
+                  <div className="text-[10px] text-blue-600 font-semibold">10% Fee + 2% PMSBY Cess</div>
                 </div>
 
-                {/* 2. Worker Earnings in 24h Escrow */}
+                {/* 2. Platform Facilitation Corpus (10%) */}
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-indigo-200/90 dark:border-indigo-900 shadow-xs space-y-1">
+                  <div className="text-[10px] uppercase font-bold text-indigo-700">Platform Facilitation (10%)</div>
+                  <div className="text-xl font-black font-mono text-indigo-700">
+                    ₹{(adminWalletData?.totalCommissionCollected ?? adminLedgerSummary?.adminMaintenanceFund ?? 0).toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-indigo-600 font-semibold">App, Cloud &amp; Operations</div>
+                </div>
+
+                {/* 3. Statutory Worker Welfare Corpus (2%) */}
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-purple-200/90 dark:border-purple-900 shadow-xs space-y-1">
+                  <div className="text-[10px] uppercase font-bold text-purple-700">Welfare Fund Corpus (2%)</div>
+                  <div className="text-xl font-black font-mono text-purple-700">
+                    ₹{(adminWalletData?.totalWelfareFundCollected ?? adminLedgerSummary?.welfareFundCorpus ?? 0).toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-purple-600 font-semibold">PMSBY Social Security</div>
+                </div>
+
+                {/* 4. Worker Earnings in 24h Escrow */}
                 <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-amber-200/90 dark:border-amber-900 shadow-xs space-y-1 bg-amber-50/20">
                   <div className="text-[10px] uppercase font-bold text-amber-700">24H Warranty Escrow</div>
                   <div className="text-xl font-black font-mono text-amber-600">
@@ -1943,45 +1972,27 @@ export const SuperAdminPage: React.FC = () => {
                   <div className="text-[10px] text-amber-700 font-bold">{adminLedgerSummary?.activeEscrowHolds ?? 0} Defect Holds</div>
                 </div>
 
-                {/* 3. Matured / Released Wages */}
+                {/* 5. Matured / Released Wages */}
                 <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-emerald-200/90 dark:border-emerald-900 shadow-xs space-y-1 bg-emerald-50/30">
                   <div className="text-[10px] uppercase font-bold text-emerald-700">Released Wages</div>
                   <div className="text-xl font-black font-mono text-emerald-700">
                     ₹{(adminLedgerSummary?.totalWorkerEarningsReleased ?? 0).toLocaleString()}
                   </div>
-                  <div className="text-[10px] text-emerald-600 font-semibold">100% Unlocked</div>
-                </div>
-
-                {/* 4. Worker Withdrawals */}
-                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-1">
-                  <div className="text-[10px] uppercase font-bold text-slate-400">Total DBT Disbursed</div>
-                  <div className="text-xl font-black font-mono text-slate-700 dark:text-slate-300">
-                    ₹{(adminLedgerSummary?.totalDisbursedToWorkers ?? 0).toLocaleString()}
-                  </div>
-                  <div className="text-[10px] text-emerald-600 font-bold">IMPS / UPI Dispatched</div>
-                </div>
-
-                {/* 5. Total Transactions */}
-                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-1">
-                  <div className="text-[10px] uppercase font-bold text-slate-400">Total Transactions</div>
-                  <div className="text-xl font-black font-mono text-slate-900 dark:text-white">
-                    {adminLedgerSummary?.totalTransactions ?? filteredTransactions.length}
-                  </div>
-                  <div className="text-[10px] text-emerald-600 font-medium">Razorpay Verified</div>
+                  <div className="text-[10px] text-emerald-600 font-semibold">100% Unlocked to Artisans</div>
                 </div>
 
                 {/* 6. Pricing Structure */}
                 <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-1">
-                  <div className="text-[10px] uppercase font-bold text-slate-400">Fair Wage Model</div>
-                  <div className="text-xl font-black font-mono text-slate-900 dark:text-white">₹300 + ₹50</div>
-                  <div className="text-[10px] text-slate-500">Worker + Platform</div>
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Fair Percentage Model</div>
+                  <div className="text-xl font-black font-mono text-slate-900 dark:text-white">88% + 10% + 2%</div>
+                  <div className="text-[10px] text-slate-500">Rapido Gig Benchmark</div>
                 </div>
 
                 {/* 7. Dispute Rate */}
                 <div className="p-3.5 rounded-2xl bg-white dark:bg-[#101828] border border-rose-200/90 dark:border-rose-900 shadow-xs space-y-1">
-                  <div className="text-[10px] uppercase font-bold text-rose-700">Warranty Claims</div>
+                  <div className="text-[10px] uppercase font-bold text-rose-700">Dispute Rate</div>
                   <div className="text-xl font-black font-mono text-rose-600">0.0%</div>
-                  <div className="text-[10px] text-slate-500">24H Quality Lock</div>
+                  <div className="text-[10px] text-slate-500">OTP Gated Release</div>
                 </div>
               </div>
 
@@ -1992,6 +2003,19 @@ export const SuperAdminPage: React.FC = () => {
               <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3 text-xs font-bold">
                 <button
                   type="button"
+                  onClick={() => setPaymentsSubTab("ADMIN_WALLET")}
+                  className={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-2 ${
+                    paymentsSubTab === "ADMIN_WALLET"
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+                  }`}
+                >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>Admin Wallet &amp; Treasury (₹{(adminWalletData?.totalBalance ?? adminLedgerSummary?.adminWalletBalance ?? 0).toLocaleString()})</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setPaymentsSubTab("LEDGER")}
                   className={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-2 ${
                     paymentsSubTab === "LEDGER"
@@ -1999,7 +2023,7 @@ export const SuperAdminPage: React.FC = () => {
                       : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
                   }`}
                 >
-                  <CreditCard className="w-3.5 h-3.5" />
+                  <FileText className="w-3.5 h-3.5" />
                   <span>Customer &amp; Worker Transactions Ledger ({filteredTransactions.length})</span>
                 </button>
 
@@ -2333,6 +2357,160 @@ export const SuperAdminPage: React.FC = () => {
                         )}
                       </tbody>
                     </table>
+                  </div>
+                </div>
+              )}
+
+              {/* 4. SUB-TAB: ADMIN TREASURY WALLET & COMMISSION CORPUS */}
+              {paymentsSubTab === "ADMIN_WALLET" && (
+                <div className="space-y-6">
+                  {/* Top Treasury Summary Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-5 rounded-3xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-lg space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-emerald-100 uppercase tracking-wider">Treasury Balance</span>
+                        <span className="p-2 rounded-xl bg-white/20">
+                          <CreditCard className="w-5 h-5 text-white" />
+                        </span>
+                      </div>
+                      <div className="text-3xl font-black font-mono">
+                        ₹{(adminWalletData?.totalBalance ?? adminLedgerSummary?.adminWalletBalance ?? 0).toLocaleString()}
+                      </div>
+                      <p className="text-[11px] text-emerald-100">
+                        Liquid federation treasury available for system expansion and automated disbursement.
+                      </p>
+                    </div>
+
+                    <div className="p-5 rounded-3xl bg-white dark:bg-[#101828] border border-slate-200 dark:border-slate-800 shadow-xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Platform Revenue (10%)</span>
+                        <span className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600">
+                          <TrendingUp className="w-5 h-5" />
+                        </span>
+                      </div>
+                      <div className="text-3xl font-black font-mono text-blue-600">
+                        ₹{(adminWalletData?.totalCommissionCollected ?? adminLedgerSummary?.adminMaintenanceFund ?? 0).toLocaleString()}
+                      </div>
+                      <p className="text-[11px] text-slate-500">
+                        10% platform facilitation fee under SAC 998714 for server infrastructure and dispatch algorithms.
+                      </p>
+                    </div>
+
+                    <div className="p-5 rounded-3xl bg-white dark:bg-[#101828] border border-slate-200 dark:border-slate-800 shadow-xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">PMSBY Social Security (2%)</span>
+                        <span className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-600">
+                          <HeartHandshake className="w-5 h-5" />
+                        </span>
+                      </div>
+                      <div className="text-3xl font-black font-mono text-purple-600">
+                        ₹{(adminWalletData?.totalWelfareFundCollected ?? adminLedgerSummary?.welfareFundCorpus ?? 0).toLocaleString()}
+                      </div>
+                      <p className="text-[11px] text-slate-500">
+                        2% statutory gig worker welfare cess ring-fenced for accidental healthcare cover and insurance.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Benchmark Comparison & Trust Architecture */}
+                  <div className="p-5 rounded-3xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-blue-600 text-white">
+                          Statutory Benchmark Model
+                        </span>
+                        <h4 className="text-sm font-black text-slate-900 dark:text-white">
+                          Fair Percentage-Based Split (Replaced Flat ₹50 Fee)
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
+                        Benchmarked against standard gig economy models (such as Rapido/Urban Company): 
+                        <strong> 88% direct labor wage + 100% travel allowance</strong> is disbursed to the artisan (subject to a 24-hr defect warranty escrow),
+                        <strong> 10% platform facilitation fee</strong> covers state cooperative cloud dispatch, and 
+                        <strong> 2% statutory cess</strong> is deposited into the PMSBY accident and healthcare fund.
+                      </p>
+                    </div>
+                    <div className="shrink-0 flex items-center gap-2">
+                      <span className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 text-xs font-mono font-bold text-blue-700">
+                        SAC Code: 998714
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Real-time Ledger of Admin Treasury Credits */}
+                  <div className="bg-white dark:bg-[#101828] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+                    <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-black text-slate-900 dark:text-white">Admin Wallet Transaction Ledger</h4>
+                        <p className="text-xs text-slate-500">Live incoming commission and statutory welfare inflows from customer payments.</p>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+                        {adminWalletData?.transactions?.length || 0} Ledger Entries
+                      </span>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                            <th className="py-3 px-4">Tx ID</th>
+                            <th className="py-3 px-4">Booking Ref</th>
+                            <th className="py-3 px-4">Citizen Customer</th>
+                            <th className="py-3 px-4">Artisan</th>
+                            <th className="py-3 px-4">Service Category</th>
+                            <th className="py-3 px-4 text-right">Customer Total</th>
+                            <th className="py-3 px-4 text-right">Platform Fee (10%)</th>
+                            <th className="py-3 px-4 text-right">Welfare Cess (2%)</th>
+                            <th className="py-3 px-4 text-right font-black">Net Inflow</th>
+                            <th className="py-3 px-4">Timestamp</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 font-medium">
+                          {adminWalletData?.transactions && adminWalletData.transactions.length > 0 ? (
+                            adminWalletData.transactions.map((tx: any, idx: number) => (
+                              <tr key={tx.transactionId || idx} className="hover:bg-slate-50/70 dark:hover:bg-slate-900/40 transition">
+                                <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white">
+                                  {tx.transactionId || `TXN-ADM-${idx + 1}`}
+                                </td>
+                                <td className="py-3 px-4 font-mono text-blue-600">
+                                  {tx.bookingNumber || "BK-ORD"}
+                                </td>
+                                <td className="py-3 px-4 text-slate-800 dark:text-slate-200 font-bold">
+                                  {tx.customerName || "Citizen Customer"}
+                                </td>
+                                <td className="py-3 px-4 text-slate-900 dark:text-white">
+                                  {tx.workerName || "Verified Artisan"}
+                                </td>
+                                <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
+                                  {tx.serviceCategory || "Cooperative Service"}
+                                </td>
+                                <td className="py-3 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">
+                                  ₹{tx.totalServiceAmount}
+                                </td>
+                                <td className="py-3 px-4 text-right font-mono text-blue-700">
+                                  ₹{tx.platformFee}
+                                </td>
+                                <td className="py-3 px-4 text-right font-mono text-purple-700">
+                                  ₹{tx.welfareCess}
+                                </td>
+                                <td className="py-3 px-4 text-right font-mono font-black text-emerald-600">
+                                  +₹{tx.netAdminEarning}
+                                </td>
+                                <td className="py-3 px-4 text-slate-500 text-[11px]">
+                                  {tx.timestamp ? new Date(tx.timestamp).toLocaleString("en-IN") : "Recent"}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={10} className="py-12 text-center text-slate-400">
+                                No commission transactions recorded yet in Admin Wallet. Platform fees appear here immediately upon customer payment verification.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               )}

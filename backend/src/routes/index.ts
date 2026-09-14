@@ -88,8 +88,10 @@ apiRouter.post("/bookings", authenticateJwt, bookingCtrl.createBooking);
 apiRouter.get("/bookings/my", authenticateJwt, bookingCtrl.getMyBookings);
 apiRouter.get("/bookings/:id", authenticateJwt, bookingCtrl.getBookingById);
 apiRouter.patch("/bookings/:id/status", authenticateJwt, bookingCtrl.updateBookingStatus);
+apiRouter.post("/bookings/:id/verify-completion-otp", authenticateJwt, bookingCtrl.verifyCompletionOtp);
 apiRouter.post("/reviews", authenticateJwt, bookingCtrl.submitReview);
 apiRouter.get("/reviews/my", authenticateJwt, bookingCtrl.getMyReviews);
+apiRouter.get("/reviews/worker", authenticateJwt, bookingCtrl.getWorkerReviews);
 apiRouter.get("/reviews/booking/:bookingId", authenticateJwt, bookingCtrl.getReviewByBookingId);
 
 // --- EMERGENCY DISPATCH & BLOOD NETWORK ---
@@ -107,6 +109,7 @@ apiRouter.post("/payments/verify", authenticateJwt, paymentCtrl.verifyPayment);
 apiRouter.post("/payments/withdraw", authenticateJwt, paymentCtrl.requestWorkerWithdrawal);
 apiRouter.post("/payments/mature-check", authenticateJwt, paymentCtrl.releaseMatureEscrows);
 apiRouter.get("/payments/admin/ledger", authenticateJwt, paymentCtrl.getAdminFinancialLedger);
+apiRouter.get("/admin/wallet", authenticateJwt, requireRoles(USER_ROLES.SUPER_ADMIN), adminCtrl.getAdminWallet);
 apiRouter.get("/invoices/:bookingId", paymentCtrl.getInvoiceByBooking);
 
 // --- REAL-TIME BOOKING MESSAGING ---
@@ -169,6 +172,12 @@ apiRouter.post(
   authenticateJwt,
   requireRoles(USER_ROLES.SUPER_ADMIN),
   adminCtrl.createServiceArea
+);
+apiRouter.post(
+  "/admin/service-areas/activate-all",
+  authenticateJwt,
+  requireRoles(USER_ROLES.SUPER_ADMIN),
+  adminCtrl.activateAllServiceAreas
 );
 apiRouter.patch(
   "/admin/service-areas/:id/expand",

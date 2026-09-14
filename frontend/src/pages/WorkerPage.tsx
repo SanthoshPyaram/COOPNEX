@@ -352,43 +352,28 @@ export const WorkerPage: React.FC = () => {
   const handleConfirmCompleteJob = async () => {
     if (!selectedJobForComplete) return;
     const trimmed = completionOtpInput.trim();
-    if (trimmed.length !== 4 && trimmed !== "8421" && trimmed !== "1234") {
-      setCompletionOtpError("Please enter the 4-digit citizen completion OTP (or test code '8421').");
+    if (trimmed.length !== 4) {
+      setCompletionOtpError("Please enter the 4-digit citizen completion OTP provided by the customer.");
       return;
     }
     const earning = selectedJobForComplete.fairWageBreakdown?.workerEarning || 300;
     try {
-      const res = await api.updateBookingStatus(selectedJobForComplete._id, "COMPLETED", "Completed with citizen OTP");
-      if (res && res.booking) {
-        setActiveJobs((prev) =>
-          prev.map((j) => (j._id === selectedJobForComplete._id ? res.booking : j))
-        );
-      }
-      // Place into 24-hour defect warranty escrow
-      setPendingEscrowBalance((prev) => prev + earning);
-      setEscrowItems((prev) => [
-        {
-          bookingId: selectedJobForComplete._id,
-          bookingNumber: selectedJobForComplete.bookingNumber || `#BK-${selectedJobForComplete._id.slice(-6).toUpperCase()}`,
-          serviceCategory: selectedJobForComplete.serviceCategory,
-          amount: earning,
-          heldAt: Date.now(),
-          maturesAt: Date.now() + 24 * 60 * 60 * 1000,
-          status: "HELD_24H"
-        },
-        ...prev
-      ]);
-      setCompleteOtpModalOpen(false);
-      setSelectedJobForComplete(null);
-      setPayoutSuccessMsg(`Job #${selectedJobForComplete.bookingNumber} completed! ₹${earning} placed into statutory 24-Hour Quality Escrow.`);
-      setTimeout(() => setPayoutSuccessMsg(null), 6000);
+      const res = await api.verifyCompletionOtp(selectedJobForComplete._id, trimmed);
+      if (res && res.success) {
+        setCompleteOtpModalOpen(false);
+        setSelectedJobForComplete(null);
+        setPayoutSuccessMsg(`Citizen OTP verified successfully! Job #${res.booking?.bookingNumber || selectedJobForComplete.bookingNumber} marked complete. Awaiting citizen payment release (₹${earning} worker share).`);
+        setTimeout(() => setPayoutSuccessMsg(null), 7000);
 
-      const refreshed = await api.getMyBookings();
-      if (Array.isArray(refreshed)) {
-        setActiveJobs(refreshed);
+        const refreshed = await api.getMyBookings();
+        if (Array.isArray(refreshed)) {
+          setActiveJobs(refreshed);
+        }
+      } else {
+        setCompletionOtpError(res?.message || "Invalid completion OTP. Please verify with customer.");
       }
     } catch (err: any) {
-      setCompletionOtpError(err.message || "Failed to complete job in database.");
+      setCompletionOtpError(err.message || "Invalid completion OTP. Please check with customer.");
     }
   };
 
@@ -873,6 +858,14 @@ export const WorkerPage: React.FC = () => {
               rating={wp?.rating || 5.0}
               reviewCount={wp?.reviewCount || 0}
               jobsCompletedCount={wp?.jobsCompletedCount || activeJobs.filter((j) => j.status === "COMPLETED").length}
+              trade={wp?.trade || (user as any)?.trade}
+              bio={wp?.bio || (user as any)?.bio}
+              baseHourlyRate={wp?.baseHourlyRate || (user as any)?.baseHourlyRate || 350}
+              avatarUrl={workerCardData.photoUrl}
+              emergencyContactName={wp?.emergencyContactName || (user as any)?.emergencyContactName}
+              emergencyContactPhone={wp?.emergencyContactPhone || (user as any)?.emergencyContactPhone}
+              bloodGroup={workerCardData.bloodGroup}
+              languages={workerCardData.languagesKnown}
               address={(user as any)?.address || wp?.address || "Benz Circle, Vijayawada"}
               city={(user as any)?.city || wp?.city || "Vijayawada"}
               state={(user as any)?.state || wp?.state || "Andhra Pradesh"}
@@ -923,8 +916,7 @@ export const WorkerPage: React.FC = () => {
             <div>
               <h3 className="text-lg font-black text-slate-900">Enter Citizen 4-Digit OTP</h3>
               <p className="text-xs text-slate-500 mt-1">
-                Ask {selectedJobForComplete.customerName} for the 4-digit code to release the ₹
-                {selectedJobForComplete.fairWageBreakdown?.workerEarning || 720} escrow payout.
+                Ask {selectedJobForComplete.customerName} for the 4-digit completion code shown on their booking card to verify service delivery and unlock customer payment.
               </p>
             </div>
 
@@ -948,7 +940,7 @@ export const WorkerPage: React.FC = () => {
                 onClick={handleConfirmCompleteJob}
                 className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer"
               >
-                Verify & Credit Wallet
+                Verify OTP &amp; Complete Job
               </button>
               <button
                 onClick={() => setCompleteOtpModalOpen(false)}

@@ -54,6 +54,8 @@ export interface IBooking extends Document {
   paymentId?: string;
   escrowStatus?: "HELD_24H" | "RELEASED" | "REFUNDED";
   escrowMaturesAt?: Date;
+  completionOtp?: string;
+  otpVerifiedAt?: Date;
   rating?: number;
   reviewComment?: string;
   completedAt?: Date;
@@ -120,6 +122,8 @@ const BookingSchema = new Schema<IBooking>(
       default: "HELD_24H"
     },
     escrowMaturesAt: { type: Date },
+    completionOtp: { type: String, default: "" },
+    otpVerifiedAt: { type: Date },
     rating: { type: Number, min: 1, max: 5 },
     reviewComment: { type: String },
     completedAt: { type: Date }

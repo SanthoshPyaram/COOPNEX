@@ -1663,7 +1663,15 @@ export const updateProfile = async (req: AuthenticatedRequest, res: Response): P
       location,
       bloodGroup,
       emergencyContactName,
-      emergencyContactPhone
+      emergencyContactPhone,
+      skills,
+      trade,
+      bio,
+      baseHourlyRate,
+      experienceYears,
+      languages,
+      avatarUrl,
+      profileImage
     } = req.body;
 
     const user = await User.findById(userId);
@@ -1677,6 +1685,7 @@ export const updateProfile = async (req: AuthenticatedRequest, res: Response): P
     if (lastName !== undefined) user.lastName = lastName.trim();
     if (phone !== undefined) user.phone = phone.trim();
     if (gender !== undefined) user.gender = gender;
+    if (avatarUrl || profileImage) user.avatarUrl = (avatarUrl || profileImage).trim();
     if (address !== undefined) user.address = address.trim();
     if (city !== undefined) user.city = city.trim();
     if (district !== undefined) user.district = district.trim();
@@ -1706,9 +1715,38 @@ export const updateProfile = async (req: AuthenticatedRequest, res: Response): P
     await user.save();
 
     // Sync to Worker model if user is a worker
+    let updatedWorker: any = null;
     try {
       const worker = await Worker.findOne({ $or: [{ userId: user._id }, { email: user.email }] });
       if (worker) {
+        if (name) worker.name = name.trim();
+        if (phone !== undefined) worker.phone = phone.trim();
+        if (avatarUrl || profileImage) {
+          worker.avatarUrl = (avatarUrl || profileImage).trim();
+          worker.profileImage = (avatarUrl || profileImage).trim();
+        }
+        if (trade !== undefined) worker.trade = trade.trim();
+        if (bio !== undefined) worker.bio = bio.trim();
+        if (skills !== undefined) {
+          worker.skills = Array.isArray(skills)
+            ? skills.map((s: any) => String(s).trim()).filter(Boolean)
+            : String(skills).split(",").map((s) => s.trim()).filter(Boolean);
+        }
+        if (languages !== undefined) {
+          worker.languages = Array.isArray(languages)
+            ? languages.map((l: any) => String(l).trim()).filter(Boolean)
+            : String(languages).split(",").map((l) => l.trim()).filter(Boolean);
+        }
+        if (baseHourlyRate !== undefined && !isNaN(Number(baseHourlyRate))) {
+          worker.baseHourlyRate = Number(baseHourlyRate);
+        }
+        if (experienceYears !== undefined && !isNaN(Number(experienceYears))) {
+          worker.experienceYears = Number(experienceYears);
+        }
+        if (emergencyContactName !== undefined) worker.emergencyContactName = emergencyContactName.trim();
+        if (emergencyContactPhone !== undefined) worker.emergencyContactPhone = emergencyContactPhone.trim();
+        if (bloodGroup !== undefined) worker.bloodGroup = bloodGroup.trim();
+
         if (address !== undefined) worker.address = address.trim();
         if (city !== undefined) worker.city = city.trim();
         if (district !== undefined) worker.district = district.trim();
@@ -1727,9 +1765,10 @@ export const updateProfile = async (req: AuthenticatedRequest, res: Response): P
           };
         }
         await worker.save();
+        updatedWorker = worker;
       }
     } catch (syncErr) {
-      console.warn("Worker address sync warning:", syncErr);
+      console.warn("Worker profile sync warning:", syncErr);
     }
 
     res.json({
@@ -1743,6 +1782,7 @@ export const updateProfile = async (req: AuthenticatedRequest, res: Response): P
         email: user.email,
         phone: user.phone,
         role: user.role,
+        avatarUrl: user.avatarUrl,
         gender: user.gender,
         address: user.address,
         city: user.city,
@@ -1761,7 +1801,8 @@ export const updateProfile = async (req: AuthenticatedRequest, res: Response): P
         emergencyContactPhone: (user as any).emergencyContactPhone,
         emailVerified: user.emailVerified,
         phoneVerified: user.phoneVerified
-      }
+      },
+      worker: updatedWorker
     });
   } catch (error: any) {
     console.error("updateProfile error:", error);

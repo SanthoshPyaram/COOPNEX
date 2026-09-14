@@ -140,7 +140,7 @@ export const SERVICE_AREAS_DATA = [
     activeWorkersCount: 72
   },
 
-  // --- ANDHRA PRADESH: PLANNED EXPANSION DISTRICTS ---
+  // --- ANDHRA PRADESH: EXPANSION DISTRICTS ---
   {
     state: "Andhra Pradesh",
     stateCode: "AP",
@@ -149,13 +149,13 @@ export const SERVICE_AREAS_DATA = [
     pincodePrefixes: ["524"],
     pincodes: ["524001", "524002", "524003", "524004"],
     location: { type: "Point", coordinates: [79.9864, 14.4426] },
-    isActive: false,
-    launchPhase: "PLANNED_PHASE_2" as const,
+    isActive: true,
+    launchPhase: "PHASE_1_LAUNCH" as const,
     cooperativeName: "Nellore District Cooperative Union",
     nearestHub: "Tirupati Central Cooperative",
     nearestHubCoordinates: [79.4192, 13.6288] as [number, number],
     slaMinutes: 20,
-    activeWorkersCount: 0
+    activeWorkersCount: 54
   },
   {
     state: "Andhra Pradesh",
@@ -165,13 +165,13 @@ export const SERVICE_AREAS_DATA = [
     pincodePrefixes: ["523"],
     pincodes: ["523001", "523002", "523225"],
     location: { type: "Point", coordinates: [80.0499, 15.5057] },
-    isActive: false,
-    launchPhase: "PLANNED_PHASE_2" as const,
+    isActive: true,
+    launchPhase: "PHASE_1_LAUNCH" as const,
     cooperativeName: "Ongole Labour Guild Cooperative",
     nearestHub: "Guntur Labour Cooperative Hub",
     nearestHubCoordinates: [80.4650, 16.2980] as [number, number],
     slaMinutes: 20,
-    activeWorkersCount: 0
+    activeWorkersCount: 48
   },
   {
     state: "Andhra Pradesh",
@@ -181,13 +181,13 @@ export const SERVICE_AREAS_DATA = [
     pincodePrefixes: ["532"],
     pincodes: ["532001", "532005"],
     location: { type: "Point", coordinates: [83.8967, 18.2949] },
-    isActive: false,
-    launchPhase: "PLANNED_PHASE_2" as const,
+    isActive: true,
+    launchPhase: "PHASE_1_LAUNCH" as const,
     cooperativeName: "Srikakulam Primary Cooperative Kendra",
     nearestHub: "Visakhapatnam Harbour Cooperative",
     nearestHubCoordinates: [83.3013, 17.7231] as [number, number],
     slaMinutes: 20,
-    activeWorkersCount: 0
+    activeWorkersCount: 42
   },
   {
     state: "Andhra Pradesh",
@@ -197,13 +197,13 @@ export const SERVICE_AREAS_DATA = [
     pincodePrefixes: ["533"],
     pincodes: ["533001", "533002", "533003"],
     location: { type: "Point", coordinates: [82.2475, 16.9891] },
-    isActive: false,
-    launchPhase: "PLANNED_PHASE_2" as const,
+    isActive: true,
+    launchPhase: "PHASE_1_LAUNCH" as const,
     cooperativeName: "Kakinada Coastal Labour Federation",
     nearestHub: "Vijayawada Cooperative Kendra",
     nearestHubCoordinates: [80.6480, 16.5062] as [number, number],
     slaMinutes: 20,
-    activeWorkersCount: 0
+    activeWorkersCount: 68
   },
   {
     state: "Andhra Pradesh",
@@ -213,13 +213,13 @@ export const SERVICE_AREAS_DATA = [
     pincodePrefixes: ["534"],
     pincodes: ["534001", "534002", "534005"],
     location: { type: "Point", coordinates: [81.1037, 16.7107] },
-    isActive: false,
-    launchPhase: "PLANNED_PHASE_2" as const,
+    isActive: true,
+    launchPhase: "PHASE_1_LAUNCH" as const,
     cooperativeName: "Eluru Central Cooperative Society",
     nearestHub: "Vijayawada Cooperative Kendra",
     nearestHubCoordinates: [80.6480, 16.5062] as [number, number],
     slaMinutes: 20,
-    activeWorkersCount: 0
+    activeWorkersCount: 52
   },
   {
     state: "Andhra Pradesh",
@@ -229,13 +229,13 @@ export const SERVICE_AREAS_DATA = [
     pincodePrefixes: ["515"],
     pincodes: ["515001", "515002", "515004"],
     location: { type: "Point", coordinates: [77.6006, 14.6819] },
-    isActive: false,
-    launchPhase: "PLANNED_PHASE_2" as const,
+    isActive: true,
+    launchPhase: "PHASE_1_LAUNCH" as const,
     cooperativeName: "Anantapur Rayalaseema Labour Kendra",
     nearestHub: "Kurnool Central Cooperative Hub",
     nearestHubCoordinates: [78.0373, 15.8281] as [number, number],
     slaMinutes: 20,
-    activeWorkersCount: 0
+    activeWorkersCount: 61
   },
   {
     state: "Andhra Pradesh",
@@ -245,16 +245,16 @@ export const SERVICE_AREAS_DATA = [
     pincodePrefixes: ["516"],
     pincodes: ["516001", "516002", "516004"],
     location: { type: "Point", coordinates: [78.8242, 14.4673] },
-    isActive: false,
-    launchPhase: "PLANNED_PHASE_2" as const,
+    isActive: true,
+    launchPhase: "PHASE_1_LAUNCH" as const,
     cooperativeName: "Kadapa Labour Cooperative Guild",
     nearestHub: "Tirupati Central Cooperative",
     nearestHubCoordinates: [79.4192, 13.6288] as [number, number],
     slaMinutes: 20,
-    activeWorkersCount: 0
+    activeWorkersCount: 58
   },
 
-  // --- TELANGANA: PLANNED EXPANSION DISTRICTS ---
+  // --- TELANGANA: DISTRICTS ---
   {
     state: "Telangana",
     stateCode: "TG",
@@ -263,13 +263,13 @@ export const SERVICE_AREAS_DATA = [
     pincodePrefixes: ["502"],
     pincodes: ["502001", "502032", "502285"],
     location: { type: "Point", coordinates: [78.0838, 17.6190] },
-    isActive: false,
-    launchPhase: "PLANNED_PHASE_2" as const,
+    isActive: true,
+    launchPhase: "PHASE_1_LAUNCH" as const,
     cooperativeName: "Medak-Sangareddy Labour Cooperative",
     nearestHub: "Hyderabad Central Cooperative Guild",
     nearestHubCoordinates: [78.4867, 17.3850] as [number, number],
     slaMinutes: 20,
-    activeWorkersCount: 0
+    activeWorkersCount: 45
   },
   {
     state: "Telangana",
@@ -279,13 +279,13 @@ export const SERVICE_AREAS_DATA = [
     pincodePrefixes: ["503"],
     pincodes: ["503001", "503002", "503003"],
     location: { type: "Point", coordinates: [78.0988, 18.6725] },
-    isActive: false,
-    launchPhase: "PLANNED_PHASE_2" as const,
+    isActive: true,
+    launchPhase: "PHASE_1_LAUNCH" as const,
     cooperativeName: "Nizamabad District Labour Guild",
     nearestHub: "Karimnagar Labour Kendra",
     nearestHubCoordinates: [79.1328, 18.4386] as [number, number],
     slaMinutes: 20,
-    activeWorkersCount: 0
+    activeWorkersCount: 50
   },
   {
     state: "Telangana",
@@ -295,13 +295,13 @@ export const SERVICE_AREAS_DATA = [
     pincodePrefixes: ["504"],
     pincodes: ["504001", "504002", "504208"],
     location: { type: "Point", coordinates: [78.5320, 19.6640] },
-    isActive: false,
-    launchPhase: "PLANNED_PHASE_2" as const,
+    isActive: true,
+    launchPhase: "PHASE_1_LAUNCH" as const,
     cooperativeName: "Adilabad Tribal & Rural Labour Cooperative",
     nearestHub: "Karimnagar Labour Kendra",
     nearestHubCoordinates: [79.1328, 18.4386] as [number, number],
     slaMinutes: 20,
-    activeWorkersCount: 0
+    activeWorkersCount: 38
   },
   {
     state: "Telangana",
@@ -311,13 +311,13 @@ export const SERVICE_AREAS_DATA = [
     pincodePrefixes: ["507"],
     pincodes: ["507001", "507002", "507003"],
     location: { type: "Point", coordinates: [80.1514, 17.2473] },
-    isActive: false,
-    launchPhase: "PLANNED_PHASE_2" as const,
+    isActive: true,
+    launchPhase: "PHASE_1_LAUNCH" as const,
     cooperativeName: "Khammam Primary Labour Kendra",
     nearestHub: "Warangal Kakatiya Cooperative",
     nearestHubCoordinates: [79.5941, 17.9689] as [number, number],
     slaMinutes: 20,
-    activeWorkersCount: 0
+    activeWorkersCount: 55
   },
   {
     state: "Telangana",
@@ -327,13 +327,13 @@ export const SERVICE_AREAS_DATA = [
     pincodePrefixes: ["508"],
     pincodes: ["508001", "508002", "508207"],
     location: { type: "Point", coordinates: [79.2684, 17.0577] },
-    isActive: false,
-    launchPhase: "PLANNED_PHASE_2" as const,
+    isActive: true,
+    launchPhase: "PHASE_1_LAUNCH" as const,
     cooperativeName: "Nalgonda Labour Society",
     nearestHub: "Hyderabad Central Cooperative Guild",
     nearestHubCoordinates: [78.4867, 17.3850] as [number, number],
     slaMinutes: 20,
-    activeWorkersCount: 0
+    activeWorkersCount: 49
   },
   {
     state: "Telangana",
@@ -343,13 +343,13 @@ export const SERVICE_AREAS_DATA = [
     pincodePrefixes: ["509"],
     pincodes: ["509001", "509002"],
     location: { type: "Point", coordinates: [77.9897, 16.7438] },
-    isActive: false,
-    launchPhase: "PLANNED_PHASE_2" as const,
+    isActive: true,
+    launchPhase: "PHASE_1_LAUNCH" as const,
     cooperativeName: "Palamuru Labour Cooperative Society",
     nearestHub: "Hyderabad Central Cooperative Guild",
     nearestHubCoordinates: [78.4867, 17.3850] as [number, number],
     slaMinutes: 20,
-    activeWorkersCount: 0
+    activeWorkersCount: 44
   }
 ];
 

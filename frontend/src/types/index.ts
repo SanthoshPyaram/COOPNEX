@@ -8,12 +8,14 @@ export type BookingStatus =
   | "ON_THE_WAY"
   | "ARRIVED"
   | "IN_PROGRESS"
+  | "AWAITING_PAYMENT"
   | "COMPLETED"
   | "CANCELLED"
   | "REJECTED";
 
 export interface FairWageBreakdown {
   customerPaid: number;
+  laborWage?: number;
   baseWorkerWage: number;
   skillPremium: number;
   experiencePremium: number;
@@ -22,6 +24,9 @@ export interface FairWageBreakdown {
   workerEarning: number;
   cooperativeContribution: number;
   adminMaintenanceFee?: number;
+  platformFacilitationFee?: number;
+  welfareFundCess?: number;
+  gstAmount?: number;
   taxGst: number;
 }
 

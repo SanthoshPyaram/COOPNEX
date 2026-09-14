@@ -128,21 +128,28 @@ export class FairWageEngine {
     // Service Amount (Worker labour components)
     const serviceAmount = baseWorkerWage + skillPremium + experiencePremium + emergencyAllowance;
 
-    // Total Worker Earning (100% credited to Worker Wallet)
+    // Total Worker Earning (100% credited to Worker Wallet, including travel)
     const workerEarning = serviceAmount + transportCost + returnTravelCost;
 
-    // 6. Platform Maintenance & Welfare Contribution (₹50 flat fee)
-    const adminMaintenanceFee = 50;
-    const cooperativeContribution = adminMaintenanceFee;
-    explanations.push(`Platform Maintenance & Member Welfare: +₹${adminMaintenanceFee} (Flat maintenance, dispute warranty & welfare charge)`);
+    // 6. Transparent Percentage Model (benchmark: Rapido & Statutory Gig Worker Welfare Standards)
+    // 10% Platform Facilitation Fee (Cooperative server, app, and dispatch infrastructure)
+    const platformFee = Math.max(25, Math.round(serviceAmount * 0.10));
+    // 2% Statutory Social Security & Welfare Corpus (PMSBY accidental insurance, medical cover)
+    const cooperativeContribution = Math.max(5, Math.round(serviceAmount * 0.02));
+    const adminMaintenanceFee = platformFee + cooperativeContribution;
 
-    // 7. Applicable GST
-    const taxGst = 0;
+    explanations.push(`Platform Facilitation Fee: +₹${platformFee} (10% cooperative platform & dispatch infrastructure)`);
+    explanations.push(`Statutory Worker Social Security Cess: +₹${cooperativeContribution} (2% state welfare fund for PMSBY accident & healthcare protection)`);
 
-    // Total Paid by Customer: Worker Wage + ₹50 Platform Maintenance
-    const customerPaid = workerEarning + adminMaintenanceFee;
+    // 7. Applicable GST (5% on Platform Facilitation Fee under SAC 998714)
+    const taxGst = Math.round(platformFee * 0.05);
+    if (taxGst > 0) {
+      explanations.push(`GST (5% on facilitation fee): +₹${taxGst}`);
+    }
+
+    // Total Paid by Customer: Worker Earning + Platform Maintenance + GST
+    const customerPaid = workerEarning + adminMaintenanceFee + taxGst;
     const totalAmount = customerPaid;
-    const platformFee = adminMaintenanceFee;
 
     // Long-distance & scheduling feasibility evaluation
     const maxSameDayDistanceKm = 25.0;
@@ -165,7 +172,7 @@ export class FairWageEngine {
       scheduleReason = `It is past ${sameDayCutoffHour}:00 PM. Same-day non-emergency slots may experience delays; tomorrow morning is recommended.`;
     }
 
-    const summaryMessage = `Worker allocated ₹${workerEarning} (subject to 24-hr quality hold). Admin maintenance & welfare retains ₹${adminMaintenanceFee}. Total invoice: ₹${customerPaid}.`;
+    const summaryMessage = `Worker allocated ₹${workerEarning} (88% direct labor + 100% travel, subject to 24-hr defect hold). Federation treasury receives ₹${adminMaintenanceFee} (₹${platformFee} 10% platform fee + ₹${cooperativeContribution} 2% welfare fund). Total invoice: ₹${customerPaid}.`;
 
     return {
       breakdown: {

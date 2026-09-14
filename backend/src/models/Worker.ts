@@ -56,10 +56,15 @@ export interface IWorker extends Document {
     coordinates: [number, number]; // [lon, lat]
   };
   serviceRadiusKm: number;
+  trade?: string;
+  bio?: string;
   skills: string[];
   experienceYears: number;
   languages: string[];
   selectedServiceAreas?: string[];
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  bloodGroup?: string;
   verificationLevel: number; // 1 to 5
   verificationStatus: "PENDING" | "UNDER_REVIEW" | "VERIFIED" | "REJECTED" | "REUPLOAD_REQUESTED";
   preliminaryRiskScore?: number;
@@ -158,10 +163,15 @@ const WorkerSchema = new Schema<IWorker>(
       coordinates: { type: [Number], required: true } // [lon, lat]
     },
     serviceRadiusKm: { type: Number, default: 15 },
+    trade: { type: String, default: "" },
+    bio: { type: String, default: "" },
     skills: { type: [String], required: true, index: true },
     experienceYears: { type: Number, default: 3 },
     languages: { type: [String], default: ["Telugu", "Hindi", "English"] },
     selectedServiceAreas: { type: [String], default: [] },
+    emergencyContactName: { type: String, default: "" },
+    emergencyContactPhone: { type: String, default: "" },
+    bloodGroup: { type: String, default: "O+" },
     verificationLevel: { type: Number, default: 1, min: 1, max: 5, index: true },
     verificationStatus: {
       type: String,

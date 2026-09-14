@@ -9,6 +9,7 @@ import { Federation } from "../models/Federation";
 import { WorkforceExchange } from "../models/WorkforceExchange";
 import { ServiceArea } from "../models/ServiceArea";
 import { Notification } from "../models/Notification";
+import { AdminWallet } from "../models/AdminWallet";
 import { AiService } from "../services/aiService";
 import { AuthenticatedRequest } from "../middleware/auth";
 
@@ -697,23 +698,36 @@ export const toggleServiceArea = async (req: Request, res: Response): Promise<vo
 export const expandServiceAreaPincodes = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { pincodes } = req.body;
-
-    const area = await ServiceArea.findById(id);
-    if (!area) {
-      res.status(404).json({ success: false, message: "Service area not found." });
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ success: false, message: "Invalid service area ID format." });
       return;
     }
 
+    let rawPins = req.body.pincodes ?? req.body.pincode ?? req.body;
+    if (typeof rawPins === "string") {
+      try {
+        const parsed = JSON.parse(rawPins);
+        if (Array.isArray(parsed)) rawPins = parsed;
+      } catch {
+        // keep as string
+      }
+    }
+
     let newPins: string[] = [];
-    if (Array.isArray(pincodes)) {
-      newPins = pincodes.map((p) => String(p).trim()).filter((p) => /^[1-9][0-9]{5}$/.test(p));
-    } else if (typeof pincodes === "string") {
-      newPins = pincodes.split(",").map((p) => p.trim()).filter((p) => /^[1-9][0-9]{5}$/.test(p));
+    if (Array.isArray(rawPins)) {
+      newPins = rawPins.map((p) => String(p).trim()).filter((p) => /^[1-9][0-9]{5}$/.test(p));
+    } else if (typeof rawPins === "string") {
+      newPins = rawPins.split(/[,\s]+/).map((p) => p.trim()).filter((p) => /^[1-9][0-9]{5}$/.test(p));
     }
 
     if (newPins.length === 0) {
       res.status(400).json({ success: false, message: "Please enter at least one valid 6-digit Indian PIN code." });
+      return;
+    }
+
+    const area = await ServiceArea.findById(id);
+    if (!area) {
+      res.status(404).json({ success: false, message: "Service area not found." });
       return;
     }
 
@@ -781,6 +795,11 @@ export const expandServiceAreaPincodes = async (req: Request, res: Response): Pr
 export const removeServiceAreaPincode = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id, pincode } = req.params;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ success: false, message: "Invalid service area ID format." });
+      return;
+    }
+
     const cleanPin = String(pincode).trim();
 
     const area = await ServiceArea.findById(id);
@@ -825,6 +844,50 @@ export const removeServiceAreaPincode = async (req: Request, res: Response): Pro
   } catch (error: any) {
     console.error("removeServiceAreaPincode error:", error);
     res.status(500).json({ success: false, message: "Failed to remove pincode.", error: error.message });
+  }
+};
+
+/**
+ * Super Admin: Activate all service areas across the state
+ */
+export const activateAllServiceAreas = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const result = await ServiceArea.updateMany({}, { $set: { isActive: true, launchPhase: "PHASE_1_LAUNCH" } });
+    const areas = await ServiceArea.find().sort({ state: 1, city: 1 });
+    res.json({
+      success: true,
+      message: `All ${areas.length} service coverage sectors have been fully activated across Andhra Pradesh!`,
+      modifiedCount: result.modifiedCount,
+      areas
+    });
+  } catch (error: any) {
+    console.error("activateAllServiceAreas error:", error);
+    res.status(500).json({ success: false, message: "Failed to activate all service areas.", error: error.message });
+  }
+};
+
+/**
+ * Super Admin: Get Admin Treasury Wallet & Commission Corpus
+ */
+export const getAdminWallet = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    let wallet = await AdminWallet.findOne();
+    if (!wallet) {
+      wallet = await AdminWallet.create({
+        totalBalance: 0,
+        totalCommissionCollected: 0,
+        totalWelfareFundCollected: 0,
+        totalTransactions: 0,
+        transactions: []
+      });
+    }
+    res.json({
+      success: true,
+      wallet
+    });
+  } catch (error: any) {
+    console.error("getAdminWallet error:", error);
+    res.status(500).json({ success: false, message: "Failed to retrieve admin wallet.", error: error.message });
   }
 };
 

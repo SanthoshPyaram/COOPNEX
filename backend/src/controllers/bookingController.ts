@@ -83,11 +83,13 @@ export const createBooking = async (req: AuthenticatedRequest, res: Response): P
     });
 
     const bookingNumber = `BK-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+    const completionOtp = Math.floor(1000 + Math.random() * 9000).toString();
 
     const initialStatus: BookingStatus = assignedWorker ? BOOKING_STATUS.ASSIGNED : BOOKING_STATUS.REQUESTED;
 
     const booking = await Booking.create({
       bookingNumber,
+      completionOtp,
       customerId,
       customerName,
       customerPhone,
@@ -189,6 +191,14 @@ export const getMyBookings = async (req: AuthenticatedRequest, res: Response): P
       .populate("workerId", "name avatarUrl rating verificationLevel phone workerIdNumber societyName")
       .limit(30);
 
+    // Ensure all bookings have a valid completionOtp
+    for (const b of bookings) {
+      if (!b.completionOtp) {
+        b.completionOtp = `${(parseInt(b._id.toString().slice(-4), 16) % 9000) + 1000}`;
+        await Booking.updateOne({ _id: b._id }, { $set: { completionOtp: b.completionOtp } });
+      }
+    }
+
     res.json({
       success: true,
       count: bookings.length,
@@ -208,6 +218,11 @@ export const getBookingById = async (req: Request, res: Response): Promise<void>
     if (!booking) {
       res.status(404).json({ success: false, message: "Booking not found." });
       return;
+    }
+
+    if (!booking.completionOtp) {
+      booking.completionOtp = `${(parseInt(booking._id.toString().slice(-4), 16) % 9000) + 1000}`;
+      await Booking.updateOne({ _id: booking._id }, { $set: { completionOtp: booking.completionOtp } });
     }
 
     res.json({ success: true, booking });
@@ -362,6 +377,51 @@ export const updateBookingStatus = async (req: AuthenticatedRequest, res: Respon
   }
 };
 
+/**
+ * Worker verifies completion OTP given by customer
+ * Unlocks customer payment module
+ */
+export const verifyCompletionOtp = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { otp } = req.body;
+
+    const booking = await Booking.findById(id);
+    if (!booking) {
+      res.status(404).json({ success: false, message: "Booking not found." });
+      return;
+    }
+
+    if (!otp || String(otp).trim() !== String(booking.completionOtp)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid completion OTP. Please ask the customer for the 4-digit code displayed on their screen."
+      });
+      return;
+    }
+
+    booking.otpVerifiedAt = new Date();
+    // Move to AWAITING_PAYMENT status
+    booking.status = (BOOKING_STATUS as any).AWAITING_PAYMENT || "AWAITING_PAYMENT";
+    booking.statusTimeline.push({
+      status: (BOOKING_STATUS as any).AWAITING_PAYMENT || "AWAITING_PAYMENT",
+      timestamp: new Date(),
+      note: "Work completed on-site. Citizen completion OTP verified. Customer payment enabled."
+    });
+
+    await booking.save();
+
+    res.json({
+      success: true,
+      message: "Customer completion OTP verified! Customer payment module is now enabled.",
+      booking
+    });
+  } catch (error: any) {
+    console.error("verifyCompletionOtp error:", error);
+    res.status(500).json({ success: false, message: "OTP verification failed.", error: error.message });
+  }
+};
+
 export const submitReview = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const {
@@ -475,6 +535,44 @@ export const getMyReviews = async (req: AuthenticatedRequest, res: Response): Pr
   } catch (error: any) {
     console.error("getMyReviews error:", error);
     res.status(500).json({ success: false, message: "Failed to fetch customer reviews." });
+  }
+};
+
+/**
+ * Worker Portal: Get all reviews written by customers about the logged-in worker
+ */
+export const getWorkerReviews = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?._id;
+    const worker = await Worker.findOne({
+      $or: [
+        { userId },
+        ...(mongoose.Types.ObjectId.isValid(userId) ? [{ _id: userId }] : []),
+        ...(req.user?.employeeId ? [{ employeeId: req.user.employeeId }, { workerIdNumber: req.user.employeeId }] : []),
+        ...(req.user?.phone ? [{ phone: req.user.phone }] : [])
+      ]
+    });
+
+    const workerQuery = worker ? { workerId: worker._id } : { workerId: userId };
+    const reviews = await Review.find(workerQuery)
+      .populate("customerId", "name phone avatarUrl")
+      .populate("bookingId", "bookingNumber serviceCategory completedAt fairWageBreakdown createdAt")
+      .sort({ createdAt: -1 });
+
+    const totalReviews = reviews.length;
+    const averageRating = totalReviews > 0
+      ? Number((reviews.reduce((sum, r) => sum + (r.overallRating || 5), 0) / totalReviews).toFixed(1))
+      : (worker?.rating || 4.9);
+
+    res.json({
+      success: true,
+      count: totalReviews,
+      averageRating,
+      reviews
+    });
+  } catch (error: any) {
+    console.error("getWorkerReviews error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch worker reviews." });
   }
 };
 

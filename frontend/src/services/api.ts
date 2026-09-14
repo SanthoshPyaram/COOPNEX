@@ -42,6 +42,35 @@ const getApiBaseUrl = (): string => {
 
 export const API_BASE = getApiBaseUrl();
 
+/**
+ * Robust JSON fetch wrapper that avoids SyntaxError on empty or HTML error responses
+ */
+export async function safeJsonFetch(input: RequestInfo | URL, init?: RequestInit): Promise<any> {
+  try {
+    const res = await fetch(input, init);
+    const text = await res.text();
+    try {
+      const data = JSON.parse(text);
+      if (!res.ok && data && data.success === undefined) {
+        data.success = false;
+      }
+      return data;
+    } catch {
+      return {
+        success: res.ok,
+        status: res.status,
+        message: text || `Server responded with status ${res.status}`
+      };
+    }
+  } catch (err: any) {
+    console.error("safeJsonFetch network error:", err);
+    return {
+      success: false,
+      message: err.message || "Network request failed. Please verify your connection."
+    };
+  }
+}
+
 export const api = {
   // Workers
   getWorkers: async (params?: Record<string, any>): Promise<WorkerProfile[]> => {
@@ -417,14 +446,23 @@ export const api = {
 
   // Admin Service Areas
   getAdminServiceAreas: async () => {
-    const res = await fetch(`${API_BASE}/admin/service-areas`, {
+    return safeJsonFetch(`${API_BASE}/admin/service-areas`, {
       headers: { Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}` }
     });
-    return res.json();
+  },
+
+  activateAllServiceAreas: async () => {
+    return safeJsonFetch(`${API_BASE}/admin/service-areas/activate-all`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      }
+    });
   },
 
   toggleServiceArea: async (id: string, isActive?: boolean) => {
-    const res = await fetch(`${API_BASE}/admin/service-areas/${id}/toggle`, {
+    return safeJsonFetch(`${API_BASE}/admin/service-areas/${id}/toggle`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -432,11 +470,10 @@ export const api = {
       },
       body: JSON.stringify(typeof isActive === "boolean" ? { isActive } : {})
     });
-    return res.json();
   },
 
   createServiceArea: async (payload: any) => {
-    const res = await fetch(`${API_BASE}/admin/service-areas`, {
+    return safeJsonFetch(`${API_BASE}/admin/service-areas`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -444,11 +481,10 @@ export const api = {
       },
       body: JSON.stringify(payload)
     });
-    return res.json();
   },
 
   expandServiceArea: async (id: string, pincodes: string[]) => {
-    const res = await fetch(`${API_BASE}/admin/service-areas/${id}/expand`, {
+    return safeJsonFetch(`${API_BASE}/admin/service-areas/${id}/expand`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -456,27 +492,66 @@ export const api = {
       },
       body: JSON.stringify({ pincodes })
     });
-    return res.json();
   },
 
   removeServiceAreaPincode: async (id: string, pincode: string) => {
-    const res = await fetch(`${API_BASE}/admin/service-areas/${id}/pincodes/${pincode}`, {
+    return safeJsonFetch(`${API_BASE}/admin/service-areas/${id}/pincodes/${pincode}`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
       }
     });
-    return res.json();
   },
 
   deleteServiceArea: async (id: string) => {
-    const res = await fetch(`${API_BASE}/admin/service-areas/${id}`, {
+    return safeJsonFetch(`${API_BASE}/admin/service-areas/${id}`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
       }
     });
-    return res.json();
+  },
+
+  // Admin Wallet & Treasury
+  getAdminWallet: async () => {
+    return safeJsonFetch(`${API_BASE}/admin/wallet`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      }
+    });
+  },
+
+  // Completion OTP Verification (Worker enters code provided by Citizen customer)
+  verifyCompletionOtp: async (bookingId: string, otp: string) => {
+    return safeJsonFetch(`${API_BASE}/bookings/${bookingId}/verify-completion-otp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      },
+      body: JSON.stringify({ otp })
+    });
+  },
+
+  // Worker Reviews (Logged-in worker viewing customer reviews)
+  getWorkerReviews: async () => {
+    return safeJsonFetch(`${API_BASE}/reviews/worker`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      }
+    });
+  },
+
+  // Profile Update (Worker & Citizen)
+  updateProfileDetails: async (payload: any) => {
+    return safeJsonFetch(`${API_BASE}/auth/profile`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("sahakari_token") || ""}`
+      },
+      body: JSON.stringify(payload)
+    });
   },
 
   // Real-time Booking Messages

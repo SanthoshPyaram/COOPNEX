@@ -123,7 +123,7 @@ export const AdminServiceAreasTab: React.FC = () => {
       const res = await api.toggleServiceArea(area._id, nextActive);
       if (res && res.success) {
         setActionNotice({
-          text: `Area ${area.city} is now ${nextActive ? "ACTIVE" : "SUSPENDED"}. ${res.notifiedCount || 0} registered user(s) notified.`,
+          text: `Area ${area.city} is now ${nextActive ? "ACTIVE COVERAGE" : "COVERAGE PAUSED"}. ${res.notifiedCount || 0} registered user(s) notified.`,
           type: "success"
         });
         await fetchServiceAreas();
@@ -132,6 +132,31 @@ export const AdminServiceAreasTab: React.FC = () => {
       }
     } catch (err: any) {
       setActionNotice({ text: err.message || "Failed to toggle status.", type: "error" });
+    }
+  };
+
+  const [isActivatingAll, setIsActivatingAll] = useState<boolean>(false);
+
+  const handleActivateAll = async () => {
+    if (!window.confirm("Activate full dispatch coverage across all service areas in Andhra Pradesh & Telangana? All sectors will immediately accept citizen requests.")) {
+      return;
+    }
+    setIsActivatingAll(true);
+    try {
+      const res = await api.activateAllServiceAreas();
+      if (res && res.success) {
+        setActionNotice({
+          text: res.message || "All service areas have been activated across Andhra Pradesh and Telangana!",
+          type: "success"
+        });
+        await fetchServiceAreas();
+      } else {
+        setActionNotice({ text: res?.message || "Failed to activate all areas.", type: "error" });
+      }
+    } catch (err: any) {
+      setActionNotice({ text: err.message || "Failed to activate all areas.", type: "error" });
+    } finally {
+      setIsActivatingAll(false);
     }
   };
 
@@ -335,17 +360,27 @@ export const AdminServiceAreasTab: React.FC = () => {
             </h2>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Authoritative geographical dispatch boundaries. Expand coverage to new pincodes or suspend areas with instant automated user notices.
+            Authoritative geographical dispatch boundaries. Expand coverage to new pincodes or pause coverage with instant automated user notices.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={fetchServiceAreas}
             className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition cursor-pointer"
             title="Refresh from MongoDB"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          </button>
+
+          <button
+            onClick={handleActivateAll}
+            disabled={isActivatingAll}
+            className="px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
+            title="Activate all dispatch coverage sectors across the state"
+          >
+            <Radio className={`w-3.5 h-3.5 ${isActivatingAll ? "animate-spin" : "animate-pulse"}`} />
+            <span>{isActivatingAll ? "Activating..." : "⚡ Activate All Sectors"}</span>
           </button>
 
           <button
@@ -390,7 +425,7 @@ export const AdminServiceAreasTab: React.FC = () => {
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs col-span-2 sm:col-span-1">
           <span className="text-[10px] font-mono uppercase font-bold text-slate-400 block">Expanding Pipeline</span>
           <div className="text-xl font-black text-amber-600 mt-1">{metrics.comingSoonCount}</div>
-          <span className="text-[10px] text-amber-700 font-bold">Phase 2 / Planned</span>
+          <span className="text-[10px] text-amber-700 font-bold">Coverage Paused / Phased</span>
         </div>
       </div>
 
@@ -426,8 +461,8 @@ export const AdminServiceAreasTab: React.FC = () => {
             className="text-xs font-bold px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-300"
           >
             <option value="ALL">All Statuses</option>
-            <option value="ACTIVE">Active (Live)</option>
-            <option value="INACTIVE">Suspended / Planned</option>
+            <option value="ACTIVE">Active Coverage</option>
+            <option value="INACTIVE">Coverage Paused / Planned</option>
           </select>
         </div>
       </div>
@@ -480,9 +515,10 @@ export const AdminServiceAreasTab: React.FC = () => {
                           ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800"
                           : "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
                       }`}
+                      title={area.isActive ? "Dispatch active across registered pincodes" : "Coverage temporarily paused for workforce mobilization or scheduled expansion. Not a penalty."}
                     >
                       <span className={`w-1.5 h-1.5 rounded-full ${area.isActive ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
-                      {area.isActive ? "Active" : "Suspended"}
+                      {area.isActive ? "Active Coverage" : "Coverage Paused"}
                     </span>
                   </div>
                 </div>
@@ -539,7 +575,7 @@ export const AdminServiceAreasTab: React.FC = () => {
                             type="button"
                             onClick={() => setPincodeToRemove({ areaId: area._id, pincode: pin, cityName: area.city })}
                             className="text-slate-400 hover:text-rose-600 p-0.5 rounded transition cursor-pointer"
-                            title={`Remove PIN ${pin} (will suspend service in this PIN)`}
+                            title={`Remove PIN ${pin} (will pause service in this PIN)`}
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -566,12 +602,12 @@ export const AdminServiceAreasTab: React.FC = () => {
                     {area.isActive ? (
                       <>
                         <XCircle className="w-3.5 h-3.5" />
-                        <span>Suspend Area</span>
+                        <span>Pause Coverage</span>
                       </>
                     ) : (
                       <>
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Activate Area</span>
+                        <span>Resume Coverage</span>
                       </>
                     )}
                   </button>
@@ -694,7 +730,7 @@ export const AdminServiceAreasTab: React.FC = () => {
                 Remove PIN {pincodeToRemove.pincode} from {pincodeToRemove.cityName}?
               </h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Removing this PIN code will mark COOPNEX services as <strong>unavailable / suspended</strong> in this location. All customers and workers in the database located in PIN {pincodeToRemove.pincode} will be sent an automated notification informing them that local dispatch is paused.
+                Removing this PIN code will mark COOPNEX services as <strong>temporarily unavailable / coverage paused</strong> in this location. All customers and workers in the database located in PIN {pincodeToRemove.pincode} will be sent an automated notification informing them that local dispatch is paused.
               </p>
             </div>
 
