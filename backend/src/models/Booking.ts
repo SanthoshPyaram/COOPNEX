@@ -12,6 +12,11 @@ export interface IFairWageBreakdown {
   adminMaintenanceFee?: number;
   cooperativeContribution: number;
   taxGst: number;
+  laborWage?: number;
+  platformFacilitationFee?: number;
+  welfareFundCess?: number;
+  gstAmount?: number;
+  totalEstimatedWage?: number;
   serviceAmount?: number;
   transportCost?: number;
   returnTravelCost?: number;

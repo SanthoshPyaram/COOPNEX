@@ -205,7 +205,7 @@ export class ServiceCoverageEngine {
           // If the area has explicit pincodes configured, and this pincode is NOT among them,
           // then this pincode has either been removed or not yet expanded.
           const hasExplicitPincodes = Array.isArray(prefixArea.pincodes) && prefixArea.pincodes.length > 0;
-          const isIncludedInPincodes = hasExplicitPincodes ? prefixArea.pincodes.includes(cleaned) : true;
+          const isIncludedInPincodes = hasExplicitPincodes ? (prefixArea.pincodes?.includes(cleaned) ?? true) : true;
 
           if (prefixArea.isActive && isIncludedInPincodes) {
             return {

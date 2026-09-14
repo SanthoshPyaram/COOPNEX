@@ -379,3 +379,4 @@ export const CustomerReceiptModal: React.FC<CustomerReceiptModalProps> = ({
     </div>
   );
 };
+
