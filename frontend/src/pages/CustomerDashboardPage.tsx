@@ -1418,8 +1418,8 @@ export const CustomerDashboardPage: React.FC = () => {
                       <div className="flex items-center gap-3">
                         <span
                           className={`text-xs font-bold px-3 py-1 rounded-full ${
-                            b.status === "COMPLETED"
-                              ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                            (b as any).paymentStatus === "PAID" || b.status === "COMPLETED"
+                              ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
                               : b.status === "AWAITING_PAYMENT"
                               ? "bg-amber-100 text-amber-900 border border-amber-300 animate-pulse"
                               : b.status === "CANCELLED"
@@ -1427,10 +1427,14 @@ export const CustomerDashboardPage: React.FC = () => {
                               : "bg-blue-100 text-blue-800"
                           }`}
                         >
-                          {b.status === "AWAITING_PAYMENT" ? "OTP Verified • Awaiting Payment" : t(`status.${b.status.toLowerCase()}`, b.status)}
+                          {(b as any).paymentStatus === "PAID" || b.status === "COMPLETED"
+                            ? "✓ Paid & Secured in Escrow"
+                            : b.status === "AWAITING_PAYMENT"
+                            ? "OTP Verified • Awaiting Payment"
+                            : t(`status.${b.status.toLowerCase()}`, b.status)}
                         </span>
 
-                        {b.status !== "COMPLETED" && b.status !== "CANCELLED" && b.status !== "AWAITING_PAYMENT" && (
+                        {b.status !== "COMPLETED" && (b as any).paymentStatus !== "PAID" && b.status !== "CANCELLED" && b.status !== "AWAITING_PAYMENT" && (
                           <div className="text-right pl-3 border-l border-slate-200">
                             <span className="text-[10px] text-slate-400 block uppercase font-bold">Service OTP</span>
                             <span className="text-lg font-mono font-black text-[#F59E0B]">
@@ -1464,7 +1468,7 @@ export const CustomerDashboardPage: React.FC = () => {
                     </div>
 
                     {/* COMPLETION OTP BANNER: If still in-progress, instruct citizen to give OTP only upon completion */}
-                    {b.status !== "COMPLETED" && b.status !== "CANCELLED" && b.status !== "AWAITING_PAYMENT" && (
+                    {b.status !== "COMPLETED" && (b as any).paymentStatus !== "PAID" && b.status !== "CANCELLED" && b.status !== "AWAITING_PAYMENT" && (
                       <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-1.5 text-amber-900 font-bold text-xs">
@@ -1484,8 +1488,8 @@ export const CustomerDashboardPage: React.FC = () => {
                       </div>
                     )}
 
-                    {/* AWAITING PAYMENT BANNER: Enabled once worker enters valid OTP */}
-                    {b.status === "AWAITING_PAYMENT" && (
+                    {/* AWAITING PAYMENT BANNER: Enabled once worker enters valid OTP (Only if NOT already paid) */}
+                    {b.status === "AWAITING_PAYMENT" && (b as any).paymentStatus !== "PAID" && (
                       <div className="p-4 bg-emerald-50 border-2 border-emerald-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs animate-in fade-in">
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2 text-emerald-900 font-black text-xs">
@@ -1508,7 +1512,7 @@ export const CustomerDashboardPage: React.FC = () => {
                     )}
 
                     {/* Honest Live Tracking Notice for Active Bookings */}
-                    {b.status !== "COMPLETED" && b.status !== "CANCELLED" && b.status !== "AWAITING_PAYMENT" && (
+                    {b.status !== "COMPLETED" && (b as any).paymentStatus !== "PAID" && b.status !== "CANCELLED" && b.status !== "AWAITING_PAYMENT" && (
                       <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl text-xs text-blue-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-start gap-2.5">
                           <Radio className="w-4 h-4 text-blue-600 shrink-0 mt-0.5 animate-pulse" />
@@ -1537,8 +1541,8 @@ export const CustomerDashboardPage: React.FC = () => {
                       </span>
 
                       <div className="flex items-center gap-2">
-                        {/* PAY NOW: Only active if AWAITING_PAYMENT */}
-                        {b.status === "AWAITING_PAYMENT" ? (
+                        {/* PAY NOW: Only active if AWAITING_PAYMENT and NOT paid */}
+                        {b.status === "AWAITING_PAYMENT" && (b as any).paymentStatus !== "PAID" ? (
                           <button
                             type="button"
                             onClick={() => setPaymentModalBooking(b)}
@@ -1547,7 +1551,7 @@ export const CustomerDashboardPage: React.FC = () => {
                             <CreditCard className="w-3.5 h-3.5" />
                             <span>Pay ₹{b.pricing?.customerTotalINR || (b as any).fairWageBreakdown?.customerPaid || 350} (Bharat UPI / Card)</span>
                           </button>
-                        ) : b.status !== "COMPLETED" && b.status !== "CANCELLED" ? (
+                        ) : b.status !== "COMPLETED" && (b as any).paymentStatus !== "PAID" && b.status !== "CANCELLED" ? (
                           <span
                             className="px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-400 font-bold text-[11px] flex items-center gap-1 cursor-not-allowed"
                             title="Payment unlocks once artisan enters your 4-digit completion code"
@@ -1557,7 +1561,7 @@ export const CustomerDashboardPage: React.FC = () => {
                           </span>
                         ) : null}
 
-                        {b.status !== "COMPLETED" && b.status !== "CANCELLED" && (
+                        {b.status !== "COMPLETED" && (b as any).paymentStatus !== "PAID" && b.status !== "CANCELLED" && (
                           <>
                             <button
                               type="button"
@@ -1579,8 +1583,12 @@ export const CustomerDashboardPage: React.FC = () => {
                           </>
                         )}
 
-                        {b.status === "COMPLETED" && (
+                        {((b as any).paymentStatus === "PAID" || b.status === "COMPLETED") && (
                           <>
+                            <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-extrabold text-[11px] flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                              <span>Paid (Escrow Active)</span>
+                            </span>
                             <button
                               type="button"
                               onClick={() => handleOpenReceipt(b)}
@@ -2252,9 +2260,23 @@ export const CustomerDashboardPage: React.FC = () => {
           }}
           onClose={() => setPaymentModalBooking(null)}
           onPaymentSuccess={async (details) => {
+            const paidId = paymentModalBooking._id;
+            setMyBookings((prev) =>
+              prev.map((item) =>
+                item._id === paidId
+                  ? {
+                      ...item,
+                      status: "COMPLETED",
+                      paymentStatus: "PAID",
+                      completedAt: new Date().toISOString(),
+                      paymentId: details.utrNumber
+                    }
+                  : item
+              )
+            );
             try {
               await api.verifyPayment({
-                bookingId: paymentModalBooking._id,
+                bookingId: paidId,
                 razorpayOrderId: `order_live_${Date.now()}`,
                 razorpayPaymentId: details.utrNumber,
                 razorpaySignature: `sig_verified_${Date.now()}`

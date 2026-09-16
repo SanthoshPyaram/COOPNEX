@@ -97,39 +97,76 @@ export const verifyPayment = async (req: AuthenticatedRequest, res: Response): P
     const customerTotal = breakdown.customerPaid || (workerWage + adminTotalFee);
     const escrowMaturesAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24-hour guarantee hold
 
-    // Update / Upsert payment record
+    // Update / Upsert payment record with guaranteed required fields
+    const defaultTxnId = `TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const payment = await Payment.findOneAndUpdate(
       { bookingId: booking._id },
       {
-        status: "SUCCESS",
-        gatewayPaymentId: razorpayPaymentId || `pay_${crypto.randomBytes(8).toString("hex")}`,
-        gatewayOrderId: razorpayOrderId,
-        paymentMethod: method,
-        amount: customerTotal,
-        workerEarningAmount: workerWage,
-        adminMaintenanceFee: adminTotalFee,
-        coopFundAmount: welfareCess,
-        workerWageDisbursed: false, // In 24h Escrow
-        escrowStatus: "HELD_24H",
-        escrowMaturesAt
+        $setOnInsert: {
+          transactionId: defaultTxnId,
+          customerId: booking.customerId,
+          workerId: booking.workerId || booking.customerId,
+          societyId: booking.societyId || booking.customerId,
+          currency: "INR",
+          paymentGateway: "RAZORPAY_TEST",
+        },
+        $set: {
+          status: "SUCCESS",
+          gatewayPaymentId: razorpayPaymentId || `pay_${crypto.randomBytes(8).toString("hex")}`,
+          gatewayOrderId: razorpayOrderId || `order_${crypto.randomBytes(8).toString("hex")}`,
+          paymentMethod: method,
+          amount: customerTotal,
+          workerEarningAmount: workerWage,
+          adminMaintenanceFee: adminTotalFee,
+          coopFundAmount: welfareCess,
+          workerWageDisbursed: false, // In 24h Escrow
+          escrowStatus: "HELD_24H",
+          escrowMaturesAt
+        }
       },
       { new: true, upsert: true }
     );
 
-    // Update booking state
+    // Update booking state authoritative
     booking.paymentStatus = "PAID";
-    booking.paymentId = payment.transactionId;
+    booking.paymentId = payment.transactionId || defaultTxnId;
     booking.status = BOOKING_STATUS.COMPLETED;
     booking.completedAt = new Date();
     booking.escrowStatus = "HELD_24H";
     booking.escrowMaturesAt = escrowMaturesAt;
-    booking.fairWageBreakdown.customerPaid = customerTotal;
-    booking.fairWageBreakdown.workerEarning = workerWage;
-    booking.fairWageBreakdown.adminMaintenanceFee = adminTotalFee;
-    booking.fairWageBreakdown.platformFee = platformFee;
-    booking.fairWageBreakdown.cooperativeContribution = welfareCess;
-    booking.fairWageBreakdown.taxGst = taxGst;
 
+    if (!booking.fairWageBreakdown) {
+      booking.fairWageBreakdown = {
+        customerPaid: customerTotal,
+        baseWorkerWage: workerWage,
+        skillPremium: 0,
+        experiencePremium: 0,
+        travelAllowance: 0,
+        emergencyAllowance: 0,
+        workerEarning: workerWage,
+        adminMaintenanceFee: adminTotalFee,
+        cooperativeContribution: welfareCess,
+        taxGst: taxGst,
+        platformFee: platformFee,
+        platformFacilitationFee: platformFee,
+        welfareFundCess: welfareCess,
+        gstAmount: taxGst
+      } as any;
+    } else {
+      booking.fairWageBreakdown.customerPaid = customerTotal;
+      booking.fairWageBreakdown.workerEarning = workerWage;
+      booking.fairWageBreakdown.adminMaintenanceFee = adminTotalFee;
+      booking.fairWageBreakdown.platformFee = platformFee;
+      (booking.fairWageBreakdown as any).platformFacilitationFee = platformFee;
+      (booking.fairWageBreakdown as any).welfareFundCess = welfareCess;
+      booking.fairWageBreakdown.cooperativeContribution = welfareCess;
+      booking.fairWageBreakdown.taxGst = taxGst;
+      (booking.fairWageBreakdown as any).gstAmount = taxGst;
+    }
+
+    if (!Array.isArray(booking.statusTimeline)) {
+      booking.statusTimeline = [];
+    }
     booking.statusTimeline.push({
       status: BOOKING_STATUS.COMPLETED,
       timestamp: new Date(),
@@ -154,7 +191,7 @@ export const verifyPayment = async (req: AuthenticatedRequest, res: Response): P
     adminWallet.totalWelfareFundCollected += welfareCess;
     adminWallet.totalTransactions += 1;
     adminWallet.transactions.unshift({
-      transactionId: payment.transactionId,
+      transactionId: payment.transactionId || defaultTxnId,
       bookingId: booking._id,
       bookingNumber: booking.bookingNumber || `BK-${booking._id.toString().slice(-6).toUpperCase()}`,
       customerName: booking.customerName || "Citizen Customer",
@@ -199,35 +236,39 @@ export const verifyPayment = async (req: AuthenticatedRequest, res: Response): P
     const invoice = await Invoice.findOneAndUpdate(
       { bookingId: booking._id },
       {
-        invoiceNumber,
-        bookingId: booking._id,
-        paymentId: payment._id,
-        customerDetails: {
-          name: booking.customerName,
-          phone: booking.customerPhone,
-          address: booking.serviceLocation.address
+        $setOnInsert: {
+          invoiceNumber,
+          bookingId: booking._id,
+          paymentId: payment._id,
         },
-        workerDetails: {
-          workerIdNumber: "SS-AP-2026-104",
-          name: booking.workerName || "Verified Worker",
-          phone: booking.workerPhone || "+919876543210",
-          verificationLevel: 4,
-          societyName: "Vijayawada Central Labour Cooperative"
-        },
-        serviceCategory: booking.serviceCategory,
-        itemizedBreakdown: {
-          baseWorkerWage: booking.fairWageBreakdown?.baseWorkerWage || workerWage,
-          skillPremium: booking.fairWageBreakdown?.skillPremium || 0,
-          experiencePremium: booking.fairWageBreakdown?.experiencePremium || 0,
-          travelAllowance: booking.fairWageBreakdown?.travelAllowance || 0,
-          emergencyAllowance: booking.fairWageBreakdown?.emergencyAllowance || 0,
-          totalWorkerWage: workerWage,
-          cooperativeWelfareFund: welfareCess,
-          platformConvenienceCharge: platformFee,
-          taxGstAmount: taxGst,
-          totalAmountPaid: customerTotal
-        },
-        issuedAt: new Date()
+        $set: {
+          customerDetails: {
+            name: booking.customerName || "Citizen Customer",
+            phone: booking.customerPhone || "+91 98490 12345",
+            address: booking.serviceLocation?.address || "Registered Service Base, Vijayawada"
+          },
+          workerDetails: {
+            workerIdNumber: (booking as any).workerIdNumber || "SS-AP-2026-104",
+            name: booking.workerName || "Verified Worker",
+            phone: booking.workerPhone || "+919876543210",
+            verificationLevel: 4,
+            societyName: (booking as any).societyName || "Vijayawada Central Labour Cooperative"
+          },
+          serviceCategory: booking.serviceCategory || "Artisan Service",
+          itemizedBreakdown: {
+            baseWorkerWage: booking.fairWageBreakdown?.baseWorkerWage || workerWage,
+            skillPremium: booking.fairWageBreakdown?.skillPremium || 0,
+            experiencePremium: booking.fairWageBreakdown?.experiencePremium || 0,
+            travelAllowance: booking.fairWageBreakdown?.travelAllowance || 0,
+            emergencyAllowance: booking.fairWageBreakdown?.emergencyAllowance || 0,
+            totalWorkerWage: workerWage,
+            cooperativeWelfareFund: welfareCess,
+            platformConvenienceCharge: platformFee,
+            taxGstAmount: taxGst,
+            totalAmountPaid: customerTotal
+          },
+          issuedAt: new Date()
+        }
       },
       { new: true, upsert: true }
     );
@@ -235,6 +276,7 @@ export const verifyPayment = async (req: AuthenticatedRequest, res: Response): P
     res.json({
       success: true,
       message: `Payment of ₹${customerTotal} verified successfully. ₹${platformFee} (10%) platform fee and ₹${welfareCess} (2%) welfare fund credited to Admin Wallet; ₹${workerWage} held in 24-Hour Escrow for worker.`,
+      booking,
       payment,
       invoice,
       breakdown: {

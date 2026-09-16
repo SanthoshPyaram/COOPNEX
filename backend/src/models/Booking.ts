@@ -112,7 +112,11 @@ const BookingSchema = new Schema<IBooking>(
       workerEarning: { type: Number, required: true },
       adminMaintenanceFee: { type: Number, default: 50 },
       cooperativeContribution: { type: Number, required: true },
-      taxGst: { type: Number, default: 0 }
+      taxGst: { type: Number, default: 0 },
+      platformFee: { type: Number, default: 0 },
+      platformFacilitationFee: { type: Number, default: 0 },
+      welfareFundCess: { type: Number, default: 0 },
+      gstAmount: { type: Number, default: 0 }
     },
     paymentStatus: {
       type: String,

@@ -16,7 +16,7 @@ import {
   Info
 } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
-import { ttsService } from "../services/tts";
+import { api } from "../services/api";
 
 export interface RealisticPaymentModalProps {
   isOpen: boolean;
@@ -67,53 +67,6 @@ export const RealisticPaymentModal: React.FC<RealisticPaymentModalProps> = ({
   const [utrNumber, setUtrNumber] = useState<string>("");
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
-  // Authentic Multilingual Bharat UPI Soundbox Alert (Audio Chime + Speech)
-  const playSoundboxAlert = (amount: number) => {
-    // 1. Synthesize iconic dual-tone Soundbox audio chime
-    try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtx) {
-        const ctx = new AudioCtx();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12); // A5
-        gain.gain.setValueAtTime(0.2, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.4);
-      }
-    } catch {
-      // AudioContext blocked
-    }
-
-    // 2. Announce via Bharat Soundbox Multilingual Voice
-    setTimeout(() => {
-      let soundboxText = `COOPNEX. Payment of ₹${amount} received successfully in worker account.`;
-      if (language === "te") {
-        soundboxText = `సహకారి సేవ. వర్కర్ ఖాతాలో ₹${amount} రూపాయలు విజయవంతంగా జమ అయ్యాయి.`;
-      } else if (language === "hi") {
-        soundboxText = `सहकारी सेवा. कामगार खाते में ₹${amount} रुपये सफलतापूर्वक प्राप्त हुए।`;
-      } else if (language === "ta") {
-        soundboxText = `சஹகாரி சேவை. பணியாளர் கணக்கில் ₹${amount} ரூபாய் வரவு வைக்கப்பட்டது.`;
-      } else if (language === "kn") {
-        soundboxText = `ಸಹಕಾರಿ ಸೇವೆ. ಕೆಲಸಗಾರರ ಖಾತೆಗೆ ₹${amount} ಯಶಸ್ವಿಯಾಗಿ ಜಮೆಯಾಗಿದೆ.`;
-      } else if (language === "bn") {
-        soundboxText = `সহকারি সেবা. শ্রমিক অ্যাকাউন্টে ₹${amount} টাকা সফলভাবে জমা হয়েছে।`;
-      } else if (language === "mr") {
-        soundboxText = `सहकारी सेवा. कामगाराच्या खात्यात ₹${amount} रुपये यशस्वीरीत्या जमा झाले.`;
-      }
-
-      ttsService.speak(soundboxText, {
-        id: `soundbox_payment_${amount}`,
-        language
-      });
-    }, 350);
-  };
-
   useEffect(() => {
     let timer: any;
     if (isOpen && countdown > 0 && txState === "IDLE") {
@@ -134,29 +87,50 @@ export const RealisticPaymentModal: React.FC<RealisticPaymentModalProps> = ({
     setTimeout(() => setCopiedUpi(false), 2000);
   };
 
-  const handlePayNow = () => {
+  const handlePayNow = async () => {
     setTxState("PROCESSING");
     setProcessingStep(0);
     const generatedUtr = `UPI/${new Date().getFullYear()}/${Math.floor(100000000000 + Math.random() * 900000000000)}`;
     setUtrNumber(generatedUtr);
 
-    // Dynamic Step Timeline Progression
-    setTimeout(() => setProcessingStep(1), 600);
-    setTimeout(() => setProcessingStep(2), 1300);
-    setTimeout(() => setProcessingStep(3), 2000);
+    // Dynamic Step Timeline Progression (Visual only)
+    setTimeout(() => setProcessingStep(1), 500);
+    setTimeout(() => setProcessingStep(2), 1100);
+    setTimeout(() => setProcessingStep(3), 1700);
 
+    const bookingId = (booking as any).id || (booking as any)._id;
+    let verifiedBookingData: any = null;
+
+    try {
+      if (bookingId) {
+        const res = await api.verifyPayment({
+          bookingId,
+          razorpayOrderId: `order_npci_${Date.now()}`,
+          razorpayPaymentId: generatedUtr,
+          razorpaySignature: `sig_verified_${Date.now()}`,
+          method
+        });
+        if (res && res.success) {
+          verifiedBookingData = res.booking;
+        }
+      }
+    } catch (err) {
+      console.warn("Direct payment verification note:", err);
+    }
+
+    // Transition to visual success state without any audio alerts
     setTimeout(() => {
       setTxState("SUCCESS");
-      playSoundboxAlert(booking.amount || 520);
       if (onPaymentSuccess) {
         onPaymentSuccess({
           utrNumber: generatedUtr,
           amount: booking.amount,
           method,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          booking: verifiedBookingData
         });
       }
-    }, 2800);
+    }, 2200);
   };
 
   if (!isOpen) return null;
@@ -561,29 +535,32 @@ export const RealisticPaymentModal: React.FC<RealisticPaymentModalProps> = ({
                 </p>
               </div>
 
-              {/* Realistic Bharat UPI Soundbox Alert Audio Badge */}
-              <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-slate-800 dark:to-slate-850 rounded-2xl border border-amber-300 dark:border-amber-700/60 flex items-center justify-between gap-3 shadow-xs">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                    🔊
+              {/* Visual Escrow & Tokenized Settlement Badge (Zero Audio) */}
+              <div className="p-3.5 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 rounded-2xl border border-emerald-300 dark:border-emerald-700/60 flex items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+                    <ShieldCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider block">
-                      Bharat UPI Soundbox Alert
-                    </span>
-                    <span className="text-xs font-black text-slate-900 dark:text-white">
-                      ₹{booking.amount || 520} received in Worker DBT Wallet
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-extrabold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider block">
+                        Direct Settlement Secured
+                      </span>
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-600/20 text-emerald-700 dark:text-emerald-300">
+                        24H Warranty Hold
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                      ₹{booking.amount || 520} placed in Cooperative Escrow for {booking.workerName}
                     </span>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => playSoundboxAlert(booking.amount || 520)}
-                  className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-[10px] font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 cursor-pointer"
-                  title="Replay audio announcement"
-                >
-                  Replay ❯
-                </button>
+                <div className="text-right shrink-0">
+                  <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-bold block">
+                    ✓ Verified
+                  </span>
+                  <span className="text-[9px] text-slate-400">Zero Commission</span>
+                </div>
               </div>
 
               {/* Tax Invoice & UTR Receipt */}

@@ -40,14 +40,14 @@ export const CustomerPaymentsView: React.FC<CustomerPaymentsViewProps> = ({ book
         const workerWage = breakdown?.workerEarning || Math.round(cost * 0.86);
         const platformFee = breakdown?.platformFacilitationFee || Math.round(cost * 0.10);
         const welfareCess = breakdown?.welfareFundCess || Math.round(cost * 0.02);
-        const isPaid = (b as any).paymentStatus === "PAID";
-        const isCompleted = b.status === "COMPLETED";
-        const isAwaitingPayment = b.status === "AWAITING_PAYMENT";
+        const isPaid = (b as any).paymentStatus === "PAID" || b.status === "COMPLETED";
+        const isCompleted = b.status === "COMPLETED" || (b as any).paymentStatus === "PAID";
+        const isAwaitingPayment = b.status === "AWAITING_PAYMENT" && !isPaid;
         const isCancelled = b.status === "CANCELLED";
 
         let escrowStatus = "HELD_IN_ESCROW";
         if (isCancelled) escrowStatus = "REFUNDED";
-        else if (isCompleted && isPaid) escrowStatus = "RELEASED";
+        else if (isCompleted && isPaid) escrowStatus = "HELD_24H";
         else if (isPaid) escrowStatus = "HELD_24H";
         else if (isAwaitingPayment) escrowStatus = "AWAITING_PAYMENT";
         else escrowStatus = "PAYMENT_LOCKED";
@@ -313,9 +313,10 @@ export const CustomerPaymentsView: React.FC<CustomerPaymentsViewProps> = ({ book
           }}
           onClose={() => setSelectedBookingForPayment(null)}
           onPaymentSuccess={async (details) => {
+            const bId = selectedBookingForPayment._id;
             try {
               await api.verifyPayment({
-                bookingId: selectedBookingForPayment._id,
+                bookingId: bId,
                 razorpayOrderId: `order_payview_${Date.now()}`,
                 razorpayPaymentId: details.utrNumber,
                 razorpaySignature: `sig_verified_${Date.now()}`
@@ -323,7 +324,6 @@ export const CustomerPaymentsView: React.FC<CustomerPaymentsViewProps> = ({ book
             } catch (err) {
               console.warn("Payment verify error:", err);
             }
-            setSelectedBookingForPayment(null);
             onPaymentCompleted?.();
           }}
           onViewReceipt={(details) => {

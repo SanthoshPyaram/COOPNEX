@@ -18,8 +18,17 @@
   --coopnex-success: #10B981;
 }
 
+.dark {
+  --coopnex-bg: #050B17;
+  --coopnex-surface: #0A1128;
+  --coopnex-border: #1E293B;
+  --coopnex-navy: #F8FAFC;
+  --coopnex-slate: #94A3B8;
+  --coopnex-primary: #3B82F6;
+}
+
 /* =========================================================
-   BASE STYLES
+   BASE STYLES & SMOOTH THEME TRANSITION
    ========================================================= */
 
 @layer base {
@@ -27,14 +36,16 @@
     scroll-behavior: smooth;
     overflow-x: hidden;
     max-width: 100vw;
+    transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   body {
-    @apply bg-[#F8FAFC] text-[#172554] font-sans antialiased
+    @apply bg-[#F8FAFC] dark:bg-[#050B17] text-[#172554] dark:text-[#F8FAFC] font-sans antialiased
       selection:bg-[#2563EB] selection:text-white;
     overflow-x: hidden;
     max-width: 100vw;
     width: 100%;
+    transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   h1,
@@ -43,7 +54,7 @@
   h4,
   h5,
   h6 {
-    @apply text-[#172554] tracking-tight font-bold;
+    @apply text-[#172554] dark:text-[#F8FAFC] tracking-tight font-bold;
   }
 }
 
@@ -360,6 +371,39 @@
   }
 }
 
+@keyframes connectionPulse {
+  0% {
+    transform: scale(0.96);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+    opacity: 0.9;
+  }
+  70% {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 14px rgba(37, 99, 235, 0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.96);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+    opacity: 0.9;
+  }
+}
+
+@keyframes connectionPulseCyan {
+  0% {
+    box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.8);
+    opacity: 0.95;
+  }
+  70% {
+    box-shadow: 0 0 0 16px rgba(6, 182, 212, 0);
+    opacity: 1;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(6, 182, 212, 0);
+    opacity: 0.95;
+  }
+}
+
 /* =========================================================
    ANIMATION UTILITIES
    ========================================================= */
@@ -374,6 +418,14 @@
 
 .animate-pulseGlow {
   animation: pulseGlow 3s ease-in-out infinite;
+}
+
+.connection-pulse {
+  animation: connectionPulse 2.4s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.connection-pulse-cyan {
+  animation: connectionPulseCyan 2.2s infinite cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* =========================================================

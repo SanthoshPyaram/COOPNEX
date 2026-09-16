@@ -53,7 +53,6 @@ import { PincodeCheckerModal } from "../components/PincodeCheckerModal";
 import { checkLocalPincode, PincodeCheckResult, getPanIndiaWorkers } from "../data/indiaLocations";
 import { RealisticPaymentModal } from "../components/RealisticPaymentModal";
 import { ReviewModal } from "../components/ReviewModal";
-import { ContinuousPortalVideo } from "../components/ContinuousPortalVideo";
 import { VoiceButton } from "../components/VoiceButton";
 import { ttsService } from "../services/tts";
 import { TiltCard3D } from "../components/3d/TiltCard3D";
@@ -74,6 +73,9 @@ import { HowCoopnexWorksContinuousPath } from "../components/home/HowCoopnexWork
 import { TharDoorstepRoadAnimation } from "../components/animations/TharDoorstepRoadAnimation";
 import { CooperativeMottoPrinciples } from "../components/animations/CooperativeMottoPrinciples";
 import { EmergencyBloodCoopBanner } from "../components/animations/EmergencyBloodCoopBanner";
+import { VideoModal } from "../components/common/VideoModal";
+import { ConnectedHumanNetwork3D } from "../components/3d/ConnectedHumanNetwork3D";
+import { HorizontalStorytellingTabs } from "../components/home/HorizontalStorytellingTabs";
 
 export const LandingPage: React.FC = () => {
   const { isAuthenticated, user, switchDemoRoleForTesting } = useAuth();
@@ -144,7 +146,6 @@ export const LandingPage: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [heroDetectionResult, setHeroDetectionResult] = useState<PincodeCheckResult | null>(null);
   const [showLocationMatcher, setShowLocationMatcher] = useState(false);
-  const [showPortalVideo, setShowPortalVideo] = useState(true);
 
   // Active Pan-India Location State (defaults to Vijayawada Central Hub)
   const [selectedPincode, setSelectedPincode] = useState<string>("520001");
@@ -440,9 +441,9 @@ export const LandingPage: React.FC = () => {
               {/* Headline & Core Brand Statement */}
               <div className="space-y-2">
                 <h1 className="font-display font-extrabold text-4xl sm:text-5xl lg:text-6xl text-slate-900 dark:text-white tracking-tight leading-[1.12]">
-                  {t("hero.tagline_part1", "People. Skills.")}{" "}
-                  <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 bg-clip-text text-transparent block sm:inline">
-                    {t("hero.tagline_part2", "Cooperatives. Connected.")}
+                  <span className="text-blue-600 dark:text-blue-400">COOPNEX</span> — People. Skills.{" "}
+                  <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-400 bg-clip-text text-transparent block sm:inline">
+                    Cooperatives. Connected.
                   </span>
                 </h1>
                 <p className="text-slate-600 dark:text-slate-300 text-base sm:text-lg max-w-xl leading-relaxed pt-1">
@@ -534,7 +535,7 @@ export const LandingPage: React.FC = () => {
                 {/* Primary CTA: Find a Service */}
                 <a
                   href="#services-marketplace"
-                  className="px-7 py-3 rounded-xl bg-gradient-to-r from-[#0A66C2] to-[#0256A8] hover:from-[#004182] hover:to-[#023e7d] text-white text-xs font-black shadow-lg shadow-blue-500/20 flex items-center gap-2 transition active:scale-[0.98]"
+                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#0A66C2] to-[#0256A8] hover:from-[#004182] hover:to-[#023e7d] text-white text-xs font-black shadow-lg shadow-blue-500/20 flex items-center gap-2 transition active:scale-[0.98]"
                 >
                   <Search className="w-4 h-4 text-blue-200" />
                   <span>{t("hero.findService", "Find a Service")}</span>
@@ -549,20 +550,17 @@ export const LandingPage: React.FC = () => {
                   <span>{t("hero.joinWorker", "Join as a Worker")}</span>
                 </Link>
 
-                {/* Video Tour */}
+                {/* ONE COMPACT HERO BUTTON: Watch How COOPNEX Works */}
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowPortalVideo(true);
-                    const el = document.getElementById("portal-video-tour");
-                    if (el) el.scrollIntoView({ behavior: "smooth" });
-                  }}
-                  className="px-4 py-3 rounded-xl bg-white dark:bg-white/10 text-slate-700 dark:text-white border border-slate-200 dark:border-white/15 text-xs font-bold flex items-center gap-2 group cursor-pointer shadow-xs hover:border-[#0A66C2] hover:bg-slate-50 transition active:scale-[0.98]"
+                  onClick={() => setVideoModalOpen(true)}
+                  className="px-5 py-3 rounded-xl bg-white dark:bg-slate-800/90 hover:bg-blue-50/80 dark:hover:bg-slate-750 text-slate-800 dark:text-white border-2 border-blue-600/30 hover:border-blue-600 text-xs font-black flex items-center gap-2.5 group cursor-pointer shadow-md hover:shadow-lg transition active:scale-[0.98]"
+                  title="Open cinematic multilingual video tour"
                 >
-                  <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
-                    <Play className="w-2.5 h-2.5 fill-current ml-0.5 text-white" />
+                  <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
+                    <Play className="w-3 h-3 fill-current ml-0.5 text-white" />
                   </div>
-                  <span>{t("hero.watchVideo", "Watch Video Tour")}</span>
+                  <span>▶ Watch How COOPNEX Works</span>
                 </button>
               </div>
 
@@ -585,10 +583,12 @@ export const LandingPage: React.FC = () => {
 
             {/* Right Column: Purposeful 3D WebGL Hero Stage (5 cols) */}
             <div className="lg:col-span-5 flex flex-col items-center">
-              <HeroCoopNetwork3D
-                onTradeSelect={(trade: string) => {
-                  setSelectedTrade(trade);
-                  setActiveWorkerTrade(trade);
+              <ConnectedHumanNetwork3D
+                onTradeSelect={(tradeId: string) => {
+                  const matchedCategory = serviceCategories.find((c) => c.name.toLowerCase().includes(tradeId.toLowerCase()));
+                  const tradeName = matchedCategory?.name || tradeId;
+                  setSelectedTrade(tradeName);
+                  setActiveWorkerTrade(tradeName);
                 }}
               />
             </div>
@@ -621,143 +621,17 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* ========================================================================= */}
-      {/* 2B. PROMINENT MULTILINGUAL VIDEO EXPLAINER TOUR SHOWCASE                   */}
+      {/* 2B. COMPACT HORIZONTAL STORYTELLING PLATFORM ARCHITECTURE                 */}
       {/* ========================================================================= */}
-      <section id="portal-video-tour" className="relative py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto scroll-mt-20">
-        <div className="text-center max-w-3xl mx-auto mb-6 space-y-2.5">
-          <div className="inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider bg-gradient-to-r from-rose-500/15 via-pink-500/15 to-purple-500/15 text-slate-800 dark:text-slate-100 px-4 py-1.5 rounded-full border border-rose-500/30 shadow-xs">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
-            </span>
-            <span className="bg-gradient-to-r from-rose-600 via-pink-600 to-purple-600 dark:from-rose-400 dark:via-pink-400 dark:to-purple-400 bg-clip-text text-transparent font-black">
-              {t("video.badge") || "24/7 MULTILINGUAL EXPLAINER VIDEO"}
-            </span>
-            <span className="text-slate-400 text-[10px]">10 Indian Languages</span>
-          </div>
-
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            {t("video.headline") || "How COOPNEX Works"}
-          </h2>
-          <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
-            {t("video.subheadline") || "Experience our interactive video walkthrough with authentic conversational voice narration in Telugu, Hindi, Tamil, English, and more. See how verified artisans receive 100% statutory floor wages with zero aggregator commission."}
-          </p>
-        </div>
-
-        {showPortalVideo ? (
-          <div className="relative animate-fadeIn">
-            <ContinuousPortalVideo
-              currentLanguage={language}
-              onLanguageChange={setLanguage}
-              onClose={() => setShowPortalVideo(false)}
-            />
-          </div>
-        ) : (
-          <div className="max-w-3xl mx-auto p-6 rounded-3xl bg-gradient-to-r from-rose-500/10 via-pink-500/10 to-purple-500/10 border border-slate-200 dark:border-slate-800 text-center space-y-4 shadow-lg">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#E11D48] to-[#BE185D] text-white flex items-center justify-center mx-auto shadow-lg shadow-rose-500/25">
-              <Play className="w-7 h-7 fill-current ml-1" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                Multilingual Video Tour Minimized
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-1">
-                Listen to the full spoken explainer with animated artisan visuals in Telugu, Hindi, Tamil, Kannada, Marathi, and more.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowPortalVideo(true)}
-              className="btn-primary !min-h-[44px] !px-6 text-xs font-bold inline-flex items-center gap-2 cursor-pointer shadow-md"
-            >
-              <Play className="w-4 h-4 fill-current" />
-              <span>Re-Open Video Tour</span>
-            </button>
-          </div>
-        )}
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 2C. 6-STAGE CONTINUOUS INTERACTIVE JOURNEY (HOW COOPNEX WORKS)            */}
-      {/* ========================================================================= */}
-      <div id="how-it-works-journey" className="border-t border-b border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-        <HowCoopnexWorksContinuousPath />
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 3. 24/7 RAPID EMERGENCY DISPATCH RADAR (WEBGL)                            */}
-      {/* ========================================================================= */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <EmergencyRadar3D />
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 4. 3D TRADE & SERVICES CONSTELLATION (WEBGL)                              */}
-      {/* ========================================================================= */}
-      <section id="services" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="text-center max-w-3xl mx-auto mb-10 space-y-2">
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-white/10 px-4 py-1 rounded-full border border-blue-200 dark:border-white/15 shadow-2xs">
-            <Layers className="w-3.5 h-3.5 text-blue-600" />
-            <span>{t("services.badge") || "Interactive Trade Galaxy"}</span>
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            {t("services.title") || "Verified Cooperative Trades"}
-          </h2>
-          <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
-            {t("services.subtitle") || "Browse verified artisan trades with statutory minimum hourly rates, safety certifications, and primary society rosters."}
-          </p>
-        </div>
-
-        <ServicesConstellation3D
-          onSelectService={(trade) => {
-            setSelectedTrade(trade);
-            setActiveWorkerTrade(trade);
-            const el = document.getElementById("workers-directory");
-            if (el) el.scrollIntoView({ behavior: "smooth" });
-          }}
-        />
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 5. NATIONAL COOPERATIVE DISPATCH EXPRESS (ROAD ANIMATION JOURNEY)        */}
-      {/* ========================================================================= */}
-      <section id="how-it-works" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="text-center max-w-3xl mx-auto mb-10 space-y-2">
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#E11D48] dark:text-pink-300 bg-pink-50 dark:bg-white/10 px-4 py-1 rounded-full border border-pink-200 dark:border-white/15 shadow-2xs">
-            <Navigation className="w-3.5 h-3.5 text-[#E11D48] dark:text-pink-400" />
-            <span>{t("how.badge") || "End-to-End Road Transparency"}</span>
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            {t("how.headline") || "How COOPNEX Works"}
-          </h2>
-          <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
-            {t("how.subtitle_road", "Follow the complete 5-stage dispatch corridor with real-time road telemetry from automated society dispatch to direct Bharat UPI soundbox settlement.")}
-          </p>
-        </div>
-
-        <TharDoorstepRoadAnimation />
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 6. TRANSPARENT 3D VALUE DISTRIBUTION LEDGER & WELFARE FLOW                */}
-      {/* ========================================================================= */}
-      <section id="economics" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="text-center max-w-3xl mx-auto mb-10 space-y-2">
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-pink-300 bg-pink-50 dark:bg-white/10 px-4 py-1 rounded-full border border-pink-200 dark:border-white/15 shadow-2xs">
-            <HeartHandshake className="w-3.5 h-3.5 text-rose-600" />
-            <span>{t("about.badge") || "Radical Economic Fairness"}</span>
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            {t("about.headline_cut", "0% Platform Cut.")}{" "}
-            <span className="text-blue-600 dark:text-blue-400">{t("about.headline_dignity", "100% Dignity.")}</span>
-          </h2>
-          <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
-            {t("about.subheadline") || "Unlike commercial gig apps that extract 25-35% from every job, COOPNEX passes the entire base wage directly to the artisan."}
-          </p>
-        </div>
-
-        <CooperativeEcosystem3D />
-      </section>
+      <HorizontalStorytellingTabs
+        onSelectTrade={(trade) => {
+          setSelectedTrade(trade);
+          setActiveWorkerTrade(trade);
+          const el = document.getElementById("workers-directory");
+          if (el) el.scrollIntoView({ behavior: "smooth" });
+        }}
+        onOpenVideoModal={() => setVideoModalOpen(true)}
+      />
 
       {/* ========================================================================= */}
       {/* 6B. NATIONAL COOPERATIVE MOTTO & 6 PRINCIPLES AUTOSLIDER (HUMAN GUIDE)   */}
@@ -1561,41 +1435,15 @@ export const LandingPage: React.FC = () => {
       {/* ========================================================================= */}
       {/* MODAL 1: EXPLAINER VIDEO LIGHTBOX MODAL                                   */}
       {/* ========================================================================= */}
-      {videoModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md animate-fadeIn">
-          <div className="bg-coop-navy rounded-2xl border border-white/15 shadow-2xl max-w-4xl w-full overflow-hidden">
-            <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-coop-emerald animate-pulse" />
-                <h3 className="font-bold text-white text-sm sm:text-base">
-                  COOPNEX Platform Walkthrough (Interactive Multi-Trade Tour)
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  ttsService.stop();
-                  setVideoModalOpen(false);
-                }}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 flex items-center justify-center transition cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-2 sm:p-4">
-              <ContinuousPortalVideo
-                currentLanguage={language}
-                onLanguageChange={setLanguage}
-                onClose={() => {
-                  ttsService.stop();
-                  setVideoModalOpen(false);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <VideoModal
+        isOpen={videoModalOpen}
+        onClose={() => {
+          ttsService.stop();
+          setVideoModalOpen(false);
+        }}
+        currentLanguage={language}
+        onLanguageChange={setLanguage}
+      />
 
       {/* ========================================================================= */}
       {/* MODAL 2: INTERACTIVE TRIAL BOOKING MODAL                                   */}
