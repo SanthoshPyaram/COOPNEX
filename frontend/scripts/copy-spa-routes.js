@@ -54,6 +54,20 @@ if (fs.existsSync(indexPath)) {
   fs.mkdirSync(coopnexDir, { recursive: true });
   fs.copyFileSync(indexPath, path.join(coopnexDir, "index.html"));
 
+  // Mirror dist/assets to dist/COOPNEX/assets for seamless dual compatibility
+  const assetsDir = path.join(distDir, "assets");
+  const coopnexAssetsDir = path.join(distDir, "COOPNEX", "assets");
+  if (fs.existsSync(assetsDir)) {
+    fs.cpSync(assetsDir, coopnexAssetsDir, { recursive: true });
+    console.log("[SPA Route] Mirrored dist/assets to dist/COOPNEX/assets for dual compatibility");
+  }
+
+  // Mirror favicon.svg to dist/COOPNEX/favicon.svg
+  const faviconPath = path.join(distDir, "favicon.svg");
+  if (fs.existsSync(faviconPath)) {
+    fs.copyFileSync(faviconPath, path.join(coopnexDir, "favicon.svg"));
+  }
+
   // Critical for GitHub Pages SPA routing: 404.html
   fs.copyFileSync(indexPath, path.join(distDir, "404.html"));
   fs.copyFileSync(indexPath, path.join(coopnexDir, "404.html"));
